@@ -68,12 +68,9 @@ export class RegisterHandler {
 
     this.user = await User.create({
       ...this.data,
+      emailVerificationToken: await crypto.randomBytes(20).toString('hex'),
+      emailVerificationExpires: new Date(Date.now() + 3600000), // 1 hour
     });
-    // now we need to update the users emailVerificationToken and expire
-    this.user.emailVerificationToken = await crypto.randomBytes(20).toString('hex');
-    this.user.emailVerificationExpires = new Date(Date.now() + 3600000); // 1 hour
-    // save the user object
-    await this.user.save();
   }
 
   /**

@@ -1,9 +1,9 @@
 import jwt from 'jsonwebtoken';
-import User from '../models/User';
-import mongoose from 'mongoose';
 import moment from 'moment';
-import ApiKeySchema from '../models/ApiKeySchema';
+import ApiKeySchema from '../modules/auth/model/ApiKeySchema';
+import User from '../modules/auth/model/User';
 import { hashApiKey } from '../controllers/key/createKey';
+import { AuthenticatedRequest } from '../types/AuthenticatedRequest';
 
 interface JwtPayload {
   _id: string;
@@ -22,7 +22,7 @@ interface JwtPayload {
  * @lastModified 2023-05-08T16:41:52.000-05:00
  */
 const protect = (routes?: any) => {
-  return async (req: any, res: any, next: any) => {
+  return async (req: AuthenticatedRequest, res: any, next: any) => {
     let token;
     // check the headers for an API key
     // Check for API key in headers
@@ -64,6 +64,12 @@ const protect = (routes?: any) => {
         const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload;
         // find the user in the database
         req.user = await User.findById(decoded._id).select('-password');
+
+        // if the user is not found, return a 403 error
+        if (!req.user) {
+          return res.status(403).json({ message: 'Not authorized, user not found' });
+        }
+
         req.user.token = token;
 
         next();

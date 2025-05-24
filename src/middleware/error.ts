@@ -10,11 +10,11 @@ export default (error: any, req: any, res: any, next?: any) => {
   err.message = error.message;
 
   // Mongoose Bad Object ID
-  if (err.name === "CastError") {
+  if (err.name === 'CastError') {
     const message = `No Resource Found with id: ${error.value}`;
     return res.status(404).json({ message });
   }
-  if (err.kind === "ObjectId") {
+  if (err.kind === 'ObjectId') {
     const message = `No Resource Found with id: ${error.value}`;
     return res.status(404).json({ message });
   }
@@ -24,9 +24,16 @@ export default (error: any, req: any, res: any, next?: any) => {
     return res.status(400).json({ message });
   }
   // Mongoose Validation error
-  if (err.message.includes("validation failed")) {
-    const message = Object.values(err.errors).map((value: any) => value.message);
-    return res.status(400).json({ message });
+  if (err.message.includes('validation failed')) {
+    const messages = Array.isArray(err.errors)
+      ? err.errors.map((val: any) => val.message)
+      : err.errors && typeof err.errors === 'object'
+      ? Object.values(err.errors).map((val: any) => val.message)
+      : [];
+
+    return res.status(400).json({ message: messages.join(', ') || 'Validation Error' });
   }
-  return res.status(err.statusCode || 500).json({ success: false, message: err.message || "Server Error" });
+  return res
+    .status(err.statusCode || 500)
+    .json({ success: false, message: err.message || 'Server Error' });
 };
