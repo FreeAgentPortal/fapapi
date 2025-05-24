@@ -1,16 +1,23 @@
-import user from '../model/User';
+import { Request, Response } from 'express';
+import { RegisterHandler } from '../handlers/registerHandler';
+import { eventBus } from '../../../lib/eventBus';
 
 export default class AuthService {
-  // Add your service methods here
-  // For example, you can add methods for user registration, login, etc.
-  // Example:
-  async registerUser(userData: any): Promise<any> {
-    // Implement your registration logic here
-    return { message: 'User registered successfully' };
-  }
+  static async register(req: Request, res: Response) {
+    try {
 
-  async loginUser(credentials: any): Promise<any> {
-    // Implement your login logic here
-    return { message: 'User logged in successfully' };
+      // RegisterHandler, Registers a new user and handles the registration logic
+      const handler = new RegisterHandler(req.body);
+      const result = await handler.execute();
+
+      // fire off the event to send the email
+      eventBus.publish('user.registered', {
+        user: result.user,
+      });
+
+      res.status(201).json(result);
+    } catch (err: any) {
+      res.status(500).json({ message: err.message || 'Registration failed' });
+    }
   }
 }

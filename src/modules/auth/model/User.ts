@@ -99,7 +99,9 @@ UserSchema.pre('save', async function (next) {
 
 // creates the fullName field.
 UserSchema.pre('save', async function () {
-  this.fullName = this.firstName + ' ' + this.lastName;
+  const firstName = this.firstName ?? '';
+  const lastName = this.lastName ?? '';
+  this.fullName = `${firstName} ${lastName}`.trim();
 });
 
 // Sign JWT and return

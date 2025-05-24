@@ -1,12 +1,11 @@
 import express from 'express';
 import login from '../controller/login';
-import register from '../controller/register';
-
+import AuthService from '../service/AuthService';
 const router = express.Router();
 
 // router.route('/:username/username').get(checkUsername);
 // router.route('/:email/email').get(checkEmailExists);
-router.route('/register').post(register);
+router.post('/register', AuthService.register);
 // router.route('/recaptcha').post(recaptcha);
 // router.route('/resetpassword/:resettoken').put(resetPassword);
 // router.route('/forgotpassword').post(forgotpassword);
@@ -21,4 +20,4 @@ router.route('/health').get((req, res) => {
   });
 });
 
-export default router;
+export default router; 
