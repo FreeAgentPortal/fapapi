@@ -17,6 +17,7 @@ import { cronJobs } from './cronjobs/cronjobs';
 //clustering
 import cluster from 'cluster';
 import os from 'os';
+import { NotificationService } from './modules/notification/NotificationService';
 
 // Routes
 //const middlewares
@@ -27,6 +28,7 @@ const hpp = require('hpp');
 const { Server } = require('socket.io');
 
 dotenv.config();
+NotificationService.init();
 
 const app = express();
 
