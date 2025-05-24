@@ -29,6 +29,7 @@ export interface UserType extends mongoose.Document {
   isEmailVerified: boolean;
   emailVerificationToken: string;
   emailVerificationExpires: Date;
+  profileRefs: Record<string, string | null>;
   getSignedJwtToken: () => string;
   getResetPasswordToken: () => string;
   matchPassword: (enteredPassword: string) => boolean;
@@ -80,6 +81,10 @@ const UserSchema = new mongoose.Schema(
     emailVerificationExpires: {
       type: Date,
     },
+    profileRefs: {
+      type: Object,
+      default: {},
+    }
   },
   {
     timestamps: true,

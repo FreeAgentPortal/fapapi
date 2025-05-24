@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { RegisterHandler } from '../handlers/registerHandler';
+import { RegisterHandler } from '../handlers/RegisterHandler';
 import { eventBus } from '../../../lib/eventBus';
 
 export default class AuthService {
