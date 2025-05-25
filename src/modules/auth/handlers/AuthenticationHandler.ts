@@ -50,8 +50,8 @@ export class AuthenticationHandler {
     }
 
     return {
-      user: {
-        id: foundUser._id,
+      payload: {
+        _id: foundUser._id,
         email: foundUser.email,
         roles: foundUser.role,
         profileRefs: foundUser.profileRefs
