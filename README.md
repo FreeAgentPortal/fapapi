@@ -13,10 +13,7 @@ This is the backend API powering the Free Agent Portal — a platform to connect
 - [Environment Variables](#environment-variables)
 - [Scripts](#scripts)
 - [Contributing](#contributing)
-
-## 📚 Developer Docs
-
-- [Registration Workflow](./src/modules/auth/docs/registration-workflow.md)
+ 
 ---
 
 ## 🚀 Getting Started
@@ -53,12 +50,7 @@ src/modules
 
 ## 📦 Modules
 
-- **Auth**: Login, registration, JWT generation
-- **User**: Central identity record
-- **Athlete**: Performance and personal metrics
-- **Team**: Organizational account + access control
-- **Admin**: Superuser account support
-- **Billing**: Payment processor integration and vaulting
+- [Auth Module](./src/modules/auth/docs/auth-module.md): Login, registration, JWT generation 
 
 ---
 
