@@ -16,8 +16,8 @@ const authService = new AuthService(
 // router.route('/:email/email').get(checkEmailExists);
 router.post('/register', authService.register);
 // router.route('/recaptcha').post(recaptcha);
-// router.route('/resetpassword/:resettoken').put(resetPassword);
-// router.route('/forgotpassword').post(forgotpassword);
+router.route('/resetpassword/:resettoken').put(authService.resetPassword);
+router.route('/forgotpassword').post(authService.forgotPassword);
 // router.route('/verifyEmail').post(verifyEmail);
 // router.route('/resend-verification-email').post(resendVerificationEmailVerify);
 router.route('/login').post(authService.login);

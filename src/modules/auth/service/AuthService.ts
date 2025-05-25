@@ -67,4 +67,14 @@ export default class AuthService {
       return res.status(500).json({ message: err.message || 'Password recovery failed' });
     }
   }
+
+  async resetPassword(req: Request, res: Response) {
+    try {
+      const { token, newPassword } = req.body;
+      await this.passwordRecoveryHandler.resetPassword(token, newPassword);
+      return res.status(200).json({ message: 'Password reset successful' });
+    } catch (err: any) {
+      return res.status(400).json({ error: err.message });
+    }
+  }
 }

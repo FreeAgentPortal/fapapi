@@ -22,13 +22,13 @@ export interface UserType extends mongoose.Document {
   role: string;
   fullName: string;
   isActive: boolean;
-  resetPasswordToken: string;
-  resetPasswordExpire: Date;
+  resetPasswordToken: string | undefined | null;
+  resetPasswordExpire: Date | undefined | null;
   createdAt: Date;
   updatedAt: Date;
   isEmailVerified: boolean;
-  emailVerificationToken: string;
-  emailVerificationExpires: Date;
+  emailVerificationToken: string | undefined | null;
+  emailVerificationExpires: Date | undefined | null;
   profileRefs: Record<string, string | null>;
   getSignedJwtToken: () => string;
   getResetPasswordToken: () => string;
@@ -73,7 +73,10 @@ const UserSchema = new mongoose.Schema(
       type: Boolean,
       default: false,
     },
-    resetPasswordToken: String,
+    resetPasswordToken: {
+      type: String,
+      select: false, // do not return this field by default
+    },
     resetPasswordExpire: Date,
     emailVerificationToken: {
       type: String,
@@ -84,7 +87,7 @@ const UserSchema = new mongoose.Schema(
     profileRefs: {
       type: Object,
       default: {},
-    }
+    },
   },
   {
     timestamps: true,
