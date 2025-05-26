@@ -34,9 +34,7 @@ export class RegisterHandler {
    * @returns {Promise<{token: string, profileRefs: Record<string, string | null>, billing: {status: string, requiresVaultSetup: boolean}}>}
    * @throws {Error} If any step in the registration process fails.
    */
-  public async execute(
-    data: RegisterInput
-  ): Promise<{
+  public async execute(data: RegisterInput): Promise<{
     user: any;
     token: string;
     profileRefs: Record<string, string | null>;
@@ -91,8 +89,9 @@ export class RegisterHandler {
       const creator = ProfileCreationFactory.getProfileCreator(role);
       if (!creator) continue;
 
+      const profileData = this.data.profileData?.[role] ?? {};
       try {
-        const profile = await creator.createProfile(this.user._id);
+        const profile = await creator.createProfile(this.user._id, profileData);
         this.profileRefs[role] = profile.profileId;
 
         const roleMeta = RoleRegistry[role];
