@@ -21,19 +21,28 @@ export class RegisterHandler {
   private user!: any;
   private profileRefs: Record<string, string | null> = {};
   private customerCreated = false;
+  private data!: RegisterInput;
 
   /**
    * @description Initializes the RegisterHandler with user data.
    * @param data - An object containing email, password, and roles of the user.
    */
-  constructor(private data: RegisterInput) {}
+  constructor() {}
 
   /**
    * @description Executes the registration process by creating a user and their profiles, and generating a JWT token.
    * @returns {Promise<{token: string, profileRefs: Record<string, string | null>, billing: {status: string, requiresVaultSetup: boolean}}>}
    * @throws {Error} If any step in the registration process fails.
    */
-  public async execute() {
+  public async execute(
+    data: RegisterInput
+  ): Promise<{
+    user: any;
+    token: string;
+    profileRefs: Record<string, string | null>;
+    billing: { status: string; requiresVaultSetup: boolean };
+  }> {
+    this.data = data;
     await this.createUser();
     await this.createProfiles();
 
@@ -138,5 +147,46 @@ export class RegisterHandler {
         .filter(([_, pid]) => !!pid) // filter out any null or undefined profile IDs
         .map(([role, pid]) => mongoose.model(role).findByIdAndDelete(pid)), // delete profiles by role
     ]);
+  }
+
+  /**
+   * @Description checks if the email is already registered in the system.
+   * @param email - The email to check for registration.
+   */
+  public async isEmailRegistered(email: string): Promise<boolean> {
+    const user = await User.findOne({ email }).lean();
+    return !!user;
+  }
+
+  /**
+   * @description Sets verification token and expiration for email verification.
+   * @param email - The email to set the verification token for.
+   */
+  public async setEmailVerificationToken(email: string): Promise<{ token: string }> {
+    const user = await User.findOne({ email });
+    if (!user) throw new Error('User not found');
+    const token = await crypto.randomBytes(20).toString('hex');
+    const expires = new Date(Date.now() + 3600000); // 1 hour
+    user.emailVerificationToken = token;
+    user.emailVerificationExpires = expires;
+    await user.save();
+    return { token };
+  }
+
+  /**
+   * @description Verifies the user's email using the provided token.
+   * @param token - The verification token sent to the user's email.
+   */
+  public async verifyEmail(token: string): Promise<{ message: string }> {
+    const user = await User.findOne({
+      emailVerificationToken: token,
+      emailVerificationExpires: { $gt: new Date() },
+    });
+    if (!user) throw new Error('Invalid or expired token');
+    user.isEmailVerified = true;
+    user.emailVerificationToken = undefined;
+    user.emailVerificationExpires = undefined;
+    await user.save();
+    return { message: 'Email verified successfully' };
   }
 }

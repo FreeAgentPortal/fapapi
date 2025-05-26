@@ -1,10 +1,19 @@
 import { Request } from 'express';
 import bcrypt from 'bcryptjs';
-import jwt from 'jsonwebtoken'; 
+import jwt from 'jsonwebtoken';
 import User from '../model/User';
 import { AuthenticatedRequest } from '../../../types/AuthenticatedRequest';
+import axios from 'axios';
 
 export class AuthenticationHandler {
+
+  /**
+   * @description Logs in a user by validating their credentials and generating a JWT token.
+   * @throws {Error} If the email or password is missing, or if the credentials are invalid.
+   * @param req - The request object containing user credentials.
+   * @returns {Promise<{message: string, token: string}>}
+   * @memberof AuthenticationHandler
+   */
   async login(req: Request) {
     const { email, password } = req.body;
 
@@ -37,16 +46,25 @@ export class AuthenticationHandler {
       token,
     };
   }
+
+  /**
+   * @description Retrieves the authenticated user's information.
+   * @throws {Error} If the user is not authenticated or not found.
+   * @param req - The request object, which should include the authenticated user information.
+   * This is typically set by middleware that verifies the JWT token.
+   * @returns {Promise<{payload: { _id: string, email: string, roles: string[], profileRefs: Record<string, string | null> } }>}
+   * @memberof AuthenticationHandler
+   */
   async getMe(req: Request & AuthenticatedRequest) {
     const user = req.user; // Assumes middleware has attached it
 
     if (!user || !user._id) {
-      throw new Error("User not authenticated.");
+      throw new Error('User not authenticated.');
     }
 
-    const foundUser = await User.findById(user._id).select("-password");
+    const foundUser = await User.findById(user._id).select('-password');
     if (!foundUser) {
-      throw new Error("User not found.");
+      throw new Error('User not found.');
     }
 
     return {
@@ -54,8 +72,38 @@ export class AuthenticationHandler {
         _id: foundUser._id,
         email: foundUser.email,
         roles: foundUser.role,
-        profileRefs: foundUser.profileRefs
-      }
+        profileRefs: foundUser.profileRefs,
+      },
     };
   }
+
+  /**
+   * @description Recaptcha Verification handler.
+   * @param req - The request object containing recaptcha token.
+   * @returns {Promise<{ success: boolean, message: string }>}
+   * @memberof AuthenticationHandler
+   * 
+   */
+  async recaptchaVerify(req: Request) {
+    const { token } = req.body;
+
+    if (!token) {
+      throw new Error('Recaptcha token is required.');
+    }
+
+    const secretKey = process.env.RECAPTCHA_SECRET_KEY;
+
+    const url = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${token}`;
+    const { data } = await axios.post(url); 
+
+    if (!data.success) {
+      throw new Error('Recaptcha verification failed.');
+    }
+    return {
+      isVerified: data.score >= 0.5, // Adjust threshold as needed
+      message: 'Recaptcha verification successful.',
+    };
+  }
+ 
+    
 }
