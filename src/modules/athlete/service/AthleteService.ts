@@ -15,27 +15,22 @@ export default class AthleteService {
     this.profileHandler = new AthleteProfileHandler();
   }
 
-  // Overload signatures
-  createProfile(data: AthleteProfileInput): Promise<IAthlete>;
-  createProfile(req: Request, res: Response): Promise<void>;
-
-  // Unified implementation
-  async createProfile(
-    arg1: AthleteProfileInput | Request,
-    arg2?: Response
-  ): Promise<IAthlete | void> {
-    if (isExpressRequest(arg1) && arg2) {
-      // HTTP route version
-      try {
-        const data = arg1.body as AthleteProfileInput;
-        const profile = await this.profileHandler.createProfile(data);
-        return arg2.status(201).json(profile) as unknown as IAthlete;
-      } catch (error: any) {
-        return arg2.status(400).json({ error: error.message }) as unknown as void;
-      }
-    } else {
-      // Internal service usage
-      return await this.profileHandler.createProfile(arg1 as AthleteProfileInput);
+  /**
+   * Called internally during registration or profile bootstrapping.
+   */
+  async createProfile(data: AthleteProfileInput): Promise<IAthlete> {
+    return await this.profileHandler.createProfile(data);
+  }
+  /**
+   * Called from an HTTP route. Handles req/res and responds to client.
+   */
+  async createProfileFromRequest(req: Request, res: Response): Promise<void> {
+    try {
+      const data = req.body as AthleteProfileInput;
+      const profile = await this.profileHandler.createProfile(data);
+      res.status(201).json(profile);
+    } catch (error: any) {
+      res.status(400).json({ error: error.message });
     }
   }
   async updateProfile(req: Request, res: Response) {
