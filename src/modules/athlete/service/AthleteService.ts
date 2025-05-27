@@ -38,19 +38,19 @@ export default class AthleteService {
       return await this.profileHandler.createProfile(arg1 as AthleteProfileInput);
     }
   }
-  async updateProfile(req: AuthenticatedRequest, res: Response) {
+  async updateProfile(req: Request, res: Response) {
     try {
-      const results = await this.profileHandler.updateProfile(req.user._id, req.body);
+      const results = await this.profileHandler.updateProfile(req as AuthenticatedRequest);
       return res.status(200).json(results);
     } catch (error: any) {
       return res.status(400).json({ error: error.message });
     }
   }
 
-  async deleteProfile(req: AuthenticatedRequest, res: Response) {
+  async deleteProfile(req: Request, res: Response) {
     try {
-      await this.profileHandler.deleteProfile(req.user._id);
-      return res.status(204).send();
+      await this.profileHandler.deleteProfile(req as AuthenticatedRequest);
+      return res.status(204).json({ success: true, message: 'Profile deleted successfully' });
     } catch (error: any) {
       return res.status(400).json({ error: error.message });
     }

@@ -1,6 +1,7 @@
 import { Request } from 'express';
 import { IAthlete, AthleteModel } from '../models/AthleteModel';
 import mongoose from 'mongoose';
+import { AuthenticatedRequest } from '../../../types/AuthenticatedRequest';
 
 export interface AthleteProfileInput {
   userId: mongoose.Types.ObjectId;
@@ -51,8 +52,8 @@ export class AthleteProfileHandler {
    * @param updates Partial fields to update
    * @returns The updated athlete document
    */
-  async updateProfile(userId: string, updates: Partial<IAthlete>): Promise<IAthlete | null> {
-    return await AthleteModel.findOneAndUpdate({ userId }, updates, {
+  async updateProfile(req: Request & AuthenticatedRequest): Promise<IAthlete | null> {
+    return await AthleteModel.findOneAndUpdate({ userId: req.params.id }, req.body, {
       new: true,
     });
   }
@@ -61,8 +62,9 @@ export class AthleteProfileHandler {
    * Soft deletes an athlete profile (future: implement flag-based delete).
    * @param userId The user ID linked to the athlete
    */
-  async deleteProfile(userId: string): Promise<void> {
-    await AthleteModel.findOneAndDelete({ userId });
+  async deleteProfile(req: Request & AuthenticatedRequest): Promise<Boolean | null> {
+    await AthleteModel.findOneAndDelete({ userId: req.params.id });
+    return true; // Return true if deletion was successful
   }
 
   /**

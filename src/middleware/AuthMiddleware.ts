@@ -73,7 +73,7 @@ export class AuthMiddleware {
    * @param allowedRoles - Array of roles that are allowed to access the route
    * @returns Middleware function
    */
-  static authorizeRoles(...allowedRoles: string[]) {
+  static authorizeRoles(allowedRoles: string[]) {
     return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
       if (!req.user || !allowedRoles.includes(req.user.role[0])) {
         return res.status(403).json({ error: 'Forbidden' });
