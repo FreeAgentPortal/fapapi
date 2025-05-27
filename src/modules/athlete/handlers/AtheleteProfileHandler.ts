@@ -1,3 +1,4 @@
+import { Request } from 'express';
 import { IAthlete, AthleteModel } from '../models/AthleteModel';
 import mongoose from 'mongoose';
 
@@ -40,7 +41,7 @@ export class AthleteProfileHandler {
     if (!profile){
       throw new Error('Failed to create athlete profile: Invalid data provided.');
     }
-    
+
     return await profile.save();
   }
 
@@ -65,12 +66,12 @@ export class AthleteProfileHandler {
   }
 
   /**
-   * Gets an athlete profile by the associated user ID.
+   * Gets an athlete profile by the associated ID.
    * @param userId The user ID linked to the athlete
    * @returns The athlete document or null
    */
-  async getProfileByUserId(userId: string): Promise<IAthlete | null> {
-    return await AthleteModel.findOne({ userId });
+  async getProfile(req: Request): Promise<IAthlete | null> {
+    return await AthleteModel.findOne({ _id: req.params.id });
   }
 
   /**
@@ -80,5 +81,15 @@ export class AthleteProfileHandler {
    */
   async getPublicProfileById(profileId: string): Promise<IAthlete | null> {
     return await AthleteModel.findById(profileId);
+  }
+
+  /**
+   * @description Retrieves all athlete profiles, useful for admin or public listings.
+   * @returns An array of athlete profiles
+   */
+  async getAllProfiles(req: Request): Promise<IAthlete[]> {
+    //TODO: Implement pagination and adv. filtering logic
+    // For now, return all profiles
+    return await AthleteModel.find({});
   }
 }
