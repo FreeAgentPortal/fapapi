@@ -1,10 +1,20 @@
+import { AthleteProfileHandler } from "../handlers/AtheleteProfileHandler";
+
 export default class AthleteService {
-  // Add your service methods here
-  // For example, you can add methods for user registration, login, etc.
-  static async createProfile(userId: string): Promise<any> {
-    // Implement your profile creation logic here
-    return new Promise((resolve) => {
-      resolve({ _id: userId });
-    });
+  private profileHandler: AthleteProfileHandler;
+  constructor(profileHandler: AthleteProfileHandler = new AthleteProfileHandler()) {
+    this.profileHandler = profileHandler;
   }
+
+  async createProfile(userId: string, profileData: any): Promise<any> {
+    try {
+      const profile = await this.profileHandler.createProfile({
+        userId,
+        ...profileData,
+      });
+      return profile;
+    } catch (error: any) {
+      throw new Error(`Failed to create athlete profile: ${error.message}`);
+    }
+  } 
 }

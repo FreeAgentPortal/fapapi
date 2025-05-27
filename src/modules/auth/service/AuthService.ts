@@ -4,7 +4,7 @@ import { eventBus } from '../../../lib/eventBus';
 import { AuthenticationHandler } from '../handlers/AuthenticationHandler';
 import { AuthenticatedRequest } from '../../../types/AuthenticatedRequest';
 import { PasswordRecoveryHandler } from '../handlers/PasswordRecoveryHandler';
-import { token } from 'morgan';
+
 
 export default class AuthService {
   private authHandler: AuthenticationHandler;
