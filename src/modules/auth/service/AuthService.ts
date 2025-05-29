@@ -5,24 +5,15 @@ import { AuthenticationHandler } from '../handlers/AuthenticationHandler';
 import { AuthenticatedRequest } from '../../../types/AuthenticatedRequest';
 import { PasswordRecoveryHandler } from '../handlers/PasswordRecoveryHandler';
 
-
 export default class AuthService {
-  private authHandler: AuthenticationHandler;
-  private passwordRecoveryHandler: PasswordRecoveryHandler;
-  private registerHandler: RegisterHandler;
-
   constructor(
-    authHandler: AuthenticationHandler,
-    passwordRecoveryHandler: PasswordRecoveryHandler,
-    registerHandler: RegisterHandler
-  ) {
-    this.authHandler = authHandler;
-    this.passwordRecoveryHandler = passwordRecoveryHandler;
-    this.registerHandler = registerHandler;
-  }
+    private readonly authHandler: AuthenticationHandler,
+    private readonly passwordRecoveryHandler: PasswordRecoveryHandler,
+    private readonly registerHandler: RegisterHandler
+  ) {}
 
-  async register(req: Request, res: Response) {
-    try { 
+  public register = async (req: Request, res: Response): Promise<Response> => {
+    try {
       const result = await this.registerHandler.execute(req.body);
 
       eventBus.publish('user.registered', {
@@ -34,16 +25,16 @@ export default class AuthService {
     } catch (err: any) {
       return res.status(500).json({ message: err.message || 'Registration failed' });
     }
-  }
+  };
 
-  async login(req: Request, res: Response) {
+  public login = async (req: Request, res: Response): Promise<Response> => {
     try {
       const result = await this.authHandler.login(req);
       return res.status(200).json(result);
     } catch (err: any) {
       return res.status(400).json({ error: err.message });
     }
-  }
+  };
 
   async getMe(req: Request, res: Response) {
     try {
@@ -54,7 +45,7 @@ export default class AuthService {
     }
   }
 
-  async forgotPassword(req: Request, res: Response) {
+  public forgotPassword = async (req: Request, res: Response): Promise<Response> => {
     try {
       const result = await this.passwordRecoveryHandler.requestReset(req.body.email);
 
@@ -68,9 +59,9 @@ export default class AuthService {
     } catch (err: any) {
       return res.status(500).json({ message: err.message || 'Password recovery failed' });
     }
-  }
+  };
 
-  async resetPassword(req: Request, res: Response) {
+  public resetPassword = async (req: Request, res: Response): Promise<Response> => {
     try {
       const { token, newPassword } = req.body;
       await this.passwordRecoveryHandler.resetPassword(token, newPassword);
@@ -78,10 +69,10 @@ export default class AuthService {
     } catch (err: any) {
       return res.status(400).json({ error: err.message });
     }
-  }
+  };
 
-  async verifyEmail(req: Request, res: Response) {
-    try { 
+  public verifyEmail = async (req: Request, res: Response): Promise<Response> => {
+    try {
       const result = await this.registerHandler.verifyEmail(req.body.email);
 
       // Emit event for email verification
@@ -93,9 +84,9 @@ export default class AuthService {
     } catch (err: any) {
       return res.status(400).json({ error: err.message });
     }
-  }
+  };
 
-  async resendVerificationEmail(req: Request, res: Response) {
+  public resendVerificationEmail = async (req: Request, res: Response): Promise<Response> => {
     try {
       const { email } = req.body;
       if (!email) {
@@ -109,22 +100,24 @@ export default class AuthService {
         token: result.token,
       });
 
-      return res.status(200).json({success: true, message: 'Verification email sent', token: result.token});
+      return res
+        .status(200)
+        .json({ success: true, message: 'Verification email sent', token: result.token });
     } catch (err: any) {
       return res.status(400).json({ error: err.message });
     }
-  }
+  };
 
-  async recaptcha(req: Request, res: Response) {
+  public recaptcha = async (req: Request, res: Response): Promise<Response> => {
     try {
       const result = await this.authHandler.recaptchaVerify(req);
       return res.status(200).json(result);
     } catch (err: any) {
       return res.status(400).json({ error: err.message });
     }
-  }
+  };
 
-  async checkEmail(req: Request, res: Response) {
+  public checkEmail = async (req: Request, res: Response): Promise<Response> => {
     try {
       const { email } = req.body;
       if (!email) {
@@ -132,10 +125,11 @@ export default class AuthService {
       }
 
       // const exists = await this.authHandler.checkEmailExists(email);
-      // return res.status(200).json({ exists });
+      return res.status(200).json({
+        // exists
+      });
     } catch (err: any) {
       return res.status(500).json({ error: err.message });
     }
-  }
-
+  };
 }
