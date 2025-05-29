@@ -3,10 +3,7 @@ import TeamProfileHandler from '../handlers/ProfileHandler';
 import { eventBus } from '../../../lib/eventBus';
 import { ITeamProfile } from '../model/TeamModel';
 import { AuthenticatedRequest } from '../../../types/AuthenticatedRequest';
-// Type guard to check if input is an Express Request
-function isExpressRequest(arg: any): arg is Request {
-  return arg && typeof arg === 'object' && 'body' in arg;
-}
+
 export default class TeamService {
   private profileHandler: TeamProfileHandler;
 
