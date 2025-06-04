@@ -10,7 +10,7 @@ export default async (user: UserType) => {
         email: user.email,
         firstName: user.firstName,
         lastName: user.lastName,
-        // phone: user.phoneNumber,
+        phone: user.phoneNumber,
       },
       {
         headers: {
@@ -26,10 +26,11 @@ export default async (user: UserType) => {
       ...data,
     };
   } catch (err: any) {
-    console.log(err);
+    console.log(err.response?.data);
     return {
       success: false,
       message: 'Error Creating Customer',
+      errors: err.response?.data || err.message || 'Unknown error',
     };
   }
 };

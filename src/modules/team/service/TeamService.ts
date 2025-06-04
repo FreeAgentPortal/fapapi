@@ -3,14 +3,28 @@ import TeamProfileHandler from '../handlers/ProfileHandler';
 import { eventBus } from '../../../lib/eventBus';
 import { ITeamProfile } from '../model/TeamModel';
 import { AuthenticatedRequest } from '../../../types/AuthenticatedRequest';
+import AuthenticationHandler from '../handlers/AuthenticationHandler';
 
 export default class TeamService {
   private profileHandler: TeamProfileHandler;
+  private authHandler: AuthenticationHandler;
 
   constructor() {
     this.profileHandler = new TeamProfileHandler();
+    this.authHandler = new AuthenticationHandler();
   }
-
+  public checkResource = async (req: Request, res: Response): Promise<Response> => {
+    try {
+      console.log(req);
+      const exists = await this.authHandler.checkResourceExists(req);
+      return res.status(200).json({
+        exists,
+      });
+    } catch (err: any) {
+      console.log(err);
+      return res.status(500).json({ error: err.message });
+    }
+  };
   /**
    * Called internally during registration or profile bootstrapping.
    */

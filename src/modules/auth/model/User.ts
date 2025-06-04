@@ -17,6 +17,7 @@ export interface UserType extends mongoose.Document {
   lastName: string;
   customerId: string;
   profileImageUrl: string;
+  phoneNumber: string;
   email: string;
   password: string;
   role: string;
@@ -49,6 +50,11 @@ const UserSchema = new mongoose.Schema(
       required: [true, 'Please add an email'],
       unique: true,
     },
+    phoneNumber: {
+      type: String,
+      required: [true, 'Please add a phone number'],
+      unique: true,
+    },
     password: {
       type: String,
       required: [true, 'Please add a password'],
@@ -77,7 +83,7 @@ const UserSchema = new mongoose.Schema(
       type: String,
       select: false, // do not return this field by default
     },
-    resetPasswordExpire: Date,
+    resetPasswordExpire: Date, 
     emailVerificationToken: {
       type: String,
     },

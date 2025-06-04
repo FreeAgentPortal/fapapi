@@ -6,6 +6,7 @@ const router = express.Router();
 
 const service = new TeamService();
 
+router.route('/check').get(service.checkResource); // check if a resource exists in the database
 router.route('/').get(service.getProfiles).post(AuthMiddleware.protect, service.createProfile); // ideally this would never be used as profiles should be created during registration
 router
   .route('/:id')
@@ -16,6 +17,7 @@ router
     AuthMiddleware.authorizeRoles(['admin', 'developer']) as any,
     service.deleteProfile
   ); // delete profile by user id
+
 
 router.route('/health').get((req, res) => {
   res.status(200).json({

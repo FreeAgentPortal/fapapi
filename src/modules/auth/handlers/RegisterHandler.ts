@@ -5,7 +5,7 @@ import crypto from 'crypto';
 import { RoleRegistry } from '../utils/RoleRegistry';
 import { ProfileCreationFactory } from '../factory/ProfileCreationFactory';
 // import { PaymentService } from '../service/PaymentService';
-import BillingAccount from '../model/BillingAccount';
+import BillingAccount, { BillingAccountType } from '../model/BillingAccount';
 import createCustomer from '../controller/paymentControllers/createCustomer';
 
 type RegisterInput = {
@@ -22,6 +22,7 @@ export class RegisterHandler {
   private profileRefs: Record<string, string | null> = {};
   private customerCreated = false;
   private data!: RegisterInput;
+  private billingAccount!: BillingAccountType;
 
   /**
    * @description Initializes the RegisterHandler with user data.
@@ -40,29 +41,34 @@ export class RegisterHandler {
     profileRefs: Record<string, string | null>;
     billing: { status: string; requiresVaultSetup: boolean };
   }> {
-    this.data = data;
-    await this.createUser();
-    await this.createProfiles();
+    try {
+      this.data = data;
+      await this.createUser();
+      await this.createProfiles();
 
-    const token = jwt.sign(
-      {
-        userId: this.user._id,
-        roles: this.data.roles,
+      const token = jwt.sign(
+        {
+          userId: this.user._id,
+          roles: this.data.roles,
+          profileRefs: this.profileRefs,
+        },
+        process.env.JWT_SECRET!,
+        { expiresIn: '7d' }
+      );
+
+      return {
+        token,
         profileRefs: this.profileRefs,
-      },
-      process.env.JWT_SECRET!,
-      { expiresIn: '7d' }
-    );
-
-    return {
-      token,
-      profileRefs: this.profileRefs,
-      billing: {
-        status: 'trialing',
-        requiresVaultSetup: this.customerCreated,
-      },
-      user: this.user,
-    };
+        billing: {
+          status: 'trialing',
+          requiresVaultSetup: this.customerCreated,
+        },
+        user: this.user,
+      };
+    } catch (error: any) {
+      console.log(error);
+      throw new Error(`Registration failed: ${error.message}`);
+    }
   }
 
   /**
@@ -70,8 +76,12 @@ export class RegisterHandler {
    * @throws {Error} If the email is already registered.
    */
   private async createUser() {
+    console.log(`attempting to create user with email: ${this.data.email}`);
+
     const existingUser = await User.findOne({ email: this.data.email });
-    if (existingUser) throw new Error('Email already registered');
+    if (existingUser) {
+      throw new Error('Email already registered');
+    }
 
     this.user = await User.create({
       ...this.data,
@@ -85,21 +95,26 @@ export class RegisterHandler {
    * @throws {Error} If any profile creation fails, it will clean up the user and any created profiles.
    */
   private async createProfiles() {
+    console.log(this.data.roles);
     for (const role of this.data.roles) {
+      console.log(`Creating profile for role: ${role}`);
       const creator = ProfileCreationFactory.getProfileCreator(role);
       if (!creator) continue;
-
+      console.log(`Using creator for role: ${role}`);
       const profileData = this.data.profileData?.[role] ?? {};
+      console.log(`Profile data for role ${role}:`, profileData);
       try {
-        const profile = await creator.createProfile(this.user._id, profileData); 
+        const profile = await creator.createProfile(this.user._id, profileData);
         this.profileRefs[role] = profile.profileId;
 
         const roleMeta = RoleRegistry[role];
         if (roleMeta?.isBillable && !this.customerCreated) {
+          console.log(`Creating billing account for role: ${role}`);
           await this.createBillingAccount(profile.profileId, role);
           this.customerCreated = true;
         }
       } catch (err) {
+        console.log(`Failed to create profile for role ${role}:`, err);
         await this.cleanupOnFailure();
         throw new Error(`Failed to create ${role} profile`);
       }
@@ -116,23 +131,34 @@ export class RegisterHandler {
    * @param role - The role of the user for which the billing account is being created.
    */
   private async createBillingAccount(profileId: string, role: string) {
-    const customer = await createCustomer(this.user);
+    console.log(`Creating billing account..`);
+    try {
+      const customer = await createCustomer(this.user);
+      if (!customer.success) throw new Error(customer.message);
+      console.log(customer);
+      const trialDays = RoleRegistry[role]?.trialLength ?? 14;
+      const trialEndsAt = new Date(Date.now() + trialDays * 86400_000); // 86400 seconds in a day
+      const status = RoleRegistry[role]?.trial ? 'trialing' : 'inactive';
 
-    const trialDays = RoleRegistry[role]?.trialLength ?? 14;
-    const trialEndsAt = new Date(Date.now() + trialDays * 86400_000); // 86400 seconds in a day
-    const status = RoleRegistry[role]?.trial ? 'trialing' : 'inactive';
-
-    await BillingAccount.create({
-      customerId: customer.customerId,
-      profileId,
-      profileType: role,
-      email: this.data.email,
-      processor: 'pyre',
-      processorCustomerId: customer.customer_vault_id,
-      status,
-      trialLength: trialEndsAt,
-      vaulted: false,
-    });
+      this.billingAccount = await BillingAccount.create({
+        customerId: customer.payload._id,
+        profileId,
+        profileType: role,
+        email: this.data.email,
+        processor: 'pyre',
+        processorCustomerId: customer.customer_vault_id,
+        status,
+        trialLength: trialEndsAt,
+        vaulted: false,
+      });
+      console.log(`Billing account created for profile ${profileId} with role ${role}`);
+    } catch (error: any) {
+      console.error(
+        `Failed to create billing account for profile ${profileId} with role ${role}:`,
+        error
+      );
+      throw new Error(`Failed to create billing account: ${error.message}`);
+    }
   }
 
   /**
@@ -142,7 +168,8 @@ export class RegisterHandler {
   private async cleanupOnFailure() {
     await Promise.all([
       User.findByIdAndDelete(this.user._id),
-      ...Object.entries(this.profileRefs)
+      BillingAccount.findByIdAndDelete(this.billingAccount?._id),
+      ...Object.entries(this.user.profileRefs)
         .filter(([_, pid]) => !!pid) // filter out any null or undefined profile IDs
         .map(([role, pid]) => mongoose.model(role).findByIdAndDelete(pid)), // delete profiles by role
     ]);

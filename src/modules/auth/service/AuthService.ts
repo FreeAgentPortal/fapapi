@@ -4,6 +4,7 @@ import { eventBus } from '../../../lib/eventBus';
 import { AuthenticationHandler } from '../handlers/AuthenticationHandler';
 import { AuthenticatedRequest } from '../../../types/AuthenticatedRequest';
 import { PasswordRecoveryHandler } from '../handlers/PasswordRecoveryHandler';
+import error from '../../../middleware/error';
 
 export default class AuthService {
   constructor(
@@ -22,17 +23,17 @@ export default class AuthService {
 
       result.user = null;
       return res.status(201).json(result);
-    } catch (err: any) {
-      return res.status(500).json({ message: err.message || 'Registration failed' });
+    } catch (err: any) { 
+      return error(err, req, res);
     }
-  };
+  }; 
 
   public login = async (req: Request, res: Response): Promise<Response> => {
     try {
       const result = await this.authHandler.login(req);
       return res.status(200).json(result);
     } catch (err: any) {
-      return res.status(400).json({ error: err.message });
+      return error(err, req, res); 
     }
   };
 
@@ -41,7 +42,7 @@ export default class AuthService {
       const result = await this.authHandler.getMe(req as AuthenticatedRequest);
       return res.status(200).json(result);
     } catch (err: any) {
-      return res.status(401).json({ error: err.message });
+      return error(err, req, res); 
     }
   }
 
@@ -57,7 +58,7 @@ export default class AuthService {
 
       return res.status(200).json({ message: 'Recovery email sent' });
     } catch (err: any) {
-      return res.status(500).json({ message: err.message || 'Password recovery failed' });
+      return error(err, req, res); 
     }
   };
 
@@ -67,7 +68,7 @@ export default class AuthService {
       await this.passwordRecoveryHandler.resetPassword(token, newPassword);
       return res.status(200).json({ message: 'Password reset successful' });
     } catch (err: any) {
-      return res.status(400).json({ error: err.message });
+      return error(err, req, res); 
     }
   };
 
@@ -82,7 +83,7 @@ export default class AuthService {
 
       return res.status(200).json(result);
     } catch (err: any) {
-      return res.status(400).json({ error: err.message });
+      return error(err, req, res); 
     }
   };
 
@@ -104,7 +105,7 @@ export default class AuthService {
         .status(200)
         .json({ success: true, message: 'Verification email sent', token: result.token });
     } catch (err: any) {
-      return res.status(400).json({ error: err.message });
+      return error(err, req, res); 
     }
   };
 
@@ -113,7 +114,7 @@ export default class AuthService {
       const result = await this.authHandler.recaptchaVerify(req);
       return res.status(200).json(result);
     } catch (err: any) {
-      return res.status(400).json({ error: err.message });
+      return error(err, req, res);
     }
   };
 
@@ -129,7 +130,7 @@ export default class AuthService {
         // exists
       });
     } catch (err: any) {
-      return res.status(500).json({ error: err.message });
+      return error(err, req, res); 
     }
   };
 }

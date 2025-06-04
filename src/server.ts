@@ -55,14 +55,14 @@ app.use(xss());
 app.use(hpp());
 
 app.use(express.static(path.join(__dirname, '../public')));
-app.use((req, res, next) => {
-  Object.defineProperty(req, 'query', {
-    set() {
-      console.trace('req.query assignment detected');
-    },
-  });
-  next();
-});
+// app.use((req, res, next) => {
+//   Object.defineProperty(req, 'query', {
+//     set() {
+//       console.trace('req.query assignment detected');
+//     },
+//   });
+//   next();
+// });
 
 app.use('/api/v1', apiV1Routes);
 app.post('/webhook', (req, res) => {
@@ -95,7 +95,7 @@ const numCPUs = os.cpus().length;
 const maxWorkers = Math.min(numCPUs, Number(process.env.CORE_CAP));
 
 if (cluster.isPrimary) {
-  console.log(`Primary process ${process.pid} is running`.green);
+  console.log(`Primary process ${process.pid} is running`.green); 
 
   //fork workers
   for (let i = 0; i < maxWorkers; i++) {
@@ -115,7 +115,7 @@ if (cluster.isPrimary) {
     res.json({ message: `Handled by ${process.pid}` });
   });
 
-  app.listen(3000, () => {
+  app.listen(5001, () => {
     console.log(`Worker ${process.pid} started`);
   });
   //worker process runs the server

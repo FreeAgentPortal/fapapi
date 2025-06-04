@@ -3,8 +3,7 @@ import { IAthlete, AthleteModel } from '../models/AthleteModel';
 import mongoose from 'mongoose';
 import { AuthenticatedRequest } from '../../../types/AuthenticatedRequest';
 
-export interface AthleteProfileInput {
-  userId: mongoose.Types.ObjectId;
+export interface AthleteProfileInput { 
   fullName: string;
   contactNumber?: string;
   email?: string;
@@ -32,16 +31,20 @@ export class AthleteProfileHandler {
    * @param data Athlete profile input
    * @returns The created athlete document
    */
-  async createProfile(data: AthleteProfileInput): Promise<IAthlete> {
-    const existing = await AthleteModel.findOne({ userId: data.userId });
+  async createProfile(userId: string, data: AthleteProfileInput): Promise<IAthlete> {
+    const existing = await AthleteModel.findOne({ userId: userId });
     if (existing) {
+      console.log(`Athlete profile already exists for userId: ${userId}`);
       throw new Error('Athlete profile already exists for this user.');
     }
 
-    const profile = new AthleteModel(data);
-    if (!profile){
+    const profile = await AthleteModel.create({ ...data, userId });
+    if (!profile) {
+      console.error('Failed to create athlete profile: Invalid data provided.', data);
       throw new Error('Failed to create athlete profile: Invalid data provided.');
     }
+
+    console.log(`created athlete profile`);
 
     return await profile.save();
   }
