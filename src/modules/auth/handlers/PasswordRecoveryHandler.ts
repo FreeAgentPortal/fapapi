@@ -2,19 +2,23 @@ import User from '../model/User';
 import crypto from 'crypto';
 
 export class PasswordRecoveryHandler {
-  async requestReset(email: string): Promise<{ email: string; token: string }> {
+  async requestReset(
+    email: string
+  ): Promise<{ success: boolean; email?: string; token?: string }> {
     // Validate user exists
     const user = await User.findOne({ email });
     if (!user) {
-      throw new Error('User with this email does not exist.');
+      // Soft fail if the user does not exist
+      return { success: false };
     }
     // Generate token + expiry
     const token = await user.getResetPasswordToken();
     if (!token) {
       throw new Error('Failed to generate reset token.');
     }
-    // Save to user
+    // Return token and email
     return {
+      success: true,
       email,
       token,
     };
