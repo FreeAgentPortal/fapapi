@@ -18,7 +18,7 @@ router.route('/:email/email').get(authService.checkEmail);
 router.post('/register', authService.register);
 router.route('/recaptcha').post(authService.recaptcha);
 router.route('/resetpassword/:resettoken').put(authService.resetPassword);
-router.route('/forgotpassword').post(authService.forgotPassword);
+router.route('/forgot-password').post(authService.forgotPassword);
 router.route('/verifyEmail').post(authService.verifyEmail);
 router.route('/resend-verification-email').post(authService.resendVerificationEmail);
 router.route('/login').post(authService.login);
