@@ -134,8 +134,7 @@ export class RegisterHandler {
     console.log(`Creating billing account..`);
     try {
       const customer = await createCustomer(this.user);
-      if (!customer.success) throw new Error(customer.message);
-      console.log(customer);
+      if (!customer.success) throw new Error(customer.message); ;
       const trialDays = RoleRegistry[role]?.trialLength ?? 14;
       const trialEndsAt = new Date(Date.now() + trialDays * 86400_000); // 86400 seconds in a day
       const status = RoleRegistry[role]?.trial ? 'trialing' : 'inactive';

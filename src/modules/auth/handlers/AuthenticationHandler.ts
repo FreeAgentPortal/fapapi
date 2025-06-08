@@ -4,6 +4,7 @@ import jwt from 'jsonwebtoken';
 import User from '../model/User';
 import { AuthenticatedRequest } from '../../../types/AuthenticatedRequest';
 import axios from 'axios';
+import BillingAccount from '../model/BillingAccount';
 
 export class AuthenticationHandler {
   /**
@@ -67,14 +68,16 @@ export class AuthenticationHandler {
       throw new Error('User not found.');
     }
 
+    const billing = await BillingAccount.findOne({ userId: foundUser._id });
+
     return {
       payload: {
         _id: foundUser._id,
         email: foundUser.email,
         fullName: foundUser.fullName,
-
         roles: foundUser.role,
         profileRefs: foundUser.profileRefs,
+        needsBillingSetup: !!(billing?.vaulted ?? true),
       },
     };
   }

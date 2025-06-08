@@ -13,6 +13,7 @@ export interface BillingAccountType extends mongoose.Document {
   processor?: string;
   createdAt: Date;
   updatedAt: Date;
+  vaulted: Boolean;
   nextBillingDate?: Date;
   // is yearly? whether or not the subscription is yearly
   isYearly?: boolean;
@@ -55,6 +56,10 @@ const Schema = new mongoose.Schema(
     },
     processor: {
       type: String,
+    },
+    vaulted: {
+      type: Boolean,
+      default: false,
     },
   },
   {
