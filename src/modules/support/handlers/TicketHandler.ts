@@ -1,5 +1,4 @@
-import { AuthenticatedRequest } from '../../../types/AuthenticatedRequest';
-import SupportTicket from '../models/Support'; // Adjust path as needed
+import SupportTicket, { SupportType } from '../models/Support'; // Adjust path as needed
 import SupportGroup from '../models/SupportGroups';
 import { UserType } from '../../auth/model/User';
 import { ErrorUtil } from '../../../middleware/ErrorUtil';
@@ -8,7 +7,7 @@ import mongoose from 'mongoose';
 
 export class TicketHandler {
   // Create a new support ticket
-  async createTicket(data: { user: UserType; body: any }) {
+  async createTicket(data: { user: UserType; body: any }): Promise<SupportType> {
     const newTicket = await SupportTicket.create({
       ...data.body,
       requester: data.user ? data.user._id : null,
@@ -58,7 +57,13 @@ export class TicketHandler {
   }
 
   // Retrieve all tickets for a user
-  async getTickets(options: { filters: Array<Object>; sort: Record<string, 1 | -1>; query: Array<Object>; page: Number; limit: Number }) {
+  async getTickets(options: {
+    filters: Array<Object>;
+    sort: Record<string, 1 | -1>;
+    query: Array<Object>;
+    page: Number;
+    limit: Number;
+  }): Promise<{ entries: any[]; metadata: any[]}[]> {
     return await SupportTicket.aggregate([
       {
         $match: {
@@ -105,7 +110,7 @@ export class TicketHandler {
   }
 
   // Retrieve a single ticket by ID
-  async getTicket(ticketId: string) {
+  async getTicket(ticketId: string): Promise<SupportType[]> {
     return await SupportTicket.aggregate([
       {
         $match: {
@@ -153,26 +158,22 @@ export class TicketHandler {
   }
 
   // Update a ticket (e.g., reply or status change)
-  async updateTicket(ticketId: string, req: AuthenticatedRequest) {
-    const item = await SupportTicket.findById(req.params.id);
+  async updateTicket(ticketId: string, data: any): Promise<SupportType> {
+    const item = await SupportTicket.findById(ticketId);
 
     if (!item) {
-      const error: any = new Error('Ticket not found');
-      error.status = 404;
-      throw error;
+      throw new ErrorUtil('Ticket not found', 404);
     }
     // next we need to find all of our support groups and assign the ticket to the group
     // that matches the category, the Category field is an array of strings, so find
     // all groups that match the category strings
     const groups = await SupportGroup.find({
-      name: { $in: req.body.category },
+      name: { $in: data.category },
     });
 
     // if no groups are found, return a 400 error something went wrong...
     if (!groups.length) {
-      const error: any = new Error('Ticket Group not found');
-      error.status = 404;
-      throw error;
+      throw new ErrorUtil('Ticket Group Not Found', 404);
     }
 
     //update the ticket with the groups that were found
@@ -180,24 +181,32 @@ export class TicketHandler {
 
     const updatedItem = await SupportTicket.findByIdAndUpdate(
       item._id,
-      { ...req.body },
+      { ...data },
       {
         new: true,
         runValidators: true,
       }
     );
     if (!updatedItem) {
-      const error: any = new Error('Ticket Was not able to be Updated');
-      error.status = 400;
-      throw error;
+      throw new ErrorUtil('Ticket was unable to update', 400);
     }
     return await updatedItem.save();
   }
 
   // Delete a ticket by ID
-  async deleteTicket(ticketId: string) {
-    const ticket = await SupportTicket.findByIdAndDelete(ticketId);
-    if (!ticket) throw new Error('Ticket not found or already deleted');
-    return ticket;
+  async deleteTicket(ticketId: string): Promise<{ success: boolean }> {
+    // find the object
+    const object = await SupportTicket.findById(ticketId);
+    // if the object doesn't exist, return an error
+    if (!object) {
+      throw new ErrorUtil('Ticket not found', 404);
+    }
+
+    // find all supportmessages that belong to the ticket, and delete them
+    await SupportMessage.deleteMany({ ticket: object._id });
+
+    // delete the object
+    await SupportTicket.findByIdAndDelete(ticketId);
+    return { success: true };
   }
 }

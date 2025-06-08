@@ -66,7 +66,7 @@ export default class TicketService {
           prevPage: page - 1,
           nextPage: page + 1,
         },
-      });
+      }); 
     } catch (err) {
       console.log(err);
       return error(err, req, res);
@@ -74,8 +74,10 @@ export default class TicketService {
   };
   public updateResource = async (req: Request, res: Response): Promise<Response> => {
     try {
-      return res.status(400).json({ message: 'This Method hasnt been implemented Yet' });
+      await this.ticketHandler.updateTicket(req.params.id, req.body);
+      return res.status(204).json({ success: true });
     } catch (err) {
+      console.log(err);
       return error(err, req, res);
     }
   };
