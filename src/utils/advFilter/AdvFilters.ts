@@ -5,7 +5,7 @@ export class AdvFilters {
   /**
    * Parses a filter options object (e.g. from query params) into MongoDB-compatible operators.
    */
-  public static filter(filters: string): Record<string, any> {
+  public static filter(filters: string): Record<string, any>[] {
     const filterOptionsObject: Record<string, any> = {};
     // split and remove empty strings
     const filterOptionsArray = filters.split('|').filter((option: any) => option !== '');

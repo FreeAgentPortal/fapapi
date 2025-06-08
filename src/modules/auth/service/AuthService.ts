@@ -37,7 +37,7 @@ export default class AuthService {
     }
   };
 
-  async getMe(req: Request, res: Response) {
+  public getMe = async (req: Request, res: Response): Promise<Response> => {
     try {
       const result = await this.authHandler.getMe(req as AuthenticatedRequest);
       return res.status(200).json(result);

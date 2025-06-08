@@ -1,5 +1,5 @@
-import jwt from "jsonwebtoken";
-import User from "../models/User"; // Update this to your actual User model path
+import jwt from 'jsonwebtoken';
+import User from '../modules/auth/model/User';
 
 interface JwtPayload {
   _id: string;
@@ -18,20 +18,20 @@ interface JwtPayload {
  * @lastModified 2024-11-26
  */
 const authenticateUser = async (authorizationHeader: string | undefined): Promise<any> => {
-  if (!authorizationHeader || !authorizationHeader.startsWith("Bearer")) {
+  if (!authorizationHeader || !authorizationHeader.startsWith('Bearer')) {
     return null; // No token provided
   }
 
   try {
     // Extract the token
-    const token = authorizationHeader.split(" ")[1];
-    
+    const token = authorizationHeader.split(' ')[1];
+
     // Verify and decode the token
     const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload;
-    
+
     // Find the user in the database
-    const user = await User.findById(decoded._id).select("-password");
-    
+    const user = await User.findById(decoded._id).select('-password');
+
     // Ensure user is active
     if (user && user.isActive) {
       return { ...user.toObject() }; // Return user and token

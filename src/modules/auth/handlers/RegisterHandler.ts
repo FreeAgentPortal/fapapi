@@ -95,21 +95,21 @@ export class RegisterHandler {
    * @throws {Error} If any profile creation fails, it will clean up the user and any created profiles.
    */
   private async createProfiles() {
-    console.log(this.data.roles);
+    // console.log(this.data.roles);
     for (const role of this.data.roles) {
-      console.log(`Creating profile for role: ${role}`);
+      // console.log(`Creating profile for role: ${role}`);
       const creator = ProfileCreationFactory.getProfileCreator(role);
       if (!creator) continue;
-      console.log(`Using creator for role: ${role}`);
+      // console.log(`Using creator for role: ${role}`);
       const profileData = this.data.profileData?.[role] ?? {};
-      console.log(`Profile data for role ${role}:`, profileData);
+      // console.log(`Profile data for role ${role}:`, profileData);
       try {
         const profile = await creator.createProfile(this.user._id, profileData);
         this.profileRefs[role] = profile.profileId;
 
         const roleMeta = RoleRegistry[role];
         if (roleMeta?.isBillable && !this.customerCreated) {
-          console.log(`Creating billing account for role: ${role}`);
+          // console.log(`Creating billing account for role: ${role}`);
           await this.createBillingAccount(profile.profileId, role);
           this.customerCreated = true;
         }

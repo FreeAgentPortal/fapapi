@@ -6,7 +6,6 @@ import { AuthenticatedRequest } from '../../../types/AuthenticatedRequest';
 import axios from 'axios';
 
 export class AuthenticationHandler {
-
   /**
    * @description Logs in a user by validating their credentials and generating a JWT token.
    * @throws {Error} If the email or password is missing, or if the credentials are invalid.
@@ -44,6 +43,7 @@ export class AuthenticationHandler {
     return {
       message: 'Login successful.',
       token,
+      isEmailVerified: user.isEmailVerified,
     };
   }
 
@@ -71,6 +71,8 @@ export class AuthenticationHandler {
       payload: {
         _id: foundUser._id,
         email: foundUser.email,
+        fullName: foundUser.fullName,
+
         roles: foundUser.role,
         profileRefs: foundUser.profileRefs,
       },
@@ -82,7 +84,7 @@ export class AuthenticationHandler {
    * @param req - The request object containing recaptcha token.
    * @returns {Promise<{ success: boolean, message: string }>}
    * @memberof AuthenticationHandler
-   * 
+   *
    */
   async recaptchaVerify(req: Request) {
     const { token } = req.body;
@@ -94,7 +96,7 @@ export class AuthenticationHandler {
     const secretKey = process.env.RECAPTCHA_SECRET_KEY;
 
     const url = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${token}`;
-    const { data } = await axios.post(url); 
+    const { data } = await axios.post(url);
 
     if (!data.success) {
       throw new Error('Recaptcha verification failed.');
@@ -104,6 +106,4 @@ export class AuthenticationHandler {
       message: 'Recaptcha verification successful.',
     };
   }
- 
-    
 }

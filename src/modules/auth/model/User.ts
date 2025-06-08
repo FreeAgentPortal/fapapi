@@ -45,6 +45,9 @@ const UserSchema = new mongoose.Schema(
     lastName: {
       type: String,
     },
+    profileImageUrl: {
+      type: String,
+    },
     email: {
       type: String,
       required: [true, 'Please add an email'],
@@ -83,7 +86,7 @@ const UserSchema = new mongoose.Schema(
       type: String,
       select: false, // do not return this field by default
     },
-    resetPasswordExpire: Date, 
+    resetPasswordExpire: Date,
     emailVerificationToken: {
       type: String,
     },
