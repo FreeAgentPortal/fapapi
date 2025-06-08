@@ -20,7 +20,16 @@ export default class TicketService {
   };
   public getResource = async (req: Request, res: Response): Promise<Response> => {
     try {
-      return res.status(400).json({ message: 'This Method hasnt been implemented Yet' });
+      const [result] = await this.ticketHandler.getTicket(req.params.id);
+      if (!result) {
+        return res.status(404).json({ message: 'Resource Not found' });
+      }
+      return res.status(200).json({
+        success: true,
+        payload: {
+          result,
+        },
+      });
     } catch (err) {
       return error(err, req, res);
     }

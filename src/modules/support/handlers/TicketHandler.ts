@@ -4,6 +4,7 @@ import SupportGroup from '../models/SupportGroups';
 import { UserType } from '../../auth/model/User';
 import { ErrorUtil } from '../../../middleware/ErrorUtil';
 import SupportMessage from '../models/SupportMessage';
+import mongoose from 'mongoose';
 
 export class TicketHandler {
   // Create a new support ticket
@@ -105,7 +106,50 @@ export class TicketHandler {
 
   // Retrieve a single ticket by ID
   async getTicket(ticketId: string) {
-    return await SupportTicket.findById(ticketId);
+    return await SupportTicket.aggregate([
+      {
+        $match: {
+          _id: new mongoose.Types.ObjectId(ticketId),
+        },
+      },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'requester',
+          foreignField: '_id',
+          as: 'requester',
+          pipeline: [
+            {
+              $project: {
+                _id: 1,
+                fullName: 1,
+                email: 1,
+                phoneNumber: 1,
+              },
+            },
+          ],
+        },
+      },
+      {
+        $lookup: {
+          from: 'supportgroups',
+          localField: 'groups',
+          foreignField: '_id',
+          as: 'groups',
+          pipeline: [
+            {
+              $project: {
+                _id: 1,
+                name: 1,
+              },
+            },
+          ],
+        },
+      },
+      {
+        $unwind: { path: '$requester', preserveNullAndEmptyArrays: true },
+      },
+    ]);
   }
 
   // Update a ticket (e.g., reply or status change)
