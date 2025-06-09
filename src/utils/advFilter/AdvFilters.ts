@@ -7,6 +7,8 @@ export class AdvFilters {
    */
   public static filter(filters: string): Record<string, any>[] {
     const filterOptionsObject: Record<string, any> = {};
+    //if feature string is empty or undefined return empty object
+    if (filters === undefined || filters?.length === 0) return [{}];
     // split and remove empty strings
     const filterOptionsArray = filters.split('|').filter((option: any) => option !== '');
     // console.log(filterOptionsArray);
@@ -48,7 +50,7 @@ export class AdvFilters {
         }
       }
     });
-    // console.log(filterOptionsObject);
+    console.log(filterOptionsObject);
     return [filterOptionsObject];
   }
 
@@ -57,7 +59,6 @@ export class AdvFilters {
    */
   public static sort(sortStr: string): Record<string, 1 | -1> {
     if (!sortStr) return {};
-
     return sortStr.split(';').reduce<Record<string, 1 | -1>>((acc, field) => {
       if (field.startsWith('-')) {
         acc[field.slice(1)] = -1;
@@ -133,7 +134,13 @@ export class AdvFilters {
             if (opKey === '$elemMatch' && typeof opValue === 'string') {
               return (acc[opKey] = { $eq: this.checkObjectId(opValue) }); // Handle simple string equality for $elemMatch
             } else if (opKey === '$in') {
-              acc[opKey] = Array.isArray(opValue) ? opValue : [this.checkObjectId(opValue as string)];
+              if (typeof opValue === 'string' && opValue.includes(',')) {
+                acc[opKey] = opValue.split(',').map((v) => this.checkObjectId(v.trim()));
+              } else if (Array.isArray(opValue)) {
+                acc[opKey] = opValue.map((v) => this.checkObjectId(v));
+              } else {
+                acc[opKey] = [this.checkObjectId(opValue as string)];
+              }
             } else if (isValidDate) {
               acc[opKey] = moment(opValue as any).toDate();
             } else if (isNumber) {
