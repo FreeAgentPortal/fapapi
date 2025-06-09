@@ -12,25 +12,22 @@ export class AuthMiddleware {
    * @param next - Next function to call the next middleware
    * @returns {void}
    */
-  static protect = asyncHandler(
-    async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-      const authHeader = req.headers.authorization;
+  static protect = asyncHandler(async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
+    const authHeader = req.headers.authorization;
 
-      if (!authHeader) {
-        res.status(401);
-        throw new Error('No authorization header provided.');
-      }
-
-      if (authHeader.startsWith('Bearer ')) {
-        await AuthMiddleware.verifyJwt(req, res, next);
-      } else if (authHeader.startsWith('ApiKey ')) {
-        await AuthMiddleware.verifyApiKey(req, res, next);
-      } else {
-        res.status(401);
-        throw new Error('Unsupported authentication method.');
-      }
+    if (!authHeader) {
+      res.status(401);
+      throw new Error('No authorization header provided.');
     }
-  );
+
+    if (authHeader.startsWith('Bearer ')) {
+      await AuthMiddleware.verifyJwt(req, res, next);
+    } else if (authHeader.startsWith('ApiKey ')) {
+      await AuthMiddleware.verifyApiKey(req, res, next);
+    } else {
+      return res.status(401).json({ message: 'Unsupported authentication method.' });
+    }
+  });
 
   private static async verifyJwt(req: AuthenticatedRequest, res: Response, next: NextFunction) {
     try {
@@ -38,14 +35,12 @@ export class AuthMiddleware {
       const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload;
       req.user = await User.findById(decoded.userId).select('-password');
       if (!req.user) {
-        res.status(401);
-        throw new Error('User not found.');
-      } 
+        return res.status(401).json({ message: 'User not found.' });
+      }
 
       next();
     } catch (err) {
-      res.status(401);
-      throw new Error('JWT validation failed.');
+      return res.status(401).json({ message: 'JWT validation failed.' + err });
     }
   }
 
@@ -55,8 +50,7 @@ export class AuthMiddleware {
     const validKey = process.env.INTERNAL_API_KEY; // or use a DB-stored key lookup if needed
 
     if (!validKey || apiKey !== validKey) {
-      res.status(403);
-      throw new Error('Invalid or missing API key.');
+      return res.status(401).json({ message: 'Invalid or missing API key.' });
     }
 
     // Optionally attach a `system` user identity for internal operations
@@ -73,12 +67,17 @@ export class AuthMiddleware {
    * @param allowedRoles - Array of roles that are allowed to access the route
    * @returns Middleware function
    */
-  static authorizeRoles(allowedRoles: string[]) {
+  static authorizeRoles(requiredPermissions: string[]) {
     return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
-      if (!req.user || !allowedRoles.includes(req.user.role[0])) {
-        return res.status(403).json({ error: 'Forbidden' });
+      const userPermissions = req.user?.permissions || [];
+
+      const hasPermission = requiredPermissions.every((permission) => userPermissions.includes(permission));
+
+      if (!hasPermission) {
+        return res.status(403).json({ message: 'Forbidden: insufficient permissions' });
       }
-      next();
+
+      return next();
     };
   }
 }
