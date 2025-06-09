@@ -28,6 +28,7 @@ export interface UserType extends mongoose.Document {
   createdAt: Date;
   updatedAt: Date;
   isEmailVerified: boolean;
+  permissions: string[];
   emailVerificationToken: string | undefined | null;
   emailVerificationExpires: Date | undefined | null;
   profileRefs: Record<string, string | null>;
@@ -81,6 +82,10 @@ const UserSchema = new mongoose.Schema(
     isEmailVerified: {
       type: Boolean,
       default: false,
+    },
+    permissions: {
+      type: [String],
+      default: ['user.all'],
     },
     resetPasswordToken: {
       type: String,

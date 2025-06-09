@@ -47,8 +47,7 @@ const protect = (routes?: any) => {
         }
 
         // Attach the user associated with the API key to req.user
-        req.user = await User.findById(apiRecord.user).select('-password');
-        console.log(req.user);
+        req.user = await User.findById(apiRecord.user).select('-password'); 
 
         return next();
       } catch (e) {

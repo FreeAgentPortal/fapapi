@@ -50,7 +50,7 @@ export class AdvFilters {
         }
       }
     });
-    // console.log(filterOptionsObject);
+    console.log(filterOptionsObject);
     return [filterOptionsObject];
   }
 
