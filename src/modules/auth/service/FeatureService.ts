@@ -20,7 +20,7 @@ export default class FeatureService {
   });
   public getResource = async (req: Request, res: Response): Promise<Response> => {
     try {
-      const [result] = await this.crudHandler.fetch(req.params.id);
+      const result = await this.crudHandler.fetch(req.params.id);
       if (!result) {
         return res.status(404).json({ message: 'Resource Not found' });
       }
