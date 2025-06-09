@@ -34,13 +34,14 @@ export class AuthMiddleware {
       const token = req.headers.authorization!.split(' ')[1];
       const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload;
       req.user = await User.findById(decoded.userId).select('-password');
+      console.log(req.user);
       if (!req.user) {
         return res.status(401).json({ message: 'User not found.' });
       }
 
       next();
     } catch (err) {
-      return res.status(401).json({ message: 'JWT validation failed.' + err });
+      return res.status(401).json({ message: 'JWT validation failed. ' + err });
     }
   }
 
@@ -71,7 +72,7 @@ export class AuthMiddleware {
     return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
       const userPermissions = req.user?.permissions || [];
 
-      const hasPermission = requiredPermissions.every((permission) => userPermissions.includes(permission));
+      const hasPermission = requiredPermissions.some((permission) => userPermissions.includes(permission));
 
       if (!hasPermission) {
         return res.status(403).json({ message: 'Forbidden: insufficient permissions' });
