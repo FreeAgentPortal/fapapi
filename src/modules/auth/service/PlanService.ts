@@ -6,7 +6,7 @@ import { AuthenticatedRequest } from '../../../types/AuthenticatedRequest';
 import asyncHandler from '../../../middleware/asyncHandler';
 import { PlanHandler } from '../handlers/PlanHandler';
 
-export default class FeatureService {
+export default class PlanService {
   constructor(private readonly crudHandler: PlanHandler = new PlanHandler()) {}
 
   public create = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {

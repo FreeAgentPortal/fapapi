@@ -8,4 +8,6 @@ export class PlanHandler extends CRUDHandler<PlanType> {
   constructor() {
     super(PlanSchema);
   }
+
+  
 }

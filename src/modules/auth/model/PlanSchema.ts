@@ -7,10 +7,13 @@ export interface PlanType extends mongoose.Document {
   name: string;
   description: string;
   price: string;
+  yearlyDiscount: number;
   billingCycle: string;
   availableTo: string[];
+  tier: string;
   features: FeatureType[];
   isActive: boolean;
+  mostPopular: boolean;
 }
 
 const Schema = new mongoose.Schema(
@@ -35,7 +38,17 @@ const Schema = new mongoose.Schema(
         required: true,
       },
     ],
+    tier: {
+      type: String,
+      enum: ['silver', 'gold', 'platnium', 'bronze', 'diamond'],
+      default: 'silver',
+    },
+    yearlyDiscount: {
+      type: Number,
+      default: 0.1,
+    },
     isActive: { type: Boolean, default: true },
+    mostPopular: { type: Boolean, default: false },
   },
   {
     timestamps: true,
