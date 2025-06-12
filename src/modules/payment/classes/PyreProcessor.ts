@@ -1,7 +1,7 @@
 import axios from 'axios'; 
 import PaymentProcessor from './PaymentProcess'; 
 import { CommonTransactionType } from '../../../types/CommonTransactionType';
-import User, { UserType } from '../model/User';
+import User, { UserType } from '../models/User';
 import CommonCaptureTypes from '../../../types/CommonCaptureTypes';
 import CommonVoidTypes from '../../../types/CommonVoidTypes';
 import CommonRefundTypes from '../../../types/CommonRefundTypes';
@@ -28,7 +28,7 @@ class PyreProcessing extends PaymentProcessor {
   async voidTransaction(details: CommonVoidTypes, order: any) {}
   async refundTransaction(details: CommonRefundTypes, order: any) {}
   async createVault(
-    user: UserType,
+    customerId: string,
     details: {
       first_name: string;
       last_name?: string;
@@ -59,7 +59,7 @@ class PyreProcessing extends PaymentProcessor {
     try {
       // send a request to pyre to create a customer in the api
       const { data } = await axios.post(
-        `${process.env.PYRE_API_URL}/vault/${user.customerId}`,
+        `${process.env.PYRE_API_URL}/vault/${customerId}`,
         {
           ...details,
         },
@@ -69,12 +69,7 @@ class PyreProcessing extends PaymentProcessor {
             'x-api-key': process.env.PYRE_API_KEY,
           },
         }
-      );
-
-      await User.findByIdAndUpdate(user._id, {
-        vaultId: data._id,
-      });
-
+      ); 
       return {
         success: true,
         message: 'Customer Vault Created',

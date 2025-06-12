@@ -1,9 +1,11 @@
 import mongoose from 'mongoose';
 import { ObjectId } from 'mongoose';
+import { UserType } from './User';
+import { PlanType } from './PlanSchema';
 
 export interface BillingAccountType extends mongoose.Document {
   _id: ObjectId;
-  customerId: ObjectId;
+  customerId: string;
   profileId: ObjectId;
   email: string;
   profileType: string;
@@ -13,22 +15,32 @@ export interface BillingAccountType extends mongoose.Document {
   processor?: string;
   createdAt: Date;
   updatedAt: Date;
+  vaulted: Boolean;
+  vaultId: string;
   nextBillingDate?: Date;
+  payor: UserType;
+  plan: PlanType;
   // is yearly? whether or not the subscription is yearly
   isYearly?: boolean;
 }
 
 const Schema = new mongoose.Schema(
   {
-    customerId: {
-      type: mongoose.Types.ObjectId,
-      required: true,
-      ref: 'Customer',
+    customerId: { // id of customer in pyre or payment processor
+      type: String,
+      required: true, 
     },
     profileId: {
       type: mongoose.Types.ObjectId,
       required: true,
       ref: 'Profile',
+    },
+    vaultId: {
+      type: String,
+    },
+    plan: {
+      type: mongoose.Types.ObjectId,
+      ref: 'Plan',
     },
     email: {
       type: String,
@@ -55,6 +67,14 @@ const Schema = new mongoose.Schema(
     },
     processor: {
       type: String,
+    },
+    vaulted: {
+      type: Boolean,
+      default: false,
+    },
+    payor: {
+      type: mongoose.Types.ObjectId,
+      ref: 'User',
     },
   },
   {

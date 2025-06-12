@@ -4,15 +4,12 @@ import { AuthMiddleware } from '../../../middleware/AuthMiddleware';
 import { AuthenticationHandler } from '../handlers/AuthenticationHandler';
 import { PasswordRecoveryHandler } from '../handlers/PasswordRecoveryHandler';
 import { RegisterHandler } from '../handlers/RegisterHandler';
-
+import featureRoutes from './featureRoutes';
+import planRoutes from './planRoutes';
 
 const router = express.Router();
 
-const authService = new AuthService(
-  new AuthenticationHandler(),
-  new PasswordRecoveryHandler(),
-  new RegisterHandler()
-);
+const authService = new AuthService(new AuthenticationHandler(), new PasswordRecoveryHandler(), new RegisterHandler());
 
 router.route('/:email/email').get(authService.checkEmail);
 router.post('/register', authService.register);
@@ -29,6 +26,8 @@ router.route('/health').get((req, res) => {
   });
 });
 
+router.use('/feature', featureRoutes);
+router.use('/plan', planRoutes);
 // authenticated routes
-router.get('/me', AuthMiddleware.protect, authService.getMe); 
+router.get('/me', AuthMiddleware.protect, authService.getMe);
 export default router;
