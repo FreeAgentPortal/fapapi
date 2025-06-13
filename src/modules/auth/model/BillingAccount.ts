@@ -26,9 +26,10 @@ export interface BillingAccountType extends mongoose.Document {
 
 const Schema = new mongoose.Schema(
   {
-    customerId: { // id of customer in pyre or payment processor
+    customerId: {
+      // id of customer in pyre or payment processor
       type: String,
-      required: true, 
+      required: true,
     },
     profileId: {
       type: mongoose.Types.ObjectId,

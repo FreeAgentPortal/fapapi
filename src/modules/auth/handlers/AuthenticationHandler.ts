@@ -5,6 +5,7 @@ import User from '../model/User';
 import { AuthenticatedRequest } from '../../../types/AuthenticatedRequest';
 import axios from 'axios';
 import BillingAccount from '../model/BillingAccount';
+import { ErrorUtil } from '../../../middleware/ErrorUtil';
 
 export class AuthenticationHandler {
   /**
@@ -60,16 +61,13 @@ export class AuthenticationHandler {
     const user = req.user; // Assumes middleware has attached it
 
     if (!user || !user._id) {
-      throw new Error('User not authenticated.');
+      throw new ErrorUtil('User not authenticated.', 400);
     }
 
     const foundUser = await User.findById(user._id).select('-password');
     if (!foundUser) {
-      throw new Error('User not found.');
+      throw new ErrorUtil('User not found.', 404);
     }
-
-    const billing = await BillingAccount.findOne({ userId: foundUser._id });
-
     return {
       payload: {
         _id: foundUser._id,
@@ -77,7 +75,6 @@ export class AuthenticationHandler {
         fullName: foundUser.fullName,
         roles: foundUser.role,
         profileRefs: foundUser.profileRefs,
-        needsBillingSetup: !!(billing?.vaulted ?? true),
       },
     };
   }

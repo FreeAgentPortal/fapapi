@@ -23,17 +23,17 @@ export default class AuthService {
 
       result.user = null;
       return res.status(201).json(result);
-    } catch (err: any) { 
+    } catch (err: any) {
       return error(err, req, res);
     }
-  }; 
+  };
 
   public login = async (req: Request, res: Response): Promise<Response> => {
     try {
       const result = await this.authHandler.login(req);
       return res.status(200).json(result);
     } catch (err: any) {
-      return error(err, req, res); 
+      return error(err, req, res);
     }
   };
 
@@ -42,15 +42,14 @@ export default class AuthService {
       const result = await this.authHandler.getMe(req as AuthenticatedRequest);
       return res.status(200).json(result);
     } catch (err: any) {
-      return error(err, req, res); 
+      console.log(err);
+      return error(err, req, res);
     }
-  }
+  };
 
   public forgotPassword = async (req: Request, res: Response): Promise<Response> => {
     try {
-      const result = await this.passwordRecoveryHandler.requestReset(
-        req.body.email
-      );
+      const result = await this.passwordRecoveryHandler.requestReset(req.body.email);
 
       // Only emit event if a user was found and token generated
       if (result.success) {
@@ -62,7 +61,7 @@ export default class AuthService {
 
       return res.status(200).json({ message: 'Recovery email sent' });
     } catch (err: any) {
-      return error(err, req, res); 
+      return error(err, req, res);
     }
   };
 
@@ -72,7 +71,7 @@ export default class AuthService {
       await this.passwordRecoveryHandler.resetPassword(token, newPassword);
       return res.status(200).json({ message: 'Password reset successful' });
     } catch (err: any) {
-      return error(err, req, res); 
+      return error(err, req, res);
     }
   };
 
@@ -87,7 +86,7 @@ export default class AuthService {
 
       return res.status(200).json(result);
     } catch (err: any) {
-      return error(err, req, res); 
+      return error(err, req, res);
     }
   };
 
@@ -105,11 +104,9 @@ export default class AuthService {
         token: result.token,
       });
 
-      return res
-        .status(200)
-        .json({ success: true, message: 'Verification email sent', token: result.token });
+      return res.status(200).json({ success: true, message: 'Verification email sent', token: result.token });
     } catch (err: any) {
-      return error(err, req, res); 
+      return error(err, req, res);
     }
   };
 
@@ -134,7 +131,7 @@ export default class AuthService {
         // exists
       });
     } catch (err: any) {
-      return error(err, req, res); 
+      return error(err, req, res);
     }
   };
 }

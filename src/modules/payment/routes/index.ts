@@ -9,7 +9,7 @@ const paymentService = new PaymentService();
 router.route('/').get((req, res) => {
   res.status(200).json({ message: 'hello' });
 });
-router.route('/:id').post(AuthMiddleware.protect, paymentService.updateBilling);
+router.route('/:id').get(AuthMiddleware.protect, paymentService.fetchBilling).post(AuthMiddleware.protect, paymentService.updateBilling);
 
 router.route('/health').get((req, res) => {
   res.status(200).json({

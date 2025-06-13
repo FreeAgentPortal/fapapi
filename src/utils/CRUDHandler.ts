@@ -1,6 +1,5 @@
 import mongoose, { Model } from 'mongoose';
-import { ErrorUtil } from '../../../middleware/ErrorUtil';
-import User from '../model/User'; // Only needed if cross-checking users like features are
+import { ErrorUtil } from '../middleware/ErrorUtil';
 
 export interface PaginationOptions {
   filters: Array<object>;
@@ -18,7 +17,10 @@ export class CRUDHandler<T extends mongoose.Document> {
   }
 
   async create(data: any): Promise<T> {
-    return await this.Schema.create(data);
+    await this.beforeCreate(data);
+    const result = await this.Schema.create(data);
+    await this.afterCreate(result);
+    return result;
   }
 
   async fetchAll(options: PaginationOptions): Promise<{ entries: T[]; metadata: any[] }[]> {
@@ -46,26 +48,27 @@ export class CRUDHandler<T extends mongoose.Document> {
   }
 
   async update(id: string, data: any): Promise<T | null> {
-    return await this.Schema.findByIdAndUpdate(id, data, {
-      new: true,
-      runValidators: true,
-    });
+    await this.beforeUpdate(id, data);
+    const updated = await this.Schema.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+    await this.afterUpdate(updated);
+    return updated;
   }
 
   async delete(id: string): Promise<{ success: boolean }> {
     await this.beforeDelete(id);
-    const doc = await this.Schema.findById(id);
-    if (!doc) {
-      throw new ErrorUtil(`No document found with id: ${id}`, 404);
-    }
-
-    await this.Schema.findByIdAndDelete(id);
+    const result = await this.Schema.findByIdAndDelete(id);
+    await this.afterDelete(result);
     return { success: true };
   }
 
-  /**
-   * @description override with logic from sub-class
-   * @param id
-   */
+  // === HOOK POINTS ===
+
+  protected async beforeCreate(data: any): Promise<void> {}
+  protected async afterCreate(doc: T): Promise<void> {}
+
+  protected async beforeUpdate(id: string, data: any): Promise<void> {}
+  protected async afterUpdate(doc: T | null): Promise<void> {}
+
   protected async beforeDelete(id: string): Promise<void> {}
+  protected async afterDelete(doc: T | null): Promise<void> {}
 }

@@ -51,4 +51,22 @@ export class BillingHandler {
 
     return true;
   }
+
+  /**
+   * @description Fetch billing information for user from profile id
+   */
+  async getVault(id: string): Promise<any> {
+    try {
+      const billing = await BillingAccount.findOne({ profileId: id });
+      if (!billing) throw new ErrorUtil('Billing Account not found', 404);
+      const { payload } = await this.paymentHandler.fetchCustomer(billing.customerId);
+      return {
+        ...billing.toObject(),
+        billingDetails: payload.vault,
+      };
+    } catch (err) {
+      console.log(err);
+      throw new ErrorUtil('Something went wrong', 400);
+    }
+  }
 }
