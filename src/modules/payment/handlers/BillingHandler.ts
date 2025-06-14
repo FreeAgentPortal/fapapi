@@ -1,3 +1,4 @@
+import moment from 'moment';
 import { ErrorUtil } from '../../../middleware/ErrorUtil';
 import { AuthenticatedRequest } from '../../../types/AuthenticatedRequest';
 import BillingAccount from '../../auth/model/BillingAccount';
@@ -46,6 +47,9 @@ export class BillingHandler {
     // update the billing object that we have a vault
     billing.vaulted = true;
     billing.plan = req.body.selectedPlans[0]._id;
+    billing.isYearly = req.body.billingCycle === "yearly" ? true : false;
+    // sets the nextBillingDate to the end of the trialing period or tommorow
+    billing.nextBillingDate = billing.status === 'trialing' ? moment(billing.trialLength).toDate() : moment(new Date()).add(1, 'day').toDate();
 
     await billing.save();
 
@@ -57,7 +61,7 @@ export class BillingHandler {
    */
   async getVault(id: string): Promise<any> {
     try {
-      const billing = await BillingAccount.findOne({ profileId: id });
+      const billing = await BillingAccount.findOne({ profileId: id }).populate('plan');
       if (!billing) throw new ErrorUtil('Billing Account not found', 404);
       const { payload } = await this.paymentHandler.fetchCustomer(billing.customerId);
       return {

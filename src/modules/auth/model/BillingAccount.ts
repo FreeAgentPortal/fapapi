@@ -36,6 +36,14 @@ const Schema = new mongoose.Schema(
       required: true,
       ref: 'Profile',
     },
+    isYearly: {
+      type: Boolean,
+      default: false,
+    },
+    nextBillingDate: {
+      type: Date,
+      default: Date.now(),
+    },
     vaultId: {
       type: String,
     },
