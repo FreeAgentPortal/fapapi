@@ -43,8 +43,8 @@ export class CRUDHandler<T extends mongoose.Document> {
     ]);
   }
 
-  async fetch(id: string): Promise<T | null> {
-    return await this.Schema.findById(id);
+  async fetch(id: string): Promise<any | null> {
+    return await this.Schema.findById(id).lean();
   }
 
   async update(id: string, data: any): Promise<T | null> {

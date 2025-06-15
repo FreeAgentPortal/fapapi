@@ -11,6 +11,7 @@ export default class ProfileService {
   public profile = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
     try {
       const results = await this.handler.getProfile({ id: req.params.id });
+      console.log(results);
       return res.status(201).json({ success: true, payload: results });
     } catch (err) {
       console.log(err);

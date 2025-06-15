@@ -28,6 +28,7 @@ export default class AthleteService {
       if (!result) {
         return res.status(404).json({ message: 'Resource Not found' });
       }
+      console.log(result);
       return res.status(200).json({
         success: true,
         payload: result,
@@ -77,6 +78,7 @@ export default class AthleteService {
   };
   public updateResource = async (req: Request, res: Response): Promise<Response> => {
     try {
+      console.log(req.body);
       await this.crudHandler.update(req.params.id, req.body);
       return res.status(201).json({ success: true });
     } catch (err) {

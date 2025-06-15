@@ -17,7 +17,7 @@ export class ProfileActionsHandler {
       throw new ErrorUtil('billing information not found', 400);
     }
     return {
-      ...(profile.toObject() as any),
+      ...profile,
       needsBillingSetup: !billing.vaulted,
     } as any as IAthlete;
   }

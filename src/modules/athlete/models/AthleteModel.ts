@@ -8,8 +8,8 @@ export interface IAthlete extends Document {
   email: string;
   hometown?: string;
   birthdate?: Date;
-  measurements?: Map<string, string>; // e.g., "height": "6'1\""
-  metrics?: Map<string, number>;      // e.g., "dash40": 4.42
+  measurements?: Map<string, string | number>; // e.g., "height": "6'1\""
+  metrics?: Map<string, number>; // e.g., "dash40": 4.42
   college?: string;
   position?: string;
   highSchool?: string;
@@ -41,7 +41,7 @@ const AthleteSchema = new Schema<IAthlete>(
 
     measurements: {
       type: Map,
-      of: String,
+      of: String || Number,
       default: {},
     },
 
@@ -51,7 +51,7 @@ const AthleteSchema = new Schema<IAthlete>(
       default: {},
       validate: {
         validator: function (metrics: Map<string, number>) {
-          return Array.from(metrics.values()).every(val => typeof val === 'number');
+          return Array.from(metrics.values()).every((val) => typeof val === 'number');
         },
         message: 'All metric values must be numbers.',
       },
