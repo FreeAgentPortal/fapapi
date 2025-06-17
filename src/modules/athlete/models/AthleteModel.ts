@@ -11,7 +11,9 @@ export interface IAthlete extends Document {
   measurements?: Map<string, string | number>; // e.g., "height": "6'1\""
   metrics?: Map<string, number>; // e.g., "dash40": 4.42
   college?: string;
-  position?: string;
+  positions?: string[];
+  graduationYear?: number;
+  bio?: string;
   highSchool?: string;
   awards?: string[];
   strengths?: string;
@@ -58,7 +60,7 @@ const AthleteSchema = new Schema<IAthlete>(
     },
 
     college: { type: String },
-    position: { type: String },
+    positions: { type: [String] },
     highSchool: { type: String },
     awards: [{ type: String }],
     strengths: { type: String },

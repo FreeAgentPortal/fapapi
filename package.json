@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "main": "server.js",
   "scripts": {
+    "seed:teams": "ts-node src/scripts/seedTeams.ts",
     "start": "node dist/server.js",
     "dev": "ts-node-dev src/server.ts",
     "test": "jest",

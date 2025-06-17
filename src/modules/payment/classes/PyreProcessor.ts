@@ -135,6 +135,28 @@ class PyreProcessing extends PaymentProcessor {
       };
     }
   }
+
+  async fetchTransactions(customerId: string) {
+    try {
+      // send a request to pyre to create a customer in the api
+      const { data } = await axios.get(`${process.env.PYRE_API_URL}/order`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.PYRE_API_KEY,
+        },
+      });
+      return {
+        success: true,
+        ...data,
+      };
+    } catch (err: any) {
+      console.log(err?.response?.data);
+      return {
+        success: false,
+        message: `Error Fetching Transactions - ${err?.response?.data?.message}`,
+      };
+    }
+  }
   // create a function to return the name of the processor
   getProcessorName() {
     return 'pyreprocessing';
