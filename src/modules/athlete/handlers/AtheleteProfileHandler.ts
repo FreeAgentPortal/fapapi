@@ -1,10 +1,8 @@
-import { Request } from 'express';
 import { IAthlete, AthleteModel } from '../models/AthleteModel';
-import mongoose from 'mongoose';
-import { AuthenticatedRequest } from '../../../types/AuthenticatedRequest';
-import { CRUDHandler } from '../../../utils/CRUDHandler';
+import { CRUDHandler, PaginationOptions } from '../../../utils/CRUDHandler';
 import { ErrorUtil } from '../../../middleware/ErrorUtil';
 import BillingAccount from '../../auth/model/BillingAccount';
+import mongoose from 'mongoose';
 
 export interface AthleteProfileInput {
   fullName: string;
@@ -57,5 +55,41 @@ export class AthleteProfileHandler extends CRUDHandler<IAthlete> {
       ...profile,
       needsBillingSetup: !billing.vaulted,
     } as any as IAthlete;
+  }
+
+  async fetch(id: string): Promise<any | null> {
+    const [result] = await this.Schema.aggregate([
+      {
+        $match: { _id: new mongoose.Types.ObjectId(id) },
+      },
+
+      {
+        // find all subscriptions for the athlete,
+        // each subscription will have a subscriber.profileId which is the athlete's profileId
+        // and a target.profileId which is the profileId of the subscribed profile
+        $lookup: {
+          from: 'subscriptions',
+          let: { athleteId: '$_id' },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $or: [{ $eq: ['$subscriber.profileId', '$$athleteId'] }, { $eq: ['$target.profileId', '$$athleteId'] }],
+                },
+              },
+            },
+            {
+              $project: {
+                _id: 0,
+                subscribed: { $cond: [{ $eq: ['$subscriber.profileId', '$$athleteId'] }, true, false] },
+                targetProfileId: '$target.profileId', 
+              },
+            },
+          ],
+          as: 'subscriptions',
+        },
+      },
+    ]);
+    return result;
   }
 }

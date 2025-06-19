@@ -1,52 +1,29 @@
 import { Request, Response } from 'express';
-import TeamProfileHandler from '../handlers/ProfileHandler';
 import { eventBus } from '../../../lib/eventBus';
-import { ITeamProfile } from '../model/TeamModel';
-import { AuthenticatedRequest } from '../../../types/AuthenticatedRequest';
-import AuthenticationHandler from '../handlers/AuthenticationHandler';
-import { AdvFilters } from '../../../utils/advFilter/AdvFilters';
 import error from '../../../middleware/error';
+import { AdvFilters } from '../../../utils/advFilter/AdvFilters';
+import { AuthenticatedRequest } from '../../../types/AuthenticatedRequest';
+import asyncHandler from '../../../middleware/asyncHandler';
+import { Handler } from '../handlers/SubscriptionHandler';
 
-export default class TeamService {
-  constructor(private readonly crudHandler: TeamProfileHandler = new TeamProfileHandler(), private readonly authHandler: AuthenticationHandler = new AuthenticationHandler()) {}
-  public checkResource = async (req: Request, res: Response): Promise<Response> => {
+export default class SubscriptionService {
+  constructor(private readonly crudHandler: Handler = new Handler()) {}
+
+  public create = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
     try {
-      console.log(req);
-      const exists = await this.authHandler.checkResourceExists(req);
-      return res.status(200).json({
-        exists,
-      });
-    } catch (err: any) {
+      await this.crudHandler.create({ ...req.body, user: req.user._id });
+      return res.status(201).json({ success: true });
+    } catch (err) {
       console.log(err);
-      return res.status(500).json({ error: err.message });
+      return error(err, req, res);
     }
-  };
-  /**
-   * Called internally during registration or profile bootstrapping.
-   */
-  async createProfile(data: any): Promise<ITeamProfile> {
-    return await this.crudHandler.createProfile(data);
-  }
-  /**
-   * Called from an HTTP route. Handles req/res and responds to client.
-   */
-  async createProfileFromRequest(req: Request, res: Response) {
-    try {
-      const data = req.body as any; // Adjust type as needed
-      const profile = await this.crudHandler.createProfile(data);
-      return res.status(201).json(profile);
-    } catch (error: any) {
-      res.status(400).json({ error: error.message });
-    }
-  }
-
+  });
   public getResource = async (req: Request, res: Response): Promise<Response> => {
     try {
       const result = await this.crudHandler.fetch(req.params.id);
       if (!result) {
         return res.status(404).json({ message: 'Resource Not found' });
       }
-      console.log(result);
       return res.status(200).json({
         success: true,
         payload: result,
@@ -61,7 +38,7 @@ export default class TeamService {
       const pageSize = Number(req.query?.limit) || 10;
       const page = Number(req.query?.pageNumber) || 1;
       // Generate the keyword query
-      const keywordQuery = AdvFilters.query(['name', 'coach', 'abbreviation', 'shortDisplayName'], req.query?.keyword as string);
+      const keywordQuery = AdvFilters.query(['subject', 'description'], req.query?.keyword as string);
 
       // Generate the filter options for inclusion if provided
       const filterIncludeOptions = AdvFilters.filter(req.query?.includeOptions as string);
@@ -96,7 +73,6 @@ export default class TeamService {
   };
   public updateResource = async (req: Request, res: Response): Promise<Response> => {
     try {
-      console.log(req.body);
       await this.crudHandler.update(req.params.id, req.body);
       return res.status(201).json({ success: true });
     } catch (err) {
@@ -113,4 +89,14 @@ export default class TeamService {
       return error(err, req, res);
     }
   };
+  public subscribe = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+    try {
+      console.log(req.body);
+      await this.crudHandler.toggle(req.body.subscriber, req.body.target);
+      return res.status(201).json({ success: true });
+    } catch (err) {
+      console.log(err);
+      return error(err, req, res);
+    }
+  });
 }

@@ -28,7 +28,6 @@ export default class AthleteService {
       if (!result) {
         return res.status(404).json({ message: 'Resource Not found' });
       }
-      console.log(result);
       return res.status(200).json({
         success: true,
         payload: result,

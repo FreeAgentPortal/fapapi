@@ -28,7 +28,7 @@ export class CRUDHandler<T extends mongoose.Document> {
       {
         $match: {
           $and: [...options.filters],
-          ...options.query,
+          ...(options.query.length > 0 && { $or: options.query }),
         },
       },
       {
