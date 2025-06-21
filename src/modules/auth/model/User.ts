@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import bcyrpt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
+import slugify from 'slugify';
 
 /**
  * @description Interface for the User model
@@ -25,6 +26,7 @@ export interface UserType extends mongoose.Document {
   isActive: boolean;
   resetPasswordToken: string | undefined | null;
   resetPasswordExpire: Date | undefined | null;
+  accessKey: string;
   createdAt: Date;
   updatedAt: Date;
   isEmailVerified: boolean;
@@ -101,6 +103,10 @@ const UserSchema = new mongoose.Schema(
     profileRefs: {
       type: Object,
       default: {},
+    },
+    accessKey: {
+      type: String,
+      select: false, // do not return this field by default
     },
   },
   {

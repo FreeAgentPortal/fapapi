@@ -2,7 +2,7 @@
 import sgMail from '@sendgrid/mail';
 import { EmailPayload, EmailProvider } from './EmailProvider';
 
-sgMail.setApiKey(process.env.SENDGRID_API_KEY || '');
+sgMail.setApiKey(process.env.SEND_GRID_API_KEY || '');
 
 export class SendGridProvider implements EmailProvider {
   async sendEmail({ to, subject, html, from }: EmailPayload): Promise<void> {

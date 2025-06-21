@@ -16,10 +16,6 @@
 - Do not create new test files without instruction.
 - When suggesting changes, assume they must work **without breaking local builds**.
 
-## 🧱 Component Usage
-- Always prefer **existing utility components** (e.g., `Link.tsx`, `BaseButton.tsx`, etc.) over raw elements.
-- Do not import from unfamiliar packages unless directed.
-- Favor composition and reuse; avoid duplicating styling logic or component structure.
 
 ## 🎯 Project Structure Awareness
 - We are working on a monolithic API that we are setting up in a structured way to be able to break out into microservices later

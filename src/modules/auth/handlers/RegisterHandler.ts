@@ -7,6 +7,7 @@ import { ProfileCreationFactory } from '../factory/ProfileCreationFactory';
 // import { PaymentService } from '../service/PaymentService';
 import BillingAccount, { BillingAccountType } from '../model/BillingAccount';
 import createCustomer from '../controller/paymentControllers/createCustomer';
+import slugify from 'slugify';
 
 type RegisterInput = {
   email: string;
@@ -83,11 +84,25 @@ export class RegisterHandler {
       throw new Error('Email already registered');
     }
 
+    // create a slug of the user's full name
+    const fullName = `${this.data.firstName} ${this.data.lastName || ''}`.trim();
+    const sluggedName = slugify(fullName, {
+      lower: true,
+      strict: true, // removes special characters
+      trim: true, // removes leading and trailing whitespace
+    });
+
     this.user = await User.create({
       ...this.data,
       emailVerificationToken: await crypto.randomBytes(20).toString('hex'),
       emailVerificationExpires: new Date(Date.now() + 3600000), // 1 hour
     });
+
+    // unique tail to the access key to avoid collisions
+    const uniqueTail = this.user._id.toString().slice(-6);
+    this.user.accessKey = `${sluggedName}-${uniqueTail}`;
+    // save the user with the access key
+    await this.user.save();
   }
 
   /**
