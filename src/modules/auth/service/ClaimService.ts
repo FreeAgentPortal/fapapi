@@ -3,12 +3,12 @@ import { eventBus } from '../../../lib/eventBus';
 import error from '../../../middleware/error';
 import { AuthenticatedRequest } from '../../../types/AuthenticatedRequest';
 import asyncHandler from '../../../middleware/asyncHandler';
-import { CRUDService } from '../../../utils/baseCRUD';
-import ClaimSchema, { ClaimType } from '../model/ClaimSchema';
+import { CRUDService } from '../../../utils/BaseCRUD'; 
+import { ClaimHandler } from '../handlers/ClaimHandler';
 
-export default class ClaimService extends CRUDService<ClaimType> {
+export default class ClaimService extends CRUDService {
   constructor() {
-    super(ClaimSchema);
+    super(ClaimHandler);
   }
 
   public getClaim = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
