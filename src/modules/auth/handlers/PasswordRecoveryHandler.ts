@@ -1,4 +1,4 @@
-import User from '../model/User';
+import User, { UserType } from '../model/User';
 import crypto from 'crypto';
 
 export class PasswordRecoveryHandler {
@@ -56,7 +56,7 @@ export class PasswordRecoveryHandler {
     };
   }
 
-  async resetPassword(token: string, newPassword: string): Promise<void> {
+  async resetPassword(token: string, newPassword: string): Promise<UserType> {
     // Validate token + expiry
     const isValid = await this.verifyToken(token);
     if (!isValid.valid) {
@@ -74,8 +74,6 @@ export class PasswordRecoveryHandler {
     user.resetPasswordExpire = undefined;
 
     // Save user
-    await user.save();
-    
-    return;
+    return await user.save();
   }
 }

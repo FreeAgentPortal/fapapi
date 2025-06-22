@@ -10,5 +10,7 @@ export default class NotificationService {
 
     eventBus.subscribe('email.verify', this.registrationEventHandler.emailVerification);
     eventBus.subscribe('email.verified', this.registrationEventHandler.emailVerified);
+    eventBus.subscribe('password.reset.requested', this.registrationEventHandler.passwordReset);
+    eventBus.subscribe('password.reset.completed', this.registrationEventHandler.passwordResetCompleted);
   }
 }

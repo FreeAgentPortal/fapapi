@@ -68,7 +68,11 @@ export default class AuthService {
   public resetPassword = async (req: Request, res: Response): Promise<Response> => {
     try {
       const { token, newPassword } = req.body;
-      await this.passwordRecoveryHandler.resetPassword(token, newPassword);
+      const user = await this.passwordRecoveryHandler.resetPassword(token, newPassword);
+      // Emit event for password reset
+      eventBus.publish('password.reset.complete', {
+        user,
+      });
       return res.status(200).json({ message: 'Password reset successful' });
     } catch (err: any) {
       return error(err, req, res);
