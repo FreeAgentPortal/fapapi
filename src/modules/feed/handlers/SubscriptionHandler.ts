@@ -1,9 +1,9 @@
 import { Request } from 'express';
 import mongoose, { ObjectId } from 'mongoose';
-import { AuthenticatedRequest } from '../../../types/AuthenticatedRequest';
-import { CRUDHandler } from '../../../utils/CRUDHandler';
+import { AuthenticatedRequest } from '../../../types/AuthenticatedRequest'; 
 import { ErrorUtil } from '../../../middleware/ErrorUtil';
 import { ISubscription, Subscription } from '../model/SubscriptionModel';
+import { CRUDHandler } from '../../../utils/baseCRUD';
 type RoleRef = {
   role: 'athlete' | 'team' | 'scout' | 'agent';
   profileId: ObjectId;

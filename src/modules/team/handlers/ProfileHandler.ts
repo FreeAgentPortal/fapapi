@@ -1,8 +1,8 @@
 import { Request } from 'express';
 import { AuthenticatedRequest } from '../../../types/AuthenticatedRequest';
 import User from '../../auth/model/User';
-import TeamModel, { ITeamProfile } from '../model/TeamModel';
-import { CRUDHandler } from '../../../utils/CRUDHandler';
+import TeamModel, { ITeamProfile } from '../model/TeamModel'; 
+import { CRUDHandler } from '../../../utils/baseCRUD';
 
 export default class TeamProfileHandler extends CRUDHandler<ITeamProfile> {
   constructor() {
