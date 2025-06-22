@@ -1,12 +1,14 @@
-// modules/notification/NotificationService.ts 
+// modules/notification/NotificationService.ts
 import { eventBus } from '../../lib/eventBus';
 import { EmailService } from './email/EmailService';
-import { handleUserRegistered } from './handler/userRegisteredHandler';
+import RegistrationEventHandler from './handler/RegistrationEventHandler'; 
 
-export class NotificationService {
-  public static init() {
-    EmailService.init("ethereal");
+export default class NotificationService {
+  constructor(private readonly registrationEventHandler: RegistrationEventHandler = new RegistrationEventHandler()) {}
+  public init() {
+    EmailService.init('sendgrid');
 
-    eventBus.subscribe('user.registered', handleUserRegistered);
+    eventBus.subscribe('email.verify', this.registrationEventHandler.emailVerification);
+    eventBus.subscribe('email.verified', this.registrationEventHandler.emailVerified);
   }
 }

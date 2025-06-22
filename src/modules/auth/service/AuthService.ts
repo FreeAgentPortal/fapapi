@@ -17,7 +17,7 @@ export default class AuthService {
     try {
       const result = await this.registerHandler.execute(req.body);
 
-      eventBus.publish('user.registered', {
+      eventBus.publish('email.verify', {
         user: result.user,
       });
 
@@ -77,11 +77,11 @@ export default class AuthService {
 
   public verifyEmail = async (req: Request, res: Response): Promise<Response> => {
     try {
-      const result = await this.registerHandler.verifyEmail(req.body.email);
+      const result = await this.registerHandler.verifyEmail(req.body.token as any);
 
       // Emit event for email verification
       eventBus.publish('email.verified', {
-        email: req.body.email,
+        user: result.user,
       });
 
       return res.status(200).json(result);
@@ -100,8 +100,7 @@ export default class AuthService {
 
       // Emit event for resending verification email
       eventBus.publish('email.verify', {
-        email,
-        token: result.token,
+        user: result.user,
       });
 
       return res.status(200).json({ success: true, message: 'Verification email sent', token: result.token });

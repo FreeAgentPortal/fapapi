@@ -1,4 +1,4 @@
-import User from '../model/User';
+import User, { UserType } from '../model/User';
 import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
@@ -8,6 +8,8 @@ import { ProfileCreationFactory } from '../factory/ProfileCreationFactory';
 import BillingAccount, { BillingAccountType } from '../model/BillingAccount';
 import createCustomer from '../controller/paymentControllers/createCustomer';
 import slugify from 'slugify';
+import Notification from '../../notification/model/Notification';
+import { ErrorUtil } from '../../../middleware/ErrorUtil';
 
 type RegisterInput = {
   email: string;
@@ -56,7 +58,21 @@ export class RegisterHandler {
         process.env.JWT_SECRET!,
         { expiresIn: '7d' }
       );
+      // query the admin table to get all admins and populate their emails
+      // role is an array of strings, so we need to use $in operator
+      const admins = await User.find({ role: { $in: ['admin'] } });
 
+      // for each admin, create a notification in the system
+      for (const admin of admins) {
+        await Notification.insertNotification(
+          admin._id as any,
+          this.user._id as any, // switch this to a centralized admin user id later
+          'Registration Event',
+          `New user registered: ${this.user.email}`,
+          `user_registered`,
+          this.user._id as any
+        );
+      }
       return {
         token,
         profileRefs: this.profileRefs,
@@ -149,7 +165,7 @@ export class RegisterHandler {
     console.log(`Creating billing account..`);
     try {
       const customer = await createCustomer(this.user);
-      if (!customer.success) throw new Error(customer.message); ;
+      if (!customer.success) throw new Error(customer.message);
       const trialDays = RoleRegistry[role]?.trialLength ?? 14;
       const trialEndsAt = new Date(Date.now() + trialDays * 86400_000); // 86400 seconds in a day
       const status = RoleRegistry[role]?.trial ? 'trialing' : 'inactive';
@@ -167,10 +183,7 @@ export class RegisterHandler {
       });
       console.log(`Billing account created for profile ${profileId} with role ${role}`);
     } catch (error: any) {
-      console.error(
-        `Failed to create billing account for profile ${profileId} with role ${role}:`,
-        error
-      );
+      console.error(`Failed to create billing account for profile ${profileId} with role ${role}:`, error);
       throw new Error(`Failed to create billing account: ${error.message}`);
     }
   }
@@ -202,7 +215,7 @@ export class RegisterHandler {
    * @description Sets verification token and expiration for email verification.
    * @param email - The email to set the verification token for.
    */
-  public async setEmailVerificationToken(email: string): Promise<{ token: string }> {
+  public async setEmailVerificationToken(email: string): Promise<{ token: string; user: UserType }> {
     const user = await User.findOne({ email });
     if (!user) throw new Error('User not found');
     const token = await crypto.randomBytes(20).toString('hex');
@@ -210,23 +223,24 @@ export class RegisterHandler {
     user.emailVerificationToken = token;
     user.emailVerificationExpires = expires;
     await user.save();
-    return { token };
+
+    return { token, user };
   }
 
   /**
    * @description Verifies the user's email using the provided token.
    * @param token - The verification token sent to the user's email.
    */
-  public async verifyEmail(token: string): Promise<{ message: string }> {
+  public async verifyEmail(token: string): Promise<{ message: string, user: UserType }> {
     const user = await User.findOne({
       emailVerificationToken: token,
       emailVerificationExpires: { $gt: new Date() },
     });
-    if (!user) throw new Error('Invalid or expired token');
+    if (!user) throw new ErrorUtil('Invalid or expired token', 400);
     user.isEmailVerified = true;
     user.emailVerificationToken = undefined;
     user.emailVerificationExpires = undefined;
     await user.save();
-    return { message: 'Email verified successfully' };
+    return { message: 'Email verified successfully', user};
   }
 }
