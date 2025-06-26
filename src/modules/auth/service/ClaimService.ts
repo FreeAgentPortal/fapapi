@@ -3,8 +3,8 @@ import { eventBus } from '../../../lib/eventBus';
 import error from '../../../middleware/error';
 import { AuthenticatedRequest } from '../../../types/AuthenticatedRequest';
 import asyncHandler from '../../../middleware/asyncHandler';
-import { CRUDService } from '../../../utils/BaseCRUD'; 
 import { ClaimHandler } from '../handlers/ClaimHandler';
+import { CRUDService } from '../../../utils/baseCRUD';
 
 export default class ClaimService extends CRUDService {
   constructor() {
@@ -13,10 +13,11 @@ export default class ClaimService extends CRUDService {
 
   public getClaim = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
     try {
-      const { profile } = req.params;
-
+      const response = await this.handler.fetchClaimStatus(req.query.type, req.query.slug as string);
       return res.status(200).json({
-        success: true,
+        success: response.success,
+        payload: response.claim,
+        profile: response.profile,
       });
     } catch (err) {
       console.log(err);

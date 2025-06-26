@@ -41,7 +41,7 @@ if (process.env.NODE_ENV === 'development') {
 
 // using this allows us to accept body data
 app.use(express.json({}));
-app.use(fileUpload({ parseNested: false, useTempFiles: true, tempFileDir: '/tmp/' }));
+app.use(fileUpload({ parseNested: false, useTempFiles: false, tempFileDir: '/tmp/' }));
 
 // This is to help with CORS issues, we dont want to allow anyone but a select group to access routes
 // app.use(cors(corsOptionsDelegate));

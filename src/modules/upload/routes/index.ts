@@ -1,13 +1,14 @@
 // modules/notification/routes/index.ts
-import express from 'express';
-import { UploadService } from '../services/UploadService';
-import { AuthMiddleware } from '../../../middleware/AuthMiddleware';
+import express from 'express'; 
+import wasabiRoutes from './wasabi';
+import cloudinaryRoutes from './cloudinary';
 
 const router = express.Router();
+ 
 
-const service = new UploadService();
+router.use('/wasabi-sys', wasabiRoutes);
+router.use('/cloudinary', cloudinaryRoutes);
 
-router.route('/file').post(AuthMiddleware.protect, service.uploadUserFile); 
 
 // Example diagnostic route
 router.get('/health', (req, res) => {

@@ -6,7 +6,7 @@ import error from '../../../middleware/error';
 import asyncHandler from '../../../middleware/asyncHandler';
 import { ErrorUtil } from '../../../middleware/ErrorUtil';
 
-export class UploadService {
+export class WasabiService {
   private wasabi = new WasabiHandler();
 
   public uploadUserFile = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<{ url: string; fileName: string } | void> => {
@@ -14,14 +14,20 @@ export class UploadService {
       const user = await User.findById(req.user._id).select('accessKey');
       if (!user) throw new Error('User not found');
 
-      const file = req?.files?.file as any;
+      const files = req?.files?.file as any;
 
-      const folder = 'files';
-      const fileName = file?.name || `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.txt`;
-      if (!file) throw new ErrorUtil('File not found in request', 400);
+      let urls = [];
 
-      const url = await this.wasabi.uploadFile(user.accessKey, folder, fileName, file.data);
-      res.status(201).json({ url, fileName });
+      // loop over files if multiple files are being uploaded
+      for (const file of files) {
+        const folder = 'files';
+        const fileName = file?.name || `${Date.now()}-${Math.random().toString(36).substring(2, 15)}.txt`;
+        if (!file) throw new ErrorUtil('File not found in request', 400);
+
+        const url = await this.wasabi.uploadFile(user.accessKey, folder, fileName, file.data);
+        urls.push({ url, fileName });
+      }
+      res.status(201).json({ payload: urls });
     } catch (err) {
       console.log(err);
       error(err, req, res);
