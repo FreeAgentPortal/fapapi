@@ -106,7 +106,9 @@ export abstract class CRUDService {
       if ('user' in req && req.user && typeof req.user === 'object' && '_id' in req.user) {
         data = { ...data, user: (req.user as any)._id };
       }
+      await this.beforeCreate(data);
       await this.handler.create(data);
+      await this.afterCreate(data);
       return res.status(201).json({ success: true });
     } catch (err) {
       console.log(err);
@@ -116,7 +118,9 @@ export abstract class CRUDService {
   public getResource = async (req: Request, res: Response): Promise<Response> => {
     try {
       this.ensureAuthenticated(req as AuthenticatedRequest, 'getResource');
+      await this.beforeFetch(req.params.id);
       const result = await this.handler.fetch(req.params.id);
+      await this.afterFetch(result);
       if (!result) {
         return res.status(404).json({ message: 'Resource Not found' });
       }
@@ -147,6 +151,13 @@ export abstract class CRUDService {
         ...(Object.keys(keywordQuery[0]).length > 0 ? keywordQuery : []),
         ...(Array.isArray(filterIncludeOptions) && filterIncludeOptions.length > 0 && Object.keys(filterIncludeOptions[0]).length > 0 ? filterIncludeOptions : []), // Only include if there are filters
       ];
+      await this.beforeFetchAll({
+        filters: AdvFilters.filter(req.query?.filterOptions as string),
+        sort: AdvFilters.sort((req.query?.sortOptions as string) || '-createdAt'),
+        query: orConditions,
+        page,
+        limit: pageSize,
+      });
       const [result] = await this.handler.fetchAll({
         filters: AdvFilters.filter(req.query?.filterOptions as string),
         sort: AdvFilters.sort((req.query?.sortOptions as string) || '-createdAt'),
@@ -154,6 +165,7 @@ export abstract class CRUDService {
         page,
         limit: pageSize,
       });
+      await this.afterFetchAll(result);
       return res.status(200).json({
         success: true,
         payload: [...result.entries],
@@ -173,7 +185,9 @@ export abstract class CRUDService {
   public updateResource = async (req: Request, res: Response): Promise<Response> => {
     try {
       this.ensureAuthenticated(req as AuthenticatedRequest, 'updateResource');
-      await this.handler.update(req.params.id, req.body);
+      await this.beforeUpdate(req.params.id, req.body);
+      const result = await this.handler.update(req.params.id, req.body);
+      await this.afterUpdate(result);
       return res.status(201).json({ success: true });
     } catch (err) {
       console.log(err);
@@ -183,11 +197,25 @@ export abstract class CRUDService {
   public removeResource = async (req: Request, res: Response): Promise<Response> => {
     try {
       this.ensureAuthenticated(req as AuthenticatedRequest, 'removeResource');
-      await this.handler.delete(req.params.id);
+      await this.beforeDelete(req.params.id);
+      const result = await this.handler.delete(req.params.id);
+      await this.afterDelete(result);
       return res.status(201).json({ success: true });
     } catch (err) {
       console.log(err);
       return error(err, req, res);
     }
   };
+
+  // helper methods for CRUD operations before/after hooks
+  protected async beforeCreate(data: any): Promise<void> {}
+  protected async afterCreate(doc: any): Promise<void> {}
+  protected async beforeUpdate(id: string, data: any): Promise<void> {}
+  protected async afterUpdate(doc: any | null): Promise<void> {}
+  protected async beforeDelete(id: string): Promise<void> {}
+  protected async afterDelete(doc: any | null): Promise<void> {}
+  protected async beforeFetchAll(options: PaginationOptions): Promise<void> {}
+  protected async afterFetchAll(result: any[]): Promise<void> {}
+  protected async beforeFetch(id: string): Promise<void> {}
+  protected async afterFetch(doc: any | null): Promise<void> {}
 }
