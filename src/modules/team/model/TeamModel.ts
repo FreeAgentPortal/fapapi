@@ -31,7 +31,7 @@ const TeamProfileSchema: Schema = new Schema<ITeamProfile>(
       // match: /^[\w.-]+@([\w-]+\.)+(edu|org|nfl)$/i,
     },
     phone: { type: String },
-    linkedUsers: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+    linkedUsers: [{ user: { type: Schema.Types.ObjectId, ref: 'User' }, role: { type: String, enum: ['admin', 'member'], default: 'member' } }],
     alertsEnabled: { type: Boolean, default: true },
     positionsNeeded: {
       type: [String],
@@ -63,7 +63,7 @@ const TeamProfileSchema: Schema = new Schema<ITeamProfile>(
       trim: true,
     },
     color: {
-      type: String, 
+      type: String,
       match: /^#([0-9A-Fa-f]{3}|[0-9A-Fa-f]{6})$/, // Hex color format
     },
     alternateColor: {
@@ -82,13 +82,12 @@ const TeamProfileSchema: Schema = new Schema<ITeamProfile>(
     ],
     links: [
       {
-        language: { type: String},
+        language: { type: String },
         href: { type: String, required: true },
         text: { type: String, required: true },
-        shortText: { type: String},
-      }
+        shortText: { type: String },
+      },
     ],
-
   },
   { timestamps: true }
 );

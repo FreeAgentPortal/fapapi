@@ -16,8 +16,8 @@ import socket from './utils/socket';
 import { cronJobs } from './cronjobs/cronjobs';
 //clustering
 import cluster from 'cluster';
-import os from 'os'; 
-import NotificationService from './modules/notification/NotificationService';
+import os from 'os';
+import NotificationService from './modules/notification/services/NotificationService';
 
 // Routes
 //const middlewares
@@ -96,7 +96,7 @@ const numCPUs = os.cpus().length;
 const maxWorkers = Math.min(numCPUs, Number(process.env.CORE_CAP));
 
 if (cluster.isPrimary) {
-  console.log(`Primary process ${process.pid} is running`.green); 
+  console.log(`Primary process ${process.pid} is running`.green);
 
   //fork workers
   for (let i = 0; i < maxWorkers; i++) {
@@ -121,10 +121,7 @@ if (cluster.isPrimary) {
   });
   //worker process runs the server
   const server = app.listen(PORT, () => {
-    console.log(
-      `Server running; Worker ${process.pid} running in ${process.env.NODE_ENV} mode on port ${PORT}`
-        .yellow.bold
-    );
+    console.log(`Server running; Worker ${process.pid} running in ${process.env.NODE_ENV} mode on port ${PORT}`.yellow.bold);
     cronJobs();
   });
 

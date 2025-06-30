@@ -107,8 +107,8 @@ export abstract class CRUDService {
         data = { ...data, user: (req.user as any)._id };
       }
       await this.beforeCreate(data);
-      await this.handler.create(data);
-      await this.afterCreate(data);
+      const result = await this.handler.create(data);
+      await this.afterCreate(result);
       return res.status(201).json({ success: true });
     } catch (err) {
       console.log(err);

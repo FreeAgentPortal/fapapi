@@ -7,8 +7,9 @@ export interface ClaimType extends mongoose.Document {
   profile: Types.ObjectId; // Profile type (e.g., athlete, team, agent, scout)
   slug?: string; // Optional slug for the claim
   claimType: string; // Type of claim (e.g., 'athlete', 'team', etc.)
-  status: 'pending' | 'not started' | 'completed'; // Status of the claim (e.g., 'pending', 'approved', 'rejected')
-  documents: [{ url: string; fileName: string; type: string }]; // Array of documents associated with the claim
+  message?: string; // Optional message for the claim, e.g., reason for approval or denial
+  status: 'pending' | 'not started' | 'approved' | 'denied'; // Status of the claim (e.g., 'pending', 'approved', 'rejected')
+  documents?: [{ url: string; fileName: string; type: string }]; // Array of documents associated with the claim
   createdAt?: Date;
   updatedAt?: Date;
 }
@@ -35,14 +36,17 @@ const Schema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['pending', 'not started', 'completed'],
+      enum: ['pending', 'not started', 'approved', 'denied'],
       default: 'not started',
+    },
+    message: {
+      type: String,
     },
     documents: [
       {
-        url: { type: String, required: true },
-        fileName: { type: String, required: true },
-        type: { type: String, required: true },
+        url: { type: String },
+        fileName: { type: String },
+        type: { type: String },
       },
     ],
   },
@@ -50,5 +54,10 @@ const Schema = new mongoose.Schema(
     timestamps: true,
   }
 );
+
+// TTL index for automatic deletion of claims after they havent been updated in 60 days
+Schema.index({ updatedAt: 1 }, { expireAfterSeconds: 60 * 60 * 24 * 60 }); // 60 days
+// Add a unique index on user and profile to prevent duplicate claims
+Schema.index({ user: 1, profile: 1, claimType: 1 }, { unique: true, partialFilterExpression: { status: { $ne: 'denied' } } });
 
 export default mongoose.model<ClaimType>('Claim', Schema);

@@ -45,4 +45,27 @@ export class CloudinaryService {
       error(err, req, res);
     }
   });
+
+  public deleteFile = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+      const { publicId } = req.body;
+      if (!publicId) throw new ErrorUtil('Public ID is required to delete a file', 400);
+      const response = await this.handler.deleteFile(publicId);
+      res.status(200).json({ success: true, message: 'File deleted successfully', payload: response });
+    } catch (err) {
+      console.log(err);
+      error(err, req, res);
+    }
+  });
+
+  // non-http method for internal use
+  public async deleteFileByPublicId(publicId: string): Promise<void> {
+    try {
+      if (!publicId) throw new ErrorUtil('Public ID is required to delete a file', 400);
+      await this.handler.deleteFile(publicId);
+    } catch (err) {
+      console.log(err);
+      throw err; // rethrow the error for further handling
+    }
+  }
 }
