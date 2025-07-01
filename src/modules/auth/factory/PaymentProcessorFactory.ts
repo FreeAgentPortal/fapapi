@@ -1,4 +1,5 @@
-import PyreProcessing from "../classes/PyreProcessor";
+import PyreProcessing from "../../payment/classes/PyreProcessor";
+
 
 /**
  * @description PaymentProcessorFactory class, this class is responsible for creating

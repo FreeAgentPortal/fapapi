@@ -1,8 +1,7 @@
 import jwt from 'jsonwebtoken';
 import moment from 'moment';
 import ApiKeySchema from '../modules/auth/model/ApiKeySchema';
-import User from '../modules/auth/model/User';
-import { hashApiKey } from '../controllers/key/createKey';
+import User from '../modules/auth/model/User'; 
 import { AuthenticatedRequest } from '../types/AuthenticatedRequest';
 
 interface JwtPayload {
@@ -32,10 +31,10 @@ const protect = (routes?: any) => {
         // Look up the API key in the database
 
         // encrypt the api key so that it can be compared to the encrypted api key in the database
-        const encryptedApiKey = hashApiKey(apiKey, process.env.SECRET_KEY_VERSION as any).hash;
+        // const encryptedApiKey = hashApiKey(apiKey, process.env.SECRET_KEY_VERSION as any).hash;
 
         const apiRecord = await ApiKeySchema.findOne({
-          apiKey: encryptedApiKey,
+          // apiKey: encryptedApiKey,        
         });
         // Check if API key exists and is not expired
         if (
