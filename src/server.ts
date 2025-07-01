@@ -89,7 +89,7 @@ function restartServer(callback: any) {
 app.use(errorHandler);
 
 app.get('/', (req: Request, res: Response) => {
-  res.send('API is running... Shepherds of Christ Ministries');
+  res.sendFile(path.join(__dirname, '../public/index.html'));
 });
 
 const numCPUs = os.cpus().length;
