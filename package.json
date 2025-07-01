@@ -5,6 +5,7 @@
   "scripts": {
     "seed:teams": "ts-node src/scripts/seedTeams.ts",
     "start": "node dist/server.js",
+    "build": "tsc",
     "dev": "ts-node-dev src/server.ts",
     "test": "jest",
     "test:watch": "jest --watch"
