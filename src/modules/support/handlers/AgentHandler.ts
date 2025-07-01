@@ -4,6 +4,7 @@ import User from '../../auth/model/User';
 import { ObjectId } from 'mongoose';
 import Support from '../models/Support';
 import SupportGroup from '../models/SupportGroups';
+import AdminModel from '../../admin/model/AdminModel';
 
 export class AgentHandler {
   async fetchAgents(ticketId: string) {
@@ -13,8 +14,7 @@ export class AgentHandler {
       const error: any = new Error('Ticket not found');
       error.status = 404;
       throw error;
-    }
-
+    } 
     // Find the support groups the ticket belongs to
     const groups = await SupportGroup.find({ _id: { $in: ticket.groups } });
     if (groups.length === 0) {
@@ -22,6 +22,7 @@ export class AgentHandler {
       error.status = 404;
       throw error;
     }
+ 
 
     // Inflate all agents from the support groups
     const agentIds = groups.reduce<ObjectId[]>((acc, group) => {
@@ -34,8 +35,10 @@ export class AgentHandler {
     // Remove duplicate agent IDs
     const uniqueAgentIds = [...new Set(agentIds)];
 
-    // Fetch detailed agent information
-    const uniqueAgents = await User.find({ _id: { $in: uniqueAgentIds } }).select('fullName email _id');
+    // Fetch detailed agent information, populate user, and only select necessary fields
+    const uniqueAgents = await AdminModel.find({ _id: { $in: uniqueAgentIds } })
+      .populate('user', 'fullName email profileImageUrl')
+      .select('user _id'); 
 
     return { agents: uniqueAgents };
   }

@@ -15,6 +15,7 @@ export interface SupportType extends mongoose.Document {
   status: string;
   priority: string;
   category: [string];
+  tags?: string[];
   dateSolved: Date;
 }
 /**
@@ -91,11 +92,13 @@ const SupportSchema = new Schema<SupportAttributes>(
       // is an array of strings, as the ticket can belong to multiple categories
       type: [String],
       required: true,
-      // it can be a single category, or multiple categories, of this enum list
-      enum: ['General', 'Billing', 'Technical', 'Other'],
     },
     dateSolved: {
       type: Date,
+      required: false,
+    },
+    tags: {
+      type: [String],
       required: false,
     },
   },
