@@ -50,7 +50,8 @@ src/modules
 
 ## 📦 Modules
 
-- [Auth Module](./src/modules/auth/docs/auth-module.md): Login, registration, JWT generation 
+- [Auth Module](./src/modules/auth/docs/auth-module.md): Login, registration, JWT generation
+- [Support Module](./src/modules/support/docs/support-module.md): Ticketing and support workflows
 
 ---
 

@@ -1,8 +1,8 @@
-import mongoose, { Schema } from 'mongoose'; 
+import mongoose, { Schema } from 'mongoose';
 import { UserType } from '../../auth/model/User';
 import { SupportGroupType } from './SupportGroups';
 
-export type SupportType = {
+export interface SupportType extends mongoose.Document {
   requester: UserType;
   requesterDetails: {
     email: String;
@@ -15,8 +15,9 @@ export type SupportType = {
   status: string;
   priority: string;
   category: [string];
+  tags?: string[];
   dateSolved: Date;
-};
+}
 /**
  * @description Support schema for ticketing system
  * @type {Schema}
@@ -91,11 +92,13 @@ const SupportSchema = new Schema<SupportAttributes>(
       // is an array of strings, as the ticket can belong to multiple categories
       type: [String],
       required: true,
-      // it can be a single category, or multiple categories, of this enum list
-      enum: ['General', 'Billing', 'Technical', 'Other'],
     },
     dateSolved: {
       type: Date,
+      required: false,
+    },
+    tags: {
+      type: [String],
       required: false,
     },
   },
@@ -104,4 +107,4 @@ const SupportSchema = new Schema<SupportAttributes>(
   }
 );
 
-export default mongoose.model('Support', SupportSchema);
+export default mongoose.model<SupportType>('Support', SupportSchema);

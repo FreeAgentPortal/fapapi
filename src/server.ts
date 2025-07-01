@@ -17,7 +17,7 @@ import { cronJobs } from './cronjobs/cronjobs';
 //clustering
 import cluster from 'cluster';
 import os from 'os';
-import { NotificationService } from './modules/notification/NotificationService';
+import NotificationService from './modules/notification/services/NotificationService';
 
 // Routes
 //const middlewares
@@ -28,7 +28,8 @@ const hpp = require('hpp');
 const { Server } = require('socket.io');
 
 dotenv.config();
-NotificationService.init();
+const notificationService = new NotificationService();
+notificationService.init();
 
 const app = express();
 
@@ -40,7 +41,7 @@ if (process.env.NODE_ENV === 'development') {
 
 // using this allows us to accept body data
 app.use(express.json({}));
-// app.use(fileUpload({ parseNested: false, useTempFiles: true, tempFileDir: '/tmp/' }));
+app.use(fileUpload({ parseNested: false, useTempFiles: false, tempFileDir: '/tmp/' }));
 
 // This is to help with CORS issues, we dont want to allow anyone but a select group to access routes
 // app.use(cors(corsOptionsDelegate));
@@ -95,7 +96,7 @@ const numCPUs = os.cpus().length;
 const maxWorkers = Math.min(numCPUs, Number(process.env.CORE_CAP));
 
 if (cluster.isPrimary) {
-  console.log(`Primary process ${process.pid} is running`.green); 
+  console.log(`Primary process ${process.pid} is running`.green);
 
   //fork workers
   for (let i = 0; i < maxWorkers; i++) {
@@ -120,10 +121,7 @@ if (cluster.isPrimary) {
   });
   //worker process runs the server
   const server = app.listen(PORT, () => {
-    console.log(
-      `Server running; Worker ${process.pid} running in ${process.env.NODE_ENV} mode on port ${PORT}`
-        .yellow.bold
-    );
+    console.log(`Server running; Worker ${process.pid} running in ${process.env.NODE_ENV} mode on port ${PORT}`.yellow.bold);
     cronJobs();
   });
 

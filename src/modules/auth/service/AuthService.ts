@@ -17,23 +17,23 @@ export default class AuthService {
     try {
       const result = await this.registerHandler.execute(req.body);
 
-      eventBus.publish('user.registered', {
+      eventBus.publish('email.verify', {
         user: result.user,
       });
 
       result.user = null;
       return res.status(201).json(result);
-    } catch (err: any) { 
+    } catch (err: any) {
       return error(err, req, res);
     }
-  }; 
+  };
 
   public login = async (req: Request, res: Response): Promise<Response> => {
     try {
       const result = await this.authHandler.login(req);
       return res.status(200).json(result);
     } catch (err: any) {
-      return error(err, req, res); 
+      return error(err, req, res);
     }
   };
 
@@ -42,15 +42,14 @@ export default class AuthService {
       const result = await this.authHandler.getMe(req as AuthenticatedRequest);
       return res.status(200).json(result);
     } catch (err: any) {
-      return error(err, req, res); 
+      console.log(err);
+      return error(err, req, res);
     }
-  }
+  };
 
   public forgotPassword = async (req: Request, res: Response): Promise<Response> => {
     try {
-      const result = await this.passwordRecoveryHandler.requestReset(
-        req.body.email
-      );
+      const result = await this.passwordRecoveryHandler.requestReset(req.body.email);
 
       // Only emit event if a user was found and token generated
       if (result.success) {
@@ -62,32 +61,36 @@ export default class AuthService {
 
       return res.status(200).json({ message: 'Recovery email sent' });
     } catch (err: any) {
-      return error(err, req, res); 
+      return error(err, req, res);
     }
   };
 
   public resetPassword = async (req: Request, res: Response): Promise<Response> => {
     try {
       const { token, newPassword } = req.body;
-      await this.passwordRecoveryHandler.resetPassword(token, newPassword);
+      const user = await this.passwordRecoveryHandler.resetPassword(token, newPassword);
+      // Emit event for password reset
+      eventBus.publish('password.reset.complete', {
+        user,
+      });
       return res.status(200).json({ message: 'Password reset successful' });
     } catch (err: any) {
-      return error(err, req, res); 
+      return error(err, req, res);
     }
   };
 
   public verifyEmail = async (req: Request, res: Response): Promise<Response> => {
     try {
-      const result = await this.registerHandler.verifyEmail(req.body.email);
+      const result = await this.registerHandler.verifyEmail(req.body.token as any);
 
       // Emit event for email verification
       eventBus.publish('email.verified', {
-        email: req.body.email,
+        user: result.user,
       });
 
       return res.status(200).json(result);
     } catch (err: any) {
-      return error(err, req, res); 
+      return error(err, req, res);
     }
   };
 
@@ -101,15 +104,12 @@ export default class AuthService {
 
       // Emit event for resending verification email
       eventBus.publish('email.verify', {
-        email,
-        token: result.token,
+        user: result.user,
       });
 
-      return res
-        .status(200)
-        .json({ success: true, message: 'Verification email sent', token: result.token });
+      return res.status(200).json({ success: true, message: 'Verification email sent', token: result.token });
     } catch (err: any) {
-      return error(err, req, res); 
+      return error(err, req, res);
     }
   };
 
@@ -134,7 +134,7 @@ export default class AuthService {
         // exists
       });
     } catch (err: any) {
-      return error(err, req, res); 
+      return error(err, req, res);
     }
   };
 }

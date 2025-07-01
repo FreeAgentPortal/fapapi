@@ -4,15 +4,11 @@ import { eventBus } from '../../../lib/eventBus';
 import { ITeamProfile } from '../model/TeamModel';
 import { AuthenticatedRequest } from '../../../types/AuthenticatedRequest';
 import AuthenticationHandler from '../handlers/AuthenticationHandler';
+import { AdvFilters } from '../../../utils/advFilter/AdvFilters';
+import error from '../../../middleware/error';
 
 export default class TeamService {
-  private profileHandler: TeamProfileHandler;
-  private authHandler: AuthenticationHandler;
-
-  constructor() {
-    this.profileHandler = new TeamProfileHandler();
-    this.authHandler = new AuthenticationHandler();
-  }
+  constructor(private readonly crudHandler: TeamProfileHandler = new TeamProfileHandler(), private readonly authHandler: AuthenticationHandler = new AuthenticationHandler()) {}
   public checkResource = async (req: Request, res: Response): Promise<Response> => {
     try {
       console.log(req);
@@ -29,7 +25,7 @@ export default class TeamService {
    * Called internally during registration or profile bootstrapping.
    */
   async createProfile(data: any): Promise<ITeamProfile> {
-    return await this.profileHandler.createProfile(data);
+    return await this.crudHandler.createProfile(data);
   }
   /**
    * Called from an HTTP route. Handles req/res and responds to client.
@@ -37,45 +33,84 @@ export default class TeamService {
   async createProfileFromRequest(req: Request, res: Response) {
     try {
       const data = req.body as any; // Adjust type as needed
-      const profile = await this.profileHandler.createProfile(data);
+      const profile = await this.crudHandler.createProfile(data);
       return res.status(201).json(profile);
     } catch (error: any) {
       res.status(400).json({ error: error.message });
     }
   }
 
-  async getProfile(req: Request, res: Response) {
+  public getResource = async (req: Request, res: Response): Promise<Response> => {
     try {
-      const profile = await this.profileHandler.getProfileById(req.params.id);
-      return res.status(200).json(profile);
-    } catch (err: any) {
-      return res.status(404).json({ error: 'Team profile not found' });
+      const result = await this.crudHandler.fetch(req.params.id);
+      if (!result) {
+        return res.status(404).json({ message: 'Resource Not found' });
+      }
+      console.log(result);
+      return res.status(200).json({
+        success: true,
+        payload: result,
+      });
+    } catch (err) {
+      console.log(err);
+      return error(err, req, res);
     }
-  }
-  async getProfiles(req: Request, res: Response) {
+  };
+  public getResources = async (req: Request, res: Response): Promise<Response> => {
     try {
-      const profiles = await this.profileHandler.getAllProfiles(req);
-      return res.status(200).json(profiles);
-    } catch (error: any) {
-      return res.status(400).json({ error: error.message });
-    }
-  }
+      const pageSize = Number(req.query?.limit) || 10;
+      const page = Number(req.query?.pageNumber) || 1;
+      // Generate the keyword query
+      const keywordQuery = AdvFilters.query(['name', 'coach', 'abbreviation', 'shortDisplayName'], req.query?.keyword as string);
 
-  async updateProfile(req: Request, res: Response) {
-    try {
-      const results = await this.profileHandler.updateProfile(req as AuthenticatedRequest);
-      return res.status(200).json(results);
-    } catch (err: any) {
-      return res.status(400).json({ error: err.message });
-    }
-  }
+      // Generate the filter options for inclusion if provided
+      const filterIncludeOptions = AdvFilters.filter(req.query?.includeOptions as string);
 
-  async deleteProfile(req: Request, res: Response) {
-    try {
-      await this.profileHandler.deleteProfile(req as AuthenticatedRequest);
-      return res.status(204).json({ success: true, message: 'Profile deleted successfully' });
-    } catch (error: any) {
-      return res.status(400).json({ error: error.message });
+      // Construct the `$or` array conditionally
+      const orConditions = [
+        ...(Object.keys(keywordQuery[0]).length > 0 ? keywordQuery : []),
+        ...(Array.isArray(filterIncludeOptions) && filterIncludeOptions.length > 0 && Object.keys(filterIncludeOptions[0]).length > 0 ? filterIncludeOptions : []), // Only include if there are filters
+      ];
+      const [result] = await this.crudHandler.fetchAll({
+        filters: AdvFilters.filter(req.query?.filterOptions as string),
+        sort: AdvFilters.sort((req.query?.sortOptions as string) || '-createdAt'),
+        query: orConditions,
+        page,
+        limit: pageSize,
+      });
+      return res.status(200).json({
+        success: true,
+        payload: [...result.entries],
+        metadata: {
+          page,
+          pages: Math.ceil(result.metadata[0]?.totalCount / pageSize) || 0,
+          totalCount: result.metadata[0]?.totalCount || 0,
+          prevPage: page - 1,
+          nextPage: page + 1,
+        },
+      });
+    } catch (err) {
+      console.log(err);
+      return error(err, req, res);
     }
-  }
+  };
+  public updateResource = async (req: Request, res: Response): Promise<Response> => {
+    try {
+      console.log(req.body);
+      await this.crudHandler.update(req.params.id, req.body);
+      return res.status(201).json({ success: true });
+    } catch (err) {
+      console.log(err);
+      return error(err, req, res);
+    }
+  };
+  public removeResource = async (req: Request, res: Response): Promise<Response> => {
+    try {
+      await this.crudHandler.delete(req.params.id);
+      return res.status(201).json({ success: true });
+    } catch (err) {
+      console.log(err);
+      return error(err, req, res);
+    }
+  };
 }

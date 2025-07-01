@@ -1,4 +1,4 @@
-import express from 'express'; 
+import express from 'express';
 import { AuthMiddleware } from '../../../middleware/AuthMiddleware';
 import TeamService from '../service/TeamService';
 
@@ -7,17 +7,12 @@ const router = express.Router();
 const service = new TeamService();
 
 router.route('/check').get(service.checkResource); // check if a resource exists in the database
-router.route('/').get(service.getProfiles).post(AuthMiddleware.protect, service.createProfile); // ideally this would never be used as profiles should be created during registration
+router.route('/').get(service.getResources).post(AuthMiddleware.protect, service.createProfile); // ideally this would never be used as profiles should be created during registration
 router
   .route('/:id')
-  .get(service.getProfile) // get public profile by id
-  .put(AuthMiddleware.protect, service.updateProfile) // update profile by user id
-  .delete(
-    AuthMiddleware.protect,
-    AuthMiddleware.authorizeRoles(['admin', 'developer']) as any,
-    service.deleteProfile
-  ); // delete profile by user id
-
+  .get(service.getResource) // get public profile by id
+  .put(AuthMiddleware.protect, service.updateResource) // update profile by user id
+  .delete(AuthMiddleware.protect, AuthMiddleware.authorizeRoles(['admin', 'developer']) as any, service.removeResource); // delete profile by user id
 
 router.route('/health').get((req, res) => {
   res.status(200).json({

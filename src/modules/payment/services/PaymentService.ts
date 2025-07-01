@@ -11,8 +11,17 @@ export default class PaymentService {
   public updateBilling = asyncHandler(async (req: Request & AuthenticatedRequest, res: Response): Promise<Response> => {
     try {
       const results = await this.billingHandler.updateVault(req as any);
-      return res.status(201).json({ message: 'billing updated', success: true }); 
+      return res.status(201).json({ message: 'billing updated', success: true });
     } catch (err: any) {
+      console.log(err);
+      return error(err, req, res);
+    }
+  });
+  public fetchBilling = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    try {
+      const results = await this.billingHandler.getVault(req.params.id);
+      return res.status(201).json({ message: 'success', payload: results });
+    } catch (err) {
       console.log(err);
       return error(err, req, res);
     }

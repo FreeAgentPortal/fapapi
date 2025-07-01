@@ -4,10 +4,14 @@ import { UserType } from '../../auth/model/User';
 import { ErrorUtil } from '../../../middleware/ErrorUtil';
 import SupportMessage from '../models/SupportMessage';
 import mongoose from 'mongoose';
+import { CRUDHandler } from '../../../utils/baseCRUD';
 
-export class TicketHandler {
+export class TicketHandler extends CRUDHandler<SupportType> {
+  constructor() {
+    super(SupportTicket);
+  }
   // Create a new support ticket
-  async createTicket(data: { user: UserType; body: any }): Promise<SupportType> {
+  async create(data: { user: UserType; body: any }): Promise<SupportType> {
     const newTicket = await SupportTicket.create({
       ...data.body,
       requester: data.user ? data.user._id : null,
@@ -63,7 +67,7 @@ export class TicketHandler {
     query: Array<Object>;
     page: Number;
     limit: Number;
-  }): Promise<{ entries: any[]; metadata: any[]}[]> {
+  }): Promise<{ entries: any[]; metadata: any[] }[]> {
     return await SupportTicket.aggregate([
       {
         $match: {
@@ -158,8 +162,9 @@ export class TicketHandler {
   }
 
   // Update a ticket (e.g., reply or status change)
-  async updateTicket(ticketId: string, data: any): Promise<SupportType> {
+  async update(ticketId: string, data: any): Promise<SupportType> {
     const item = await SupportTicket.findById(ticketId);
+    console.log(data);
 
     if (!item) {
       throw new ErrorUtil('Ticket not found', 404);
@@ -194,7 +199,7 @@ export class TicketHandler {
   }
 
   // Delete a ticket by ID
-  async deleteTicket(ticketId: string): Promise<{ success: boolean }> {
+  async delete(ticketId: string): Promise<{ success: boolean }> {
     // find the object
     const object = await SupportTicket.findById(ticketId);
     // if the object doesn't exist, return an error

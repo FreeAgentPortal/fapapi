@@ -1,5 +1,5 @@
-import axios from 'axios'; 
-import PaymentProcessor from './PaymentProcess'; 
+import axios from 'axios';
+import PaymentProcessor from './PaymentProcess';
 import { CommonTransactionType } from '../../../types/CommonTransactionType';
 import User, { UserType } from '../models/User';
 import CommonCaptureTypes from '../../../types/CommonCaptureTypes';
@@ -69,7 +69,7 @@ class PyreProcessing extends PaymentProcessor {
             'x-api-key': process.env.PYRE_API_KEY,
           },
         }
-      ); 
+      );
       return {
         success: true,
         message: 'Customer Vault Created',
@@ -86,15 +86,12 @@ class PyreProcessing extends PaymentProcessor {
   async deleteVault(vaultId: string) {
     try {
       // send a request to pyre to create a customer in the api
-      const { data } = await axios.post(
-        `${process.env.PYRE_API_URL}/vault/${vaultId}`,
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            'x-api-key': process.env.PYRE_API_KEY,
-          },
-        }
-      );
+      const { data } = await axios.post(`${process.env.PYRE_API_URL}/vault/${vaultId}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.PYRE_API_KEY,
+        },
+      });
 
       return {
         success: true,
@@ -117,6 +114,49 @@ class PyreProcessing extends PaymentProcessor {
     initiated_by?: string;
     stored_credential_indicator?: string;
   }) {}
+  async getVault(vaultId: string) {
+    try {
+      // send a request to pyre to create a customer in the api
+      const { data } = await axios.get(`${process.env.PYRE_API_URL}/vault/${vaultId}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.PYRE_API_KEY,
+        },
+      });
+      return {
+        success: true,
+        ...data,
+      };
+    } catch (err: any) {
+      console.log(err?.response?.data);
+      return {
+        success: false,
+        message: `Error Fetching Customer - ${err?.response?.data?.message}`,
+      };
+    }
+  }
+
+  async fetchTransactions(customerId: string) {
+    try {
+      // send a request to pyre to create a customer in the api
+      const { data } = await axios.get(`${process.env.PYRE_API_URL}/order`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.PYRE_API_KEY,
+        },
+      });
+      return {
+        success: true,
+        ...data,
+      };
+    } catch (err: any) {
+      console.log(err?.response?.data);
+      return {
+        success: false,
+        message: `Error Fetching Transactions - ${err?.response?.data?.message}`,
+      };
+    }
+  }
   // create a function to return the name of the processor
   getProcessorName() {
     return 'pyreprocessing';

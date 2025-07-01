@@ -1,4 +1,6 @@
 // services/AdminService.ts
+import { CRUDService } from '../../../utils/baseCRUD';
+import { AdminProfileHandler } from '../handlers/AdminProfile.handler';
 import AdminModel from '../model/AdminModel';
 
 type AdminProfileInput = {
@@ -7,7 +9,10 @@ type AdminProfileInput = {
   permissions?: string[];
 };
 
-export default class AdminService {
+export default class AdminService extends CRUDService {
+  constructor() {
+    super(AdminProfileHandler);
+  }
   static async createProfile({ user, role = 'admin', permissions = [] }: AdminProfileInput) {
     const profile = new AdminModel({
       user,

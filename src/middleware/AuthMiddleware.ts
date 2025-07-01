@@ -3,6 +3,7 @@ import jwt, { JwtPayload } from 'jsonwebtoken';
 import asyncHandler from './asyncHandler';
 import User from '../modules/auth/model/User';
 import { AuthenticatedRequest } from '../types/AuthenticatedRequest';
+import { ErrorUtil } from './ErrorUtil';
 
 export class AuthMiddleware {
   /**
@@ -16,8 +17,7 @@ export class AuthMiddleware {
     const authHeader = req.headers.authorization;
 
     if (!authHeader) {
-      res.status(401);
-      throw new Error('No authorization header provided.');
+      throw new ErrorUtil('No authorization header provided.', 401);
     }
 
     if (authHeader.startsWith('Bearer ')) {
@@ -33,7 +33,7 @@ export class AuthMiddleware {
     try {
       const token = req.headers.authorization!.split(' ')[1];
       const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload;
-      req.user = await User.findById(decoded.userId).select('-password'); 
+      req.user = await User.findById(decoded.userId).select('-password');
       if (!req.user) {
         return res.status(401).json({ message: 'User not found.' });
       }

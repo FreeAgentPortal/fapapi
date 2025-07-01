@@ -1,6 +1,6 @@
 import mongoose, { Schema, Model, ObjectId } from 'mongoose'; 
 
-export interface NotificationType {
+export interface NotificationType extends mongoose.Document {
   userTo: ObjectId;
   userFrom: ObjectId;
   message: string;
@@ -80,6 +80,12 @@ NotificationSchema.statics.insertNotification = async function (
 
   return await notification.save().catch((err: any) => console.log(err));
 };
+
+// Add indexes for performance
+// Index TTL for automatic removal of old notifications > 60 days old
+NotificationSchema.index({ createdAt: 1 }, { expireAfterSeconds: 60 * 60 * 24 * 60 }); // 60 days
+
+
 
 // Export the model with proper typing
 const Notification = mongoose.model<NotificationAttributes, NotificationModel>(

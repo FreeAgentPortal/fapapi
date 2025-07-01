@@ -6,10 +6,15 @@ import { PasswordRecoveryHandler } from '../handlers/PasswordRecoveryHandler';
 import { RegisterHandler } from '../handlers/RegisterHandler';
 import featureRoutes from './featureRoutes';
 import planRoutes from './planRoutes';
+import claimRoutes from './claimRoutes';
 
 const router = express.Router();
 
 const authService = new AuthService(new AuthenticationHandler(), new PasswordRecoveryHandler(), new RegisterHandler());
+
+router.use('/feature', featureRoutes);
+router.use('/plan', planRoutes);
+router.use('/claim', claimRoutes);
 
 router.route('/:email/email').get(authService.checkEmail);
 router.post('/register', authService.register);
@@ -26,8 +31,6 @@ router.route('/health').get((req, res) => {
   });
 });
 
-router.use('/feature', featureRoutes);
-router.use('/plan', planRoutes);
 // authenticated routes
 router.get('/me', AuthMiddleware.protect, authService.getMe);
 export default router;

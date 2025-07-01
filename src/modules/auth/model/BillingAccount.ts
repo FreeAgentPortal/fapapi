@@ -26,14 +26,23 @@ export interface BillingAccountType extends mongoose.Document {
 
 const Schema = new mongoose.Schema(
   {
-    customerId: { // id of customer in pyre or payment processor
+    customerId: {
+      // id of customer in pyre or payment processor
       type: String,
-      required: true, 
+      required: true,
     },
     profileId: {
       type: mongoose.Types.ObjectId,
       required: true,
       ref: 'Profile',
+    },
+    isYearly: {
+      type: Boolean,
+      default: false,
+    },
+    nextBillingDate: {
+      type: Date,
+      default: Date.now(),
     },
     vaultId: {
       type: String,

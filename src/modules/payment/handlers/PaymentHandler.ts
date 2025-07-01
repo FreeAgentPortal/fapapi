@@ -134,4 +134,25 @@ export class PaymentHandler {
       };
     }
   }
+  async fetchCustomer(id: string) {
+    try {
+      // send a request to pyre to create a customer in the api
+      const { data } = await axios.get(`${process.env.PYRE_API_URL}/customer/${id}`, {
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': process.env.PYRE_API_KEY,
+        },
+      });
+      return {
+        success: true,
+        ...data,
+      };
+    } catch (err: any) {
+      console.log(err?.response?.data);
+      return {
+        success: false,
+        message: `Error Fetching Customer - ${err?.response?.data?.message}`,
+      };
+    }
+  }
 }

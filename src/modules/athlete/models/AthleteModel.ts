@@ -1,16 +1,19 @@
 import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IAthlete extends Document {
+  _id: mongoose.Types.ObjectId;
   userId: mongoose.Types.ObjectId;
   fullName: string;
   contactNumber: string;
   email: string;
   hometown?: string;
   birthdate?: Date;
-  measurements?: Map<string, string>; // e.g., "height": "6'1\""
-  metrics?: Map<string, number>;      // e.g., "dash40": 4.42
+  measurements?: Map<string, string | number>; // e.g., "height": "6'1\""
+  metrics?: Map<string, number>; // e.g., "dash40": 4.42
   college?: string;
-  position?: string;
+  positions?: string[];
+  graduationYear?: number;
+  bio?: string;
   highSchool?: string;
   awards?: string[];
   strengths?: string;
@@ -40,7 +43,7 @@ const AthleteSchema = new Schema<IAthlete>(
 
     measurements: {
       type: Map,
-      of: String,
+      of: String || Number,
       default: {},
     },
 
@@ -50,14 +53,14 @@ const AthleteSchema = new Schema<IAthlete>(
       default: {},
       validate: {
         validator: function (metrics: Map<string, number>) {
-          return Array.from(metrics.values()).every(val => typeof val === 'number');
+          return Array.from(metrics.values()).every((val) => typeof val === 'number');
         },
         message: 'All metric values must be numbers.',
       },
     },
 
     college: { type: String },
-    position: { type: String },
+    positions: { type: [String] },
     highSchool: { type: String },
     awards: [{ type: String }],
     strengths: { type: String },

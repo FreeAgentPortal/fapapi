@@ -1,15 +1,19 @@
 import express from 'express';
 import { AuthMiddleware } from '../../../middleware/AuthMiddleware';
 import PaymentService from '../services/PaymentService';
+import receiptRoutes from './receipts';
 
 const router = express.Router();
 
 const paymentService = new PaymentService();
 
+router.use('/receipt', receiptRoutes);
+
 router.route('/').get((req, res) => {
   res.status(200).json({ message: 'hello' });
 });
-router.route('/:id').post(AuthMiddleware.protect, paymentService.updateBilling);
+
+router.route('/:id').get(AuthMiddleware.protect, paymentService.fetchBilling).post(AuthMiddleware.protect, paymentService.updateBilling);
 
 router.route('/health').get((req, res) => {
   res.status(200).json({

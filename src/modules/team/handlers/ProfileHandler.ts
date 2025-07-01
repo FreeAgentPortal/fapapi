@@ -1,9 +1,13 @@
 import { Request } from 'express';
 import { AuthenticatedRequest } from '../../../types/AuthenticatedRequest';
 import User from '../../auth/model/User';
-import TeamModel, { ITeamProfile } from '../model/TeamModel';
+import TeamModel, { ITeamProfile } from '../model/TeamModel'; 
+import { CRUDHandler } from '../../../utils/baseCRUD';
 
-export default class TeamProfileHandler {
+export default class TeamProfileHandler extends CRUDHandler<ITeamProfile> {
+  constructor() {
+    super(TeamModel);
+  }
   async createProfile(data: { name: string; email: string; phone?: string; userId: string }) {
     const { name, email, phone, userId } = data;
 
@@ -26,35 +30,5 @@ export default class TeamProfileHandler {
     });
 
     return profile;
-  }
-
-  async getProfileById(id: string) {
-    return TeamModel.findOne({ _id: id });
-  }
-
-  async updateProfile(req: Request & AuthenticatedRequest): Promise<ITeamProfile | null> {
-    return await TeamModel.findOneAndUpdate({ userId: req.params.id }, req.body, {
-      new: true,
-      runValidators: true,
-    });
-  }
-
-  async deleteProfile(req: Request & AuthenticatedRequest): Promise<boolean> {
-    const deleted = await TeamModel.findOneAndDelete({
-      _id: req.params.id,
-      linkedUsers: req.user._id,
-    });
-    if (!deleted) throw new Error('Nothing to delete');
-    return true;
-  }
-
-  /**
-   * @description Retrieves all athlete profiles, useful for admin or public listings.
-   * @returns An array of athlete profiles
-   */
-  async getAllProfiles(req: Request): Promise<ITeamProfile[]> {
-    //TODO: Implement pagination and adv. filtering logic
-    // For now, return all profiles
-    return await TeamModel.find({});
   }
 }
