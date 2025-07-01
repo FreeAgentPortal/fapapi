@@ -1,8 +1,8 @@
-import mongoose, { Schema } from 'mongoose'; 
+import mongoose, { Schema } from 'mongoose';
 import { UserType } from '../../auth/model/User';
 import { SupportGroupType } from './SupportGroups';
 
-export type SupportType = {
+export interface SupportType extends mongoose.Document {
   requester: UserType;
   requesterDetails: {
     email: String;
@@ -16,7 +16,7 @@ export type SupportType = {
   priority: string;
   category: [string];
   dateSolved: Date;
-};
+}
 /**
  * @description Support schema for ticketing system
  * @type {Schema}
@@ -104,4 +104,4 @@ const SupportSchema = new Schema<SupportAttributes>(
   }
 );
 
-export default mongoose.model('Support', SupportSchema);
+export default mongoose.model<SupportType>('Support', SupportSchema);

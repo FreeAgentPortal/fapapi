@@ -6,9 +6,8 @@ import { SupportHandler } from '../handlers/SupportHandler';
 import asyncHandler from '../../../middleware/asyncHandler';
 import { CRUDService } from '../../../utils/baseCRUD';
 
-export default class SupportService extends CRUDService{
+export default class SupportGroupService extends CRUDService {
   constructor() {
     super(SupportHandler);
-  } 
-
+  }
 }

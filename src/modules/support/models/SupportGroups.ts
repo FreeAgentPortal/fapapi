@@ -1,13 +1,13 @@
-import mongoose from 'mongoose'; 
+import mongoose, { Mongoose } from 'mongoose';
 import { SupportType } from './Support';
 import { UserType } from '../../auth/model/User';
 
-export type SupportGroupType = {
+export interface SupportGroupType extends mongoose.Document {
   name: string;
   agents: UserType[];
   tickets: SupportType[];
   isActive: boolean;
-};
+}
 
 const SupportGroupSchema = new mongoose.Schema(
   {
@@ -38,6 +38,6 @@ const SupportGroupSchema = new mongoose.Schema(
   }
 );
 
-const SupportGroup = mongoose.model('SupportGroup', SupportGroupSchema);
+const SupportGroup = mongoose.model<SupportGroupType>('SupportGroup', SupportGroupSchema);
 
 export default SupportGroup;

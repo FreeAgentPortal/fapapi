@@ -127,7 +127,7 @@ export abstract class CRUDService {
       return res.status(200).json({
         success: true,
         payload: {
-          result,
+          ...result,
         },
       });
     } catch (err) {

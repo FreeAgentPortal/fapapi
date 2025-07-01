@@ -7,6 +7,7 @@ import paymentRoutes from '../../modules/payment/routes/index';
 import feedRoutes from '../../modules/feed/routes/index';
 import uploadRoutes from '../../modules/upload/routes/index';
 import notificationRoutes from '../../modules/notification/route/index';
+import adminRoutes from '../../modules/admin/route/index';
 
 const router = express.Router();
 
@@ -18,5 +19,6 @@ router.use('/payment', paymentRoutes);
 router.use('/feed', feedRoutes);
 router.use('/upload', uploadRoutes);
 router.use('/notification', notificationRoutes);
+router.use('/admin', adminRoutes);
 
 export default router;
