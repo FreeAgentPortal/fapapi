@@ -2,7 +2,7 @@ import jwt from 'jsonwebtoken';
 import User from '../modules/auth/model/User';
 
 interface JwtPayload {
-  _id: string;
+  userId: string;
   iat: number;
   exp: number;
 }
@@ -27,16 +27,16 @@ const authenticateUser = async (authorizationHeader: string | undefined): Promis
     const token = authorizationHeader.split(' ')[1];
 
     // Verify and decode the token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload;
-
+    const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload; 
     // Find the user in the database
-    const user = await User.findById(decoded._id).select('-password');
+    const user = await User.findById(decoded.userId).select('-password').lean();
 
     // Ensure user is active
     if (user && user.isActive) {
-      return { ...user.toObject() }; // Return user and token
+      return { ...user }; // Return user and token
     }
   } catch (error) {
+    console.log('Authentication error:', error);
     // Handle invalid token or decoding issues
     return null;
   }

@@ -7,7 +7,7 @@ const ticketService = new TicketService();
 
 router.route('/').post(ticketService.create).get(ticketService.getResources);
 router.route('/:id').get(ticketService.getResource).put(ticketService.updateResource).delete(ticketService.removeResource);
-router.route('/:id/message').get(ticketService.getResource).post(ticketService.create);
+router.route('/:id/message').get(ticketService.getMessages).post(ticketService.createMessage);
 
 // authenticated routes
 export default router;
