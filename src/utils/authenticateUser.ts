@@ -30,11 +30,11 @@ const authenticateUser = async (authorizationHeader: string | undefined): Promis
     const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload;
 
     // Find the user in the database
-    const user = await User.findById(decoded._id).select('-password');
+    const user = await User.findById(decoded._id).select('-password').lean();
 
     // Ensure user is active
     if (user && user.isActive) {
-      return { ...user.toObject() }; // Return user and token
+      return { ...user }; // Return user and token
     }
   } catch (error) {
     // Handle invalid token or decoding issues

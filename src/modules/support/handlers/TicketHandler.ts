@@ -2,9 +2,12 @@ import SupportTicket, { SupportType } from '../models/Support'; // Adjust path a
 import SupportGroup from '../models/SupportGroups';
 import { UserType } from '../../auth/model/User';
 import { ErrorUtil } from '../../../middleware/ErrorUtil';
-import SupportMessage from '../models/SupportMessage';
+import SupportMessage, { SupportMessageType } from '../models/SupportMessage';
 import mongoose from 'mongoose';
 import { CRUDHandler } from '../../../utils/baseCRUD';
+import socket from '../../../utils/socket';
+import Support from '../models/Support';
+import { assign } from 'nodemailer/lib/shared';
 
 export class TicketHandler extends CRUDHandler<SupportType> {
   constructor() {
@@ -213,5 +216,99 @@ export class TicketHandler extends CRUDHandler<SupportType> {
     // delete the object
     await SupportTicket.findByIdAndDelete(ticketId);
     return { success: true };
+  }
+
+  // Get messages for a specific ticket
+  async getMessages(options: { filters: Array<Object>; sort: Record<string, 1 | -1>; query: Array<Object>; page: Number; limit: Number }): Promise<Array<SupportMessageType>> {
+    const { filters, sort, query, page, limit } = options;
+    return await SupportMessage.aggregate([
+      {
+        $match: {
+          $and: [...filters],
+          ...(query.length > 0 && { $or: query }),
+        },
+      },
+      {
+        $sort: sort,
+      },
+      {
+        $facet: {
+          metadata: [{ $count: 'totalCount' }, { $addFields: { page, limit } }],
+          entries: [
+            { $skip: (Number(page) - 1) * Number(limit) },
+            { $limit: Number(limit) },
+            {
+              $lookup: {
+                from: 'supportgroups',
+                localField: 'groups',
+                foreignField: '_id',
+                as: 'groups',
+                pipeline: [
+                  {
+                    $project: {
+                      name: 1,
+                      _id: 1,
+                    },
+                  },
+                ],
+              },
+            },
+          ],
+        },
+      },
+    ]);
+  }
+
+  async createMessage(ticketId: string, data: any): Promise<any> {
+    //try to locate ticket
+    const ticket = await Support.findById(ticketId);
+    //if no ticket is found, return a 400 error
+    if (!ticket) {
+      throw new ErrorUtil('Ticket not found', 404);
+    }
+    //create the message
+    const newMessage = await SupportMessage.create({
+      ticket: ticket._id,
+      message: data.message,
+      user: data.user ? data.user._id : null,
+      sender: {
+        email: data.user ? data.user.email : data.email,
+        fullName: data.user ? data.user.fullName : data.fullName,
+      },
+    });
+    //if the message was not created, return a 400 error
+    if (!newMessage) {
+      throw new ErrorUtil('Message was not created', 400);
+    }
+
+    // find out who is sending the message, is it the agent or the user?
+    // if the user is sending the message, we need to update the ticket status to open, and we send a notification to the agent
+    // if its the agent, we set the status to pending and send a notification to the user, but not the agent
+    // we can see whose sending the message by checking req.user against the ticket user, if they are the same, then its the user sending the message
+    // if they are different, then its the agent sending the message
+    // ticket.requester can be null, so we need to check if it exists before comparing
+    let isUser = true; // default to true, meaning the user is sending the message
+    if (!ticket.requester) {
+      isUser = false;
+    } else {
+      isUser = ticket?.requester!.toString() === data.user?._id.toString();
+    }
+
+    // update the ticket status
+    ticket.status = isUser ? 'Open' : 'Pending';
+
+    // build a return object that can be used in the event emitter
+    const user = data.user || null;
+    const returnObject = {
+      ticket,
+      message: newMessage,
+      user: user ? user._id : null,
+      assignee: ticket.assignee ? ticket.assignee : null,
+      isUser,
+    };
+
+    // save the ticket
+    await ticket.save();
+    return returnObject;
   }
 }
