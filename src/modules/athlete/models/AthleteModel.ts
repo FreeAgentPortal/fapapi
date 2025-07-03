@@ -4,20 +4,41 @@ export interface IAthlete extends Document {
   _id: mongoose.Types.ObjectId;
   userId: mongoose.Types.ObjectId;
   fullName: string;
-  contactNumber: string;
-  email: string;
-  hometown?: string;
+  contactNumber?: string;
+  email?: string;
+  birthPlace?: {
+    city: string;
+    state: string;
+    country: string;
+  };
+  links?: {
+    text: string;
+    shortText: string;
+    href: string;
+    rel: string[];
+    isExternal: boolean;
+  }[];
+  draft?: {
+    year: number;
+    round: number;
+    pick: number;
+    team: string; // Team name or ID
+  };
   birthdate?: Date;
   measurements?: Map<string, string | number>; // e.g., "height": "6'1\""
   metrics?: Map<string, number>; // e.g., "dash40": 4.42
   college?: string;
-  positions?: string[];
+  positions?: {
+    name: string;
+    abbreviation: string;
+  }[];
   graduationYear?: number;
   bio?: string;
   highSchool?: string;
   awards?: string[];
   strengths?: string;
   weaknesses?: string;
+  experienceYears?: number; // Years of playing experience
   testimony?: string;
   profileImageUrl?: string;
   highlightVideos?: string[]; // Max 5
@@ -31,22 +52,40 @@ const AthleteSchema = new Schema<IAthlete>(
     userId: {
       type: Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
       index: true,
-      unique: true,
     },
     fullName: { type: String, required: true },
-    contactNumber: { type: String, required: true },
-    email: { type: String, required: true, lowercase: true, trim: true },
-    hometown: { type: String },
+    contactNumber: { type: String },
+    email: { type: String, lowercase: true, trim: true },
+    birthPlace: {
+      city: { type: String },
+      state: { type: String },
+      country: { type: String },
+    },
     birthdate: { type: Date },
-
     measurements: {
       type: Map,
       of: String || Number,
       default: {},
     },
-
+    links: [
+      {
+        text: { type: String, required: true },
+        shortText: { type: String, required: true },
+        href: { type: String, required: true },
+        rel: { type: [String], default: [] },
+        isExternal: { type: Boolean, default: false },
+      },
+    ],
+    draft: {
+      year: { type: Number, min: 1900, max: new Date().getFullYear() },
+      round: { type: Number, min: 1 },
+      pick: { type: Number, min: 1 },
+      team: { type: String }, // Team name or ID
+    },
+    graduationYear: { type: Number, min: 1900, max: new Date().getFullYear() },
+    bio: { type: String, maxlength: 500 }, // Short bio or description
+    experienceYears: { type: Number, min: 0, default: 0 },
     metrics: {
       type: Map,
       of: Number,
