@@ -5,4 +5,6 @@ export class NCRUDHandler extends CRUDHandler<NotificationType> {
   constructor() {
     super(Notification);
   }
+
+  
 }

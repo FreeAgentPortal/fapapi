@@ -11,16 +11,13 @@ import socket from '../../../utils/socket';
 export default class TicketService extends CRUDService {
   constructor() {
     super(TicketHandler);
+    this.requiresAuth = {
+      getMessages: true,
+      createMessage: true,
+      create: true,
+    };
   }
-
-  protected async beforeCreate(data: any): Promise<void> {
-    // try to authenticate the user
-    const user = await authenticateUser(data.user);
-    if (user) {
-      data.user = user; // Attach the user to the data
-    }
-  }
-
+  
   public getMessages = async (req: Request, res: Response): Promise<Response> => {
     try {
       // mimics the fetchAll method in CRUDService
@@ -60,7 +57,7 @@ export default class TicketService extends CRUDService {
     } catch (err) {
       console.error(err);
       return error(err, req, res);
-    }
+    } 
   };
 
   public createMessage = async (req: Request, res: Response): Promise<Response> => {

@@ -107,4 +107,5 @@ const SupportSchema = new Schema<SupportAttributes>(
   }
 );
 
+
 export default mongoose.model<SupportType>('Support', SupportSchema);

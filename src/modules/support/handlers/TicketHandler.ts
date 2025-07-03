@@ -14,13 +14,13 @@ export class TicketHandler extends CRUDHandler<SupportType> {
     super(SupportTicket);
   }
   // Create a new support ticket
-  async create(data: { user: UserType; body: any }): Promise<SupportType> {
+  async create(data: any): Promise<SupportType> {
     const newTicket = await SupportTicket.create({
-      ...data.body,
+      ...data,
       requester: data.user ? data.user._id : null,
       requesterDetails: {
-        email: data.user ? data.user.email : data.body.email,
-        fullName: data.user ? data.user.fullName : data.body.fullName,
+        email: data.user ? data.user.email : data.email,
+        fullName: data.user ? data.user.fullName : data.fullName,
       },
     });
 
@@ -44,13 +44,13 @@ export class TicketHandler extends CRUDHandler<SupportType> {
     // next we want to create a message for the ticket
     const message = await SupportMessage.create({
       ticket: newTicket._id,
-      message: data.body.message,
+      message: data.message,
       // These fields are technically optional, as the messages will be attached
       // to a ticket, which will have the requester and sender fields, but it's
       // good to have them here for reference.
       user: data.user ? data.user._id : null,
       sender: {
-        fullName: data.user ? data.user.fullName : data.body.fullName,
+        fullName: data.user ? data.user.fullName : data.fullName,
         avatarUrl: data.user ? data.user?.profileImageUrl : null,
       },
     });
@@ -64,7 +64,7 @@ export class TicketHandler extends CRUDHandler<SupportType> {
   }
 
   // Retrieve all tickets for a user
-  async getTickets(options: {
+  async fetchAll(options: {
     filters: Array<Object>;
     sort: Record<string, 1 | -1>;
     query: Array<Object>;
@@ -104,7 +104,6 @@ export class TicketHandler extends CRUDHandler<SupportType> {
                   {
                     $project: {
                       name: 1,
-                      _id: 1,
                     },
                   },
                 ],
