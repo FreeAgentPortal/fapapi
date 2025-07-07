@@ -41,7 +41,7 @@ const mapAthleteData = (data: any) => ({
     abbreviation: data.position?.abbreviation,
   },
   experienceYears: data.experience?.years,
-  profileImage: data.headshot?.href,
+  profileImageUrl: data.headshot?.href,
   links: data.links?.map((link: any) => ({
     text: link.text,
     shortText: link.shortText,
@@ -66,7 +66,9 @@ const seedAthletes = async () => {
     );
 
     console.log(`Mapped ${athletes.length} athletes`);
-
+    // delete all existing athletes
+    await AthleteModel.deleteMany({});
+    console.log('✅ Deleted all existing athletes');
     const result = await AthleteModel.insertMany(athletes);
     console.log(`✅ Successfully inserted ${result.length} athletes`);
     console.log(`Seeded ${athletes.length} athletes`);
