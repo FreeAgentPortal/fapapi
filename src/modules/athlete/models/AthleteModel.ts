@@ -2,6 +2,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IAthlete extends Document {
   _id: mongoose.Types.ObjectId;
+  espnid?: string; // ESPN ID, optional for querying espn athlete data
   userId: mongoose.Types.ObjectId;
   fullName: string;
   contactNumber?: string;
@@ -28,10 +29,12 @@ export interface IAthlete extends Document {
   measurements?: Map<string, string | number>; // e.g., "height": "6'1\""
   metrics?: Map<string, number>; // e.g., "dash40": 4.42
   college?: string;
-  positions?: {
-    name: string;
-    abbreviation: string;
-  }[];
+  positions?: [
+    {
+      name: string;
+      abbreviation: string;
+    }
+  ];
   graduationYear?: number;
   bio?: string;
   highSchool?: string;
@@ -54,6 +57,7 @@ const AthleteSchema = new Schema<IAthlete>(
       ref: 'User',
       index: true,
     },
+    espnid: { type: String, unique: true, sparse: true }, // ESPN ID for querying athlete data
     fullName: { type: String, required: true },
     contactNumber: { type: String },
     email: { type: String, lowercase: true, trim: true },
@@ -99,7 +103,12 @@ const AthleteSchema = new Schema<IAthlete>(
     },
 
     college: { type: String },
-    positions: { type: [String] },
+    positions: [
+      {
+        name: { type: String },
+        abbreviation: { type: String },
+      },
+    ],
     highSchool: { type: String },
     awards: [{ type: String }],
     strengths: { type: String },

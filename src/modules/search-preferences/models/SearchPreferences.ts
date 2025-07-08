@@ -11,7 +11,7 @@ export interface ISearchPreferences extends Document {
   numberOfResults?: number; // Optional number of results to return
   dateLastRan?: Date; // Optional date when the search was last run
   ownerId: Types.ObjectId; // Linked to TeamProfile, ScoutProfile, etc.
-  positions: string[];
+  positions?: string[]; // Array of positions to filter athletes
   ageRange?: { min: number; max: number };
   performanceMetrics?: {
     [metric: string]: {
@@ -27,7 +27,6 @@ const SearchPreferencesSchema = new Schema<ISearchPreferences>(
   {
     ownerType: { type: String, required: true, enum: ['team', 'scout', 'agent'] },
     ownerId: { type: Schema.Types.ObjectId, required: true, index: true },
-    positions: [{ type: String }],
     name: { type: String, required: true },
     description: { type: String },
     tags: [{ type: String }],
@@ -39,6 +38,7 @@ const SearchPreferencesSchema = new Schema<ISearchPreferences>(
       min: Number,
       max: Number,
     },
+    positions: [{ type: String }], // Array of positions to filter athletes
     performanceMetrics: {
       type: Map,
       of: new Schema(

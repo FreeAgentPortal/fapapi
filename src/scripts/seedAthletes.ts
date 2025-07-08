@@ -16,16 +16,27 @@ const fetchAthleteDetail = async (ref: string) => {
 };
 
 const mapAthleteData = (data: any) => ({
+  espnid: data.id,
   fullName: data.fullName,
   firstName: data.firstName,
   lastName: data.lastName,
   displayName: data.displayName,
   age: data.age,
-  dateOfBirth: data.dateOfBirth,
+  birthdate: data.dateOfBirth,
   active: data.active,
-  metrics: {
+  measurements: {
     height: data.height,
     weight: data.weight,
+  },
+  // for testing purposes we will create a mock of metrics
+  metrics: {
+    // set random values so we can test the search functionality
+    dash40: Math.random() * (5 - 4) + 4, //
+    benchPress: Math.floor(Math.random() * (30 - 20 + 1)) + 20, // Random value between 20 and 30
+    verticalJump: Math.floor(Math.random() * (40 - 30 + 1)) + 30, // Random value between 30 and 40
+    broadJump: Math.floor(Math.random() * (120 - 100 + 1)) + 100, // Random value between 100 and 120
+    threeCone: Math.random() * (8 - 6) + 6, // Random value between 6 and 8
+    shuttle: Math.random() * (5 - 4) + 4, // Random value between 4 and 5
   },
   birthPlace: data.birthPlace,
   draft: data.draft
@@ -36,7 +47,7 @@ const mapAthleteData = (data: any) => ({
         displayText: data.draft.displayText,
       }
     : undefined,
-  position: {
+  positions: {
     name: data.position?.name,
     abbreviation: data.position?.abbreviation,
   },
@@ -66,12 +77,18 @@ const seedAthletes = async () => {
     );
 
     console.log(`Mapped ${athletes.length} athletes`);
-    // delete all existing athletes
-    await AthleteModel.deleteMany({});
-    console.log('✅ Deleted all existing athletes');
-    const result = await AthleteModel.insertMany(athletes);
-    console.log(`✅ Successfully inserted ${result.length} athletes`);
-    console.log(`Seeded ${athletes.length} athletes`);
+
+    // Upsert based on espnid, if espnid exists, update the document, otherwise insert a new one
+    await AthleteModel.bulkWrite(
+      athletes.map((athlete) => ({
+        updateOne: {
+          filter: { espnid: athlete.espnid },
+          update: { $set: athlete },
+          upsert: true, // Insert if not exists
+        },
+      }))
+    );
+    console.log(`✅ Successfully upserted athletes`);
   } catch (error) {
     console.error('Error seeding athletes:', error);
   } finally {

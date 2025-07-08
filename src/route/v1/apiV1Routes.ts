@@ -8,6 +8,7 @@ import feedRoutes from '../../modules/feed/routes/index';
 import uploadRoutes from '../../modules/upload/routes/index';
 import notificationRoutes from '../../modules/notification/route/index';
 import adminRoutes from '../../modules/admin/route/index';
+import searchPreferencesRoutes from '../../modules/search-preferences/routes/index';
 
 const router = express.Router();
 
@@ -20,5 +21,6 @@ router.use('/feed', feedRoutes);
 router.use('/upload', uploadRoutes);
 router.use('/notification', notificationRoutes);
 router.use('/admin', adminRoutes);
+router.use('/search-preferences', searchPreferencesRoutes);
 
 export default router;
