@@ -2,6 +2,7 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import { AthleteModel } from '../../athlete/models/AthleteModel';
+import { MONGO_URI } from '../../../config/mongouri';
 
 // Load environment variables
 dotenv.config();
@@ -12,7 +13,7 @@ async function main() {
   try {
     // Connect to MongoDB
     console.log('📦 Connecting to MongoDB...');
-    const mongoUri = process.env.MONGO_URI!;
+    const mongoUri = MONGO_URI;
     await mongoose.connect(mongoUri);
     console.log('✅ Connected to MongoDB\n');
 
