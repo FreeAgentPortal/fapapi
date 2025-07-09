@@ -5,4 +5,5 @@ export class SearchPreferencesHandler extends CRUDHandler<ISearchPreferences> {
   constructor() {
     super(SearchPreferences);
   }
+
 }

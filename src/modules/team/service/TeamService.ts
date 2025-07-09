@@ -8,6 +8,7 @@ import { AdvFilters } from '../../../utils/advFilter/AdvFilters';
 import error from '../../../middleware/error';
 import { CRUDService } from '../../../utils/baseCRUD';
 import asyncHandler from '../../../middleware/asyncHandler';
+import { ErrorUtil } from '../../../middleware/ErrorUtil';
 
 export default class TeamService extends CRUDService {
   constructor(private readonly authHandler: AuthenticationHandler = new AuthenticationHandler()) {
@@ -29,29 +30,12 @@ export default class TeamService extends CRUDService {
       return res.status(500).json({ error: err.message });
     }
   };
-
-  /**
-   * Called internally during registration or profile bootstrapping.
-   */
-  public create = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+  public createInternal = async (userId: string, data: any) => {
     try {
-      const profile = await this.handler.createProfile(req.body);
-      return res.status(201).json(profile);
+      return await this.handler.create(data);
     } catch (error: any) {
-      return res.status(400).json({ error: error.message });
+      console.error('Error creating team profile:', error);
+      throw new ErrorUtil('Failed to create team profile', 400);
     }
-  });
-
-  /**
-   * Called from an HTTP route. Handles req/res and responds to client.
-   */
-  async createProfileFromRequest(req: Request, res: Response) {
-    try {
-      const data = req.body as any; // Adjust type as needed
-      const profile = await this.handler.createProfile(data);
-      return res.status(201).json(profile);
-    } catch (error: any) {
-      res.status(400).json({ error: error.message });
-    }
-  }
+  };
 }

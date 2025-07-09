@@ -7,6 +7,7 @@ export class SearchPreferencesService extends CRUDService {
     // if the routes require authentication, set this.requiresAuth
     // to true for the respective methods
     this.requiresAuth = {
+      getResource: true,
       getResources: true,
       create: true,
       updateResource: true,
