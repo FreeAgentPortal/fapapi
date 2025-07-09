@@ -3,6 +3,7 @@ import { IAthlete } from '../models/AthleteModel';
 import { ErrorUtil } from '../../../middleware/ErrorUtil';
 import BillingAccount from '../../auth/model/BillingAccount';
 import { AthleteProfileHandler } from './AtheleteProfileHandler';
+import { CRUDHandler } from '../../../utils/baseCRUD';
 
 /**
  * Handles creation, retrieval, and modification of athlete profiles.

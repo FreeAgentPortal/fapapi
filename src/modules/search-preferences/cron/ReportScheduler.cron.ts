@@ -54,7 +54,7 @@ export class ReportSchedulerCron {
         return;
       }
 
-      console.log(`[ReportScheduler] Found ${duePreferences.length} search preferences due for reports`);
+      console.log(`[ReportScheduler] Found ${duePreferences.length} search preferences due for reports\n`);
 
       // Process each search preference
       let successCount = 0;
@@ -62,10 +62,10 @@ export class ReportSchedulerCron {
 
       for (const preference of duePreferences) {
         try {
-          await SchedulerHandler.generateReport(preference);
+          const data = await SchedulerHandler.generateReport(preference);
 
           // Update the dateLastRan field
-          await SearchPreferences.findByIdAndUpdate(preference._id, { dateLastRan: new Date() }, { new: true });
+          await SearchPreferences.findByIdAndUpdate(preference._id, { dateLastRan: new Date(), numberOfResults: data.results.length }, { new: true });
 
           successCount++;
         } catch (error) {

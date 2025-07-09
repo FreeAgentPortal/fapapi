@@ -1,28 +1,7 @@
 import { ISearchPreferences } from '../models/SearchPreferences';
 import { eventBus } from '../../../lib/eventBus';
-import { AthleteModel } from '../../athlete/models/AthleteModel';
-
-export interface AthleteSearchResult {
-  id: string;
-  name: string;
-  positions: string[];
-  age: number | null;
-  birthdate?: Date;
-  metrics: Record<string, number>;
-  college?: string;
-  profileImageUrl?: string;
-  diamondRating?: number;
-  email?: string;
-  experienceYears?: number;
-  graduationYear?: number;
-}
-
-export interface ReportData {
-  searchPreference: ISearchPreferences;
-  results: AthleteSearchResult[];
-  generatedAt: Date;
-  reportId: string;
-}
+import { AthleteModel, IAthlete } from '../../athlete/models/AthleteModel';
+import SearchReport, { ISearchReport } from '../models/SearchReport';
 
 export class SchedulerHandler {
   /**
@@ -30,25 +9,25 @@ export class SchedulerHandler {
    * @param searchPreference - The search preference to generate a report for
    * @returns Promise<ReportData> - The generated report data
    */
-  public static async generateReport(searchPreference: ISearchPreferences): Promise<ReportData> {
+  public static async generateReport(searchPreference: ISearchPreferences): Promise<ISearchReport> {
     try {
       console.log(`[Scheduler] Generating report for search preference: ${searchPreference.name} (ID: ${searchPreference._id})`);
 
-      // TODO: Implement actual search/query logic based on search preferences
-      // This would typically involve:
-      // 1. Query athletes/players based on search criteria
-      // 2. Filter by positions, age range, performance metrics
-      // 3. Apply any additional filters from the search preference
-
       // Mock report data for now - replace with actual search logic
-      const mockResults = await this.performSearch(searchPreference);
-
-      const reportData: ReportData = {
-        searchPreference,
-        results: mockResults,
+      const athletes = await this.performSearch(searchPreference);
+      if (!athletes || athletes.length === 0) {
+        console.warn(`[Scheduler] No athletes found for search preference: ${searchPreference.name}`);
+      }
+      const reportData = {
+        searchPreference: searchPreference._id as any,
+        results: athletes.map((a) => a._id),
         generatedAt: new Date(),
         reportId: `report_${searchPreference._id}_${Date.now()}`,
-      };
+        ownerId: searchPreference.ownerId,
+        ownerType: searchPreference.ownerType,
+      } as ISearchReport;
+
+      await SearchReport.create(reportData);
 
       // Emit event to notify user of new report
       await this.notifyUserOfNewReport(searchPreference, reportData);
@@ -64,7 +43,7 @@ export class SchedulerHandler {
   /**
    * Perform the actual search based on search preferences
    */
-  private static async performSearch(searchPreference: ISearchPreferences): Promise<AthleteSearchResult[]> {
+  private static async performSearch(searchPreference: ISearchPreferences): Promise<IAthlete[]> {
     // console.log(`[Scheduler] Performing search with preferences:`, {
     //   positions: searchPreference.positions,
     //   ageRange: searchPreference.ageRange,
@@ -180,36 +159,7 @@ export class SchedulerHandler {
 
       console.log(`[Scheduler] Found ${results.length} athletes matching search criteria`);
 
-      // Transform results to include calculated age and formatted data
-      const transformedResults = results.map((athlete) => {
-        let age = null;
-        if (athlete.birthdate) {
-          const today = new Date();
-          const birthDate = new Date(athlete.birthdate);
-          age = today.getFullYear() - birthDate.getFullYear();
-          const monthDiff = today.getMonth() - birthDate.getMonth();
-          if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
-            age--;
-          }
-        }
-
-        return {
-          id: athlete._id.toString(),
-          name: athlete.fullName,
-          positions: athlete.positions || [],
-          age,
-          birthdate: athlete.birthdate,
-          metrics: athlete.metrics || {},
-          college: athlete.college,
-          profileImageUrl: athlete.profileImageUrl,
-          diamondRating: athlete.diamondRating,
-          email: athlete.email,
-          experienceYears: athlete.experienceYears,
-          graduationYear: athlete.graduationYear,
-        };
-      });
-
-      return transformedResults;
+      return results;
     } catch (error) {
       console.error(`[Scheduler] Error executing search query:`, error);
       throw new Error(`Failed to perform athlete search: ${error instanceof Error ? error.message : 'Unknown error'}`);
@@ -219,7 +169,7 @@ export class SchedulerHandler {
   /**
    * Notify the user that a new report is available
    */
-  private static async notifyUserOfNewReport(searchPreference: ISearchPreferences, reportData: ReportData): Promise<void> {
+  private static async notifyUserOfNewReport(searchPreference: ISearchPreferences, reportData: ISearchReport): Promise<void> {
     try {
       // Emit event through event bus for notification system
       eventBus.publish('search.report.generated', {
@@ -231,7 +181,7 @@ export class SchedulerHandler {
         generatedAt: reportData.generatedAt,
       });
 
-      console.log(`[Scheduler] Notification sent for new report: ${reportData.reportId}`);
+      console.log(`[Scheduler] Notification sent for new report: ${reportData.reportId}\n`);
     } catch (error) {
       console.error(`[Scheduler] Error sending notification for report ${reportData.reportId}:`, error);
       // Don't throw here - report generation should succeed even if notification fails

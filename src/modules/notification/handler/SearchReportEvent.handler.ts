@@ -1,5 +1,5 @@
 import { eventBus } from '../../../lib/eventBus';
-import Notification from '../../notification/model/Notification';
+import Notification from '../model/Notification';
 import User from '../../auth/model/User';
 import { ErrorUtil } from '../../../middleware/ErrorUtil';
 
@@ -16,7 +16,7 @@ export default class SearchReportEventHandler {
   /**
    * Handle the search report generated event
    */
-  public static async onSearchReportGenerated(event: SearchReportEvent): Promise<void> {
+  public onSearchReportGenerated = async (event: SearchReportEvent): Promise<void> => {
     try {
       console.log(`[SearchReportEventHandler] Processing report generated event for user: ${event.userId}`);
 
@@ -44,17 +44,6 @@ export default class SearchReportEventHandler {
       console.error('[SearchReportEventHandler] Error processing search report event:', error);
       // Don't throw - we don't want to break the report generation process
     }
-  }
-
-  /**
-   * Initialize event listeners
-   */
-  public static init(): void {
-    console.log('[SearchReportEventHandler] Initializing search report event handlers...');
-
-    eventBus.subscribe('search.report.generated', SearchReportEventHandler.onSearchReportGenerated);
-
-    console.log('[SearchReportEventHandler] Event handlers initialized');
   }
 
   /**

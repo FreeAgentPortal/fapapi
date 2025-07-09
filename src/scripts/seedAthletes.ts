@@ -66,7 +66,7 @@ const seedAthletes = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI as string);
     console.log('🔗 Connected to MongoDB');
-    const list = await fetchAthleteList('https://sports.core.api.espn.com/v2/sports/football/leagues/nfl/athletes?limit=100&active=true');
+    const list = await fetchAthleteList('https://sports.core.api.espn.com/v2/sports/football/leagues/nfl/athletes?limit=100&active=true&page=2');
     console.log(`Fetched ${list.length} athletes from ESPN API`);
 
     const athletes = await Promise.all(

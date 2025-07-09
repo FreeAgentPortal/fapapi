@@ -105,11 +105,11 @@ export class SchedulerTestUtils {
     // Daily preference
     preferences.push(
       await this.createTestSearchPreference(ownerId, {
-        name: 'Daily Forward Search',
+        name: 'Daily Halfback Search',
         frequencyType: 'daily',
         frequency: 1,
         //positions should be an array of short strings i.e. ['QB', 'RB']
-        positions: ['FWD'],
+        positions: ['HB'],
         // for testing purposes we should only use metrics that are defined in the athlete model
         // i.e. dash40, benchPress, verticalJump, broadJump, threeCone, shuttle
         performanceMetrics: {
@@ -144,10 +144,10 @@ export class SchedulerTestUtils {
     // Weekly preference
     preferences.push(
       await this.createTestSearchPreference(ownerId, {
-        name: 'Weekly Midfielder Search',
+        name: 'Weekly FullBack Search',
         frequencyType: 'weekly',
         frequency: 1,
-        positions: ['MDF'],
+        positions: ['FB'],
         performanceMetrics: {
           dash40: { min: 4.5, max: 5.5 },
           benchPress: { min: 22, max: 28 },
@@ -162,10 +162,10 @@ export class SchedulerTestUtils {
     // Monthly preference
     preferences.push(
       await this.createTestSearchPreference(ownerId, {
-        name: 'Monthly Defender Search',
+        name: 'Monthly multi-position Search',
         frequencyType: 'monthly',
         frequency: 1,
-        positions: ['DEF'],
+        positions: ['DE', 'LB', 'CB'],
         performanceMetrics: {
           dash40: { min: 4.8, max: 5.2 },
           benchPress: { min: 24, max: 26 },
