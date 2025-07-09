@@ -88,9 +88,9 @@ export abstract class CRUDService {
   /**
    * Override this in child class to mark methods requiring authentication.
    */
-  protected requiresAuth: Partial<Record<keyof CRUDService, boolean>> = {};
+  protected requiresAuth: Partial<Record<keyof CRUDService, boolean>> & Record<string, boolean> = {};
 
-  private isAuthRequired(method: keyof CRUDService): boolean {
+  private isAuthRequired(method: keyof CRUDService | string): boolean {
     return this.requiresAuth[method] ?? false;
   }
 

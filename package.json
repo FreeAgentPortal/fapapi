@@ -4,6 +4,8 @@
   "main": "server.js",
   "scripts": {
     "seed:teams": "ts-node src/scripts/seedTeams.ts",
+    "seed:athletes": "ts-node src/scripts/seedAthletes.ts",
+    "test:scheduler": "ts-node src/modules/search-preferences/utils/runSchedulerTests.ts",
     "start": "node dist/server.js",
     "build": "tsc",
     "dev": "ts-node-dev src/server.ts",
