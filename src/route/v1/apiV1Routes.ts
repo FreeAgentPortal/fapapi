@@ -21,6 +21,6 @@ router.use('/feed', feedRoutes);
 router.use('/upload', uploadRoutes);
 router.use('/notification', notificationRoutes);
 router.use('/admin', adminRoutes);
-router.use('/search-preferences', searchPreferencesRoutes);
+router.use('/search-preference', searchPreferencesRoutes);
 
 export default router;

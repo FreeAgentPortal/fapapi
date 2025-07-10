@@ -3,6 +3,7 @@ import express from 'express';
 import { AuthMiddleware } from '../../../middleware/AuthMiddleware';
 import { SearchPreferencesService } from '../services/SearchPreference.service';
 import schedulerRoutes from './schedulerRoutes';
+import reportRoutes from './reportRoutes';
 
 const router = express.Router();
 
@@ -10,6 +11,7 @@ const service = new SearchPreferencesService();
 
 // Scheduler routes (includes admin and user routes)
 router.use('/scheduler', schedulerRoutes);
+router.use('/report', reportRoutes);
 
 // Main search preferences CRUD routes
 router.use(AuthMiddleware.protect);
