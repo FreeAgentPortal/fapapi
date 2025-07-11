@@ -29,10 +29,14 @@ export class SchedulerHandler {
 
       // We want to upsert the report to avoid duplicates if a report already exists for this search
       // if it already exists, and hasnt been opened, we will update it
-      await SearchReport.findOneAndUpdate({ searchPreference: searchPreference._id, ownerId: searchPreference.ownerId, opened: false }, { $set: reportData }, { upsert: true });
+      const report = await SearchReport.findOneAndUpdate(
+        { searchPreference: searchPreference._id, ownerId: searchPreference.ownerId, opened: false },
+        { $set: reportData },
+        { upsert: true }
+      );
 
       // Emit event to notify user of new report
-      await this.notifyUserOfNewReport(searchPreference, reportData);
+      await this.notifyUserOfNewReport(searchPreference, report!);
 
       console.log(`[Scheduler] Report generated successfully for preference: ${searchPreference.name}`);
       return reportData;
