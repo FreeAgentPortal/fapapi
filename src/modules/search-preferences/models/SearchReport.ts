@@ -16,8 +16,8 @@ export interface ISearchReport extends Document {
 
 const SearchReportSchema = new Schema<ISearchReport>(
   {
-    searchPreference: { type: Schema.Types.ObjectId, ref: 'SearchPreference', required: true },
-    results: [{ type: Schema.Types.ObjectId, ref: 'Athlete' }],
+    searchPreference: { type: Schema.Types.ObjectId, ref: 'SearchPreferences', required: true },
+    results: [{ type: Schema.Types.ObjectId, ref: 'AthleteProfile' }],
     generatedAt: { type: Date, default: Date.now },
     reportId: { type: String, required: true, unique: true },
     ownerId: { type: Schema.Types.ObjectId, required: true },

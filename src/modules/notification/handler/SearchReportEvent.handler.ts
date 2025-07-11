@@ -2,8 +2,10 @@ import { eventBus } from '../../../lib/eventBus';
 import Notification from '../model/Notification';
 import User from '../../auth/model/User';
 import { ErrorUtil } from '../../../middleware/ErrorUtil';
+import { ModelMap } from '../utils/ModelMap';
 
 export interface SearchReportEvent {
+  _id: string; // Event ID
   userId: string;
   ownerType: 'team' | 'scout' | 'agent';
   searchPreferenceName: string;
@@ -20,10 +22,15 @@ export default class SearchReportEventHandler {
     try {
       console.log(`[SearchReportEventHandler] Processing report generated event for user: ${event.userId}`);
 
+      // find the model we want to use with the modelMap
+      const Model = ModelMap[event.ownerType];
+      if (!Model) {
+        throw new ErrorUtil(`Invalid owner type: ${event.ownerType}`, 400);
+      }
       // Verify user exists
-      const user = await User.findById(event.userId);
+      const user = await Model.findById(event.userId);
       if (!user) {
-        throw new ErrorUtil(`User not found: ${event.userId}`, 404);
+        throw new ErrorUtil(`Owner not found: ${event.userId}`, 404);
       }
 
       // Create notification for the user
@@ -33,7 +40,7 @@ export default class SearchReportEventHandler {
         'New Search Report Available',
         `Your search report for "${event.searchPreferenceName}" is ready with ${event.resultCount} results.`,
         'search.report',
-        event.reportId as any
+        event._id as any
       );
 
       console.log(`[SearchReportEventHandler] Notification created for user ${event.userId} regarding report ${event.reportId}`);
@@ -44,7 +51,7 @@ export default class SearchReportEventHandler {
       console.error('[SearchReportEventHandler] Error processing search report event:', error);
       // Don't throw - we don't want to break the report generation process
     }
-  }
+  };
 
   /**
    * Send email notification (placeholder for future implementation)

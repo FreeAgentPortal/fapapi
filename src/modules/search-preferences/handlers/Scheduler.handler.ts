@@ -22,15 +22,21 @@ export class SchedulerHandler {
         searchPreference: searchPreference._id as any,
         results: athletes.map((a) => a._id),
         generatedAt: new Date(),
-        reportId: `report_${searchPreference._id}_${Date.now()}`,
+        reportId: `report_${searchPreference._id}_${searchPreference.name.replace(/\s+/g, '_')}`,
         ownerId: searchPreference.ownerId,
         ownerType: searchPreference.ownerType,
       } as ISearchReport;
 
-      await SearchReport.create(reportData);
+      // We want to upsert the report to avoid duplicates if a report already exists for this search
+      // if it already exists, and hasnt been opened, we will update it
+      const report = await SearchReport.findOneAndUpdate(
+        { searchPreference: searchPreference._id, ownerId: searchPreference.ownerId, opened: false },
+        { $set: reportData },
+        { upsert: true }
+      );
 
       // Emit event to notify user of new report
-      await this.notifyUserOfNewReport(searchPreference, reportData);
+      await this.notifyUserOfNewReport(searchPreference, report!);
 
       console.log(`[Scheduler] Report generated successfully for preference: ${searchPreference.name}`);
       return reportData;
@@ -173,6 +179,7 @@ export class SchedulerHandler {
     try {
       // Emit event through event bus for notification system
       eventBus.publish('search.report.generated', {
+        _id: reportData._id,
         userId: searchPreference.ownerId,
         ownerType: searchPreference.ownerType,
         searchPreferenceName: searchPreference.name,
