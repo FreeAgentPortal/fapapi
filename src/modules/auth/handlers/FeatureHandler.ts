@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import { ErrorUtil } from '../../../middleware/ErrorUtil';
 import FeatureSchema, { FeatureType } from '../model/FeatureSchema';
-import User from '../model/User';  
+import User from '../model/User';
 import { CRUDHandler } from '../../../utils/baseCRUD';
 
 export class FeatureHandler extends CRUDHandler<FeatureType> {
