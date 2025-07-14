@@ -7,6 +7,7 @@ import { RegisterHandler } from '../handlers/RegisterHandler';
 import featureRoutes from './featureRoutes';
 import planRoutes from './planRoutes';
 import claimRoutes from './claimRoutes';
+import legalRoutes from './legalRoutes';
 
 const router = express.Router();
 
@@ -15,6 +16,7 @@ const authService = new AuthService(new AuthenticationHandler(), new PasswordRec
 router.use('/feature', featureRoutes);
 router.use('/plan', planRoutes);
 router.use('/claim', claimRoutes);
+router.use('/legal', legalRoutes);
 
 router.route('/:email/email').get(authService.checkEmail);
 router.post('/register', authService.register);
