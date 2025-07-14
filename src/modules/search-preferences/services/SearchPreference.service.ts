@@ -1,5 +1,9 @@
+import { Response } from 'express';
+import asyncHandler from '../../../middleware/asyncHandler';
+import { AuthenticatedRequest } from '../../../types/AuthenticatedRequest';
 import { CRUDService } from '../../../utils/baseCRUD';
 import { SearchPreferencesHandler } from '../handlers/Search.handler';
+import error from '../../../middleware/error';
 
 export class SearchPreferencesService extends CRUDService {
   constructor() {
@@ -14,4 +18,17 @@ export class SearchPreferencesService extends CRUDService {
       removeResource: true,
     };
   }
+
+  public create = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+    try {
+      const data = { ...req.body, user: req.user?._id };
+      await this.beforeCreate(data);
+      const result = await this.handler.create(data);
+      await this.afterCreate(result);
+      return res.status(201).json({ success: true, payload: { _id: result._id } });
+    } catch (err) {
+      console.log(err);
+      return error(err, req, res);
+    }
+  });
 }
