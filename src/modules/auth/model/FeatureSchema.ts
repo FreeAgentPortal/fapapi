@@ -25,8 +25,8 @@ const schema = new Schema<ModelAttributes>(
     detailedDescription: { type: String }, // For marketing or display purposes
     type: {
       type: String,
-      enum: ['analytics', 'visibility', 'media', 'profile-enhancement', 'scouting', 'admin', 'misc'],
-      default: 'misc',
+      enum: ['core', 'premium', 'integration', 'add-on', 'enterprise', 'advanced'],
+      default: 'core',
     },
     isActive: { type: Boolean, default: true },
   },
