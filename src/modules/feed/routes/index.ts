@@ -16,6 +16,8 @@ router.route('/health').get((req, res) => {
   });
 });
 
+router.route("/articles").get(service.fetchArticles);
+
 // router.route('/').get(service.getResources);
 // router.route('/:id').get(service.getResource);
 
