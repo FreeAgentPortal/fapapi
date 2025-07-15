@@ -12,6 +12,7 @@ type AdminProfileInput = {
 export default class AdminService extends CRUDService {
   constructor() {
     super(AdminProfileHandler);
+    this.queryKeys = ['permissions'];
   }
   static async createProfile({ user, role = 'admin', permissions = [] }: AdminProfileInput) {
     const profile = new AdminModel({

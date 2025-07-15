@@ -17,5 +17,6 @@ export default class FeatureService extends CRUDService {
       removeResource: true,
       updateResource: true,
     };
+    this.queryKeys = ['name', 'type', 'shortDescription', 'detailedDescription'];
   }
 }

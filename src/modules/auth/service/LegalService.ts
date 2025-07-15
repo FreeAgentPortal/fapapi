@@ -16,5 +16,6 @@ export default class LegalService extends CRUDService {
       updateResource: true,
       removeResource: true,
     }
+    this.queryKeys = ['title']
   } 
 }

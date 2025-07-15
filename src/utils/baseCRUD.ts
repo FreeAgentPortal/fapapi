@@ -89,6 +89,10 @@ export abstract class CRUDService {
    * Override this in child class to mark methods requiring authentication.
    */
   protected requiresAuth: Partial<Record<keyof CRUDService, boolean>> & Record<string, boolean> = {};
+  /**
+   * Override this in child class to define query keys for filtering in fetchall methods.
+   */
+  protected queryKeys: string[] = [];
 
   private isAuthRequired(method: keyof CRUDService | string): boolean {
     return this.requiresAuth[method] ?? false;
@@ -141,7 +145,7 @@ export abstract class CRUDService {
       const pageSize = Number(req.query?.limit) || 10;
       const page = Number(req.query?.pageNumber) || 1;
       // Generate the keyword query
-      const keywordQuery = AdvFilters.query(['subject', 'description'], req.query?.keyword as string);
+      const keywordQuery = AdvFilters.query(this.queryKeys, req.query?.keyword as string);
 
       // Generate the filter options for inclusion if provided
       const filterIncludeOptions = AdvFilters.filter(req.query?.includeOptions as string);

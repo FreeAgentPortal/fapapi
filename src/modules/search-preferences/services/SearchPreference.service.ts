@@ -17,6 +17,7 @@ export class SearchPreferencesService extends CRUDService {
       updateResource: true,
       removeResource: true,
     };
+    this.queryKeys = ['name', 'description', 'tags']
   }
 
   public create = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {

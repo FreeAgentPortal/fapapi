@@ -17,6 +17,7 @@ export default class TeamService extends CRUDService {
       updateResource: true,
       create: true,
     };
+    this.queryKeys = ['name', 'description', 'tags'];
   }
   public checkResource = async (req: Request, res: Response): Promise<Response> => {
     try {
