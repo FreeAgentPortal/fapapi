@@ -9,6 +9,7 @@ import { CRUDService } from '../../../utils/baseCRUD';
 export default class ClaimService extends CRUDService {
   constructor() {
     super(ClaimHandler);
+    this.queryKeys = ['type', 'status'];
   }
   public async afterCreate(data: any): Promise<void> {
     await eventBus.publish('claim.created', { claimDetails: data });

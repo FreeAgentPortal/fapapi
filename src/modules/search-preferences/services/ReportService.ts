@@ -13,5 +13,6 @@ export class ReportService extends CRUDService {
       updateResource: true,
       removeResource: true,
     };
+    this.queryKeys = ['reportId']
   }
 }

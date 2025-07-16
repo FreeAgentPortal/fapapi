@@ -9,7 +9,7 @@ const planService = new PlanService();
 router.route('/').get(planService.getResources);
 
 router.use(AuthMiddleware.protect);
-router.use(AuthMiddleware.authorizeRoles(['admin', 'developer']) as any);
+router.use(AuthMiddleware.authorizeRoles(["*", "admin", "developer"]) as any);
 router.route('/').post(planService.create);
 router.route('/:id').get(planService.getResource).put(planService.updateResource).delete(planService.removeResource);
 
