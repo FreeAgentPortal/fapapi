@@ -66,8 +66,8 @@ export interface WordPressApiResponse {
   currentPage: number;
 }
 
-export class NewsFeedHandler { 
-  private readonly wpBaseUrl = 'http://nfldraftdiamonds.com';
+export class NewsFeedHandler {
+  private readonly wpBaseUrl = 'https://nfldraftdiamonds.com';
   private readonly wpApiEndpoint = '/wp-json/wp/v2/posts';
 
   /**
@@ -78,13 +78,7 @@ export class NewsFeedHandler {
   async fetchArticles(paginationOptions: PaginationOptions = {}): Promise<WordPressApiResponse> {
     try {
       // Set default pagination options
-      const {
-        page = 1,
-        per_page = 10,
-        order = 'desc',
-        orderby = 'date',
-        ...otherParams
-      } = paginationOptions;
+      const { page = 1, per_page = 10, order = 'desc', orderby = 'date', ...otherParams } = paginationOptions;
 
       // Build query parameters
       const queryParams = new URLSearchParams({
@@ -92,7 +86,7 @@ export class NewsFeedHandler {
         per_page: per_page.toString(),
         order,
         orderby,
-        ...this.buildQueryParams(otherParams)
+        ...this.buildQueryParams(otherParams),
       });
 
       const url = `${this.wpBaseUrl}${this.wpApiEndpoint}?${queryParams.toString()}`;
@@ -101,9 +95,9 @@ export class NewsFeedHandler {
       const response = await axios.get(url, {
         // timeout: 10000, // 10 seconds timeout
         headers: {
-          'Accept': 'application/json',
-          'User-Agent': 'FreeAgentPortal/1.0'
-        }
+          Accept: 'application/json',
+          'User-Agent': 'FreeAgentPortal/1.0',
+        },
       });
 
       // Extract pagination info from headers
@@ -114,17 +108,13 @@ export class NewsFeedHandler {
         posts: response.data,
         totalPosts,
         totalPages,
-        currentPage: page
+        currentPage: page,
       };
-
     } catch (error: any) {
       if (axios.isAxiosError(error)) {
         if (error.response) {
           // Server responded with error status
-          throw new ErrorUtil(
-            `WordPress API error: ${error.response.status} - ${error.response.statusText}`,
-            error.response.status
-          );
+          throw new ErrorUtil(`WordPress API error: ${error.response.status} - ${error.response.statusText}`, error.response.status);
         } else if (error.request) {
           // Request was made but no response received
           throw new ErrorUtil('No response from WordPress API - network error', 503);

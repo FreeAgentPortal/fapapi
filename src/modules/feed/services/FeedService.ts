@@ -13,7 +13,7 @@ export default class FeedService {
     try {
       const paginationOptions = {
         page: parseInt(req.query.pageNumber as string) || 1,
-        per_page: parseInt(req.query.limit as string) || 10,
+        per_page: parseInt(req.query.limit as string) || 2,
         orderby: req.query.sortOptions as string,
         search: req.query.keyword as string,
       } as PaginationOptions;
