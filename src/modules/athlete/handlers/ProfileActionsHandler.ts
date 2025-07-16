@@ -19,7 +19,7 @@ export class ProfileActionsHandler {
     }
     return {
       ...profile,
-      needsBillingSetup: !billing.vaulted,
+      needsBillingSetup: billing.needsUpdate,
     } as any as IAthlete;
   }
 }

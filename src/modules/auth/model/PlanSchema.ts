@@ -28,7 +28,7 @@ const Schema = new mongoose.Schema(
     },
     availableTo: {
       type: [String],
-      enum: ['athlete', 'team', 'agent', 'scout'],
+      enum: ['athlete', 'team', 'agent', 'scout'], 
       required: true,
     },
     features: [
