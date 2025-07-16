@@ -11,7 +11,7 @@ import { CRUDService } from '../../../utils/baseCRUD';
 export default class AthleteService extends CRUDService {
   constructor() {
     super(AthleteProfileHandler);
-    this.queryKeys = ['name', 'college', 'position.name'];
+    this.queryKeys = ['fullName', 'college'];
   }
   async createProfile(userId: string, data: AthleteProfileInput): Promise<IAthlete> {
     return await this.handler.create({ userId, ...data });

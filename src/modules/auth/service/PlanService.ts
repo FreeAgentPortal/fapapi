@@ -12,8 +12,7 @@ export default class PlanService extends CRUDService {
     super(PlanHandler);
     this.requiresAuth = {
       create: true,
-      getResource: true,
-      getResources: true,
+      getResource: true, 
       removeResource: true,
       updateResource: true,
     };
