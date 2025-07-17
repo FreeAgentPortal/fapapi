@@ -40,7 +40,7 @@ const Schema = new mongoose.Schema(
     ],
     tier: {
       type: String,
-      enum: ['silver', 'gold', 'platnium', 'bronze', 'diamond'],
+      enum: ['silver', 'gold', 'platinum', 'bronze', 'diamond'],
       default: 'silver',
     },
     yearlyDiscount: {
