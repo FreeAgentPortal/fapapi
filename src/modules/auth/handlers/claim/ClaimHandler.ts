@@ -8,7 +8,7 @@ import { UserType } from '../../model/User';
 import { LocalUploadClient } from '../../clients/UploadClient';
 import { ClaimPipeline } from '../../pipelines/ClaimPipeline';
 
-export class ClaimHandler extends CRUDHandler<ClaimType> {
+export class ClaimHandler {
   private claimPipeline: ClaimPipeline;
   private modelMap: Record<string, Model<any>> = {
     team: TeamModel,
@@ -16,8 +16,7 @@ export class ClaimHandler extends CRUDHandler<ClaimType> {
     // extend with other models as needed
   };
 
-  constructor() {
-    super(ClaimSchema);
+  constructor(private Schema: Model<ClaimType> = ClaimSchema) {
     this.claimPipeline = new ClaimPipeline();
   }
 
@@ -37,15 +36,6 @@ export class ClaimHandler extends CRUDHandler<ClaimType> {
       user: data.user,
     });
     return claim;
-  }
-
-  async fetchAll(options: PaginationOptions): Promise<{ entries: ClaimType[]; metadata: any[] }[]> {
-    return await this.Schema.aggregate(this.claimPipeline.getFullPipeline(options.filters, options.query, options.sort, options.page, options.limit, 'complete'));
-  }
-
-  async fetch(id: string): Promise<ClaimType | null> {
-    const result = await this.Schema.aggregate(this.claimPipeline.getSimplePipeline(id, 'detailed'));
-    return result.length > 0 ? result[0] : null;
   }
   async fetchClaimStatus(type: string, profileId: string): Promise<{ success: boolean; claim: ClaimType | undefined; profile?: any }> {
     // we are passed in a type, this type is what model we need to query to see if the profile exists

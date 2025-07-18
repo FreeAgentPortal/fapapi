@@ -3,7 +3,7 @@ import { CRUDHandler, PaginationOptions } from '../../../../utils/baseCRUD';
 import ClaimSchema, { ClaimType } from '../../model/ClaimSchema'; 
 import { ClaimPipeline } from '../../pipelines/ClaimPipeline';
 
-export class ClaimHandler extends CRUDHandler<ClaimType> {
+export class ClaimCrudHandler extends CRUDHandler<ClaimType> {
   private claimPipeline: ClaimPipeline;
   constructor() {
     super(ClaimSchema);
