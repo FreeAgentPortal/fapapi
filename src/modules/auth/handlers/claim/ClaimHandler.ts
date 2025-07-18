@@ -1,15 +1,24 @@
 import { Model } from 'mongoose';
-import { ErrorUtil } from '../../../middleware/ErrorUtil';
-import { CRUDHandler, PaginationOptions } from '../../../utils/baseCRUD';
-import ClaimSchema, { ClaimType } from '../model/ClaimSchema';
-import TeamModel from '../../team/model/TeamModel';
-import { AthleteModel } from '../../athlete/models/AthleteModel';
-import { UserType } from '../model/User';
-import { LocalUploadClient } from '../clients/UploadClient';
+import { ErrorUtil } from '../../../../middleware/ErrorUtil';
+import { CRUDHandler, PaginationOptions } from '../../../../utils/baseCRUD';
+import ClaimSchema, { ClaimType } from '../../model/ClaimSchema';
+import TeamModel from '../../../team/model/TeamModel';
+import { AthleteModel } from '../../../athlete/models/AthleteModel';
+import { UserType } from '../../model/User';
+import { LocalUploadClient } from '../../clients/UploadClient';
+import { ClaimPipeline } from '../../pipelines/ClaimPipeline';
 
 export class ClaimHandler extends CRUDHandler<ClaimType> {
+  private claimPipeline: ClaimPipeline;
+  private modelMap: Record<string, Model<any>> = {
+    team: TeamModel,
+    athlete: AthleteModel,
+    // extend with other models as needed
+  };
+
   constructor() {
     super(ClaimSchema);
+    this.claimPipeline = new ClaimPipeline();
   }
 
   async create(data: any): Promise<ClaimType> {
@@ -29,118 +38,14 @@ export class ClaimHandler extends CRUDHandler<ClaimType> {
     });
     return claim;
   }
-  modelMap: Record<string, Model<any>> = {
-    team: TeamModel,
-    athlete: AthleteModel,
-    // extend with other models as needed
-  };
+
   async fetchAll(options: PaginationOptions): Promise<{ entries: ClaimType[]; metadata: any[] }[]> {
-    return await this.Schema.aggregate([
-      {
-        $match: {
-          $and: [...options.filters],
-          ...(options.query.length > 0 && { $or: options.query }),
-        },
-      },
-      {
-        $sort: options.sort,
-      },
-      {
-        $facet: {
-          metadata: [{ $count: 'totalCount' }, { $addFields: { page: options.page, limit: options.limit } }],
-          entries: [
-            { $skip: (options.page - 1) * options.limit },
-            { $limit: options.limit },
-            {
-              $lookup: {
-                from: 'users',
-                localField: 'user',
-                foreignField: '_id',
-                as: 'user',
-                pipeline: [
-                  {
-                    $project: {
-                      _id: 1,
-                      fullName: 1,
-                      profileImageUrl: 1,
-                      email: 1,
-                    },
-                  },
-                ],
-              },
-            },
-            // Dynamic lookup for team profiles
-            {
-              $lookup: {
-                from: 'teamprofiles',
-                let: { profileId: '$profile', claimType: '$claimType' },
-                pipeline: [
-                  {
-                    $match: {
-                      $expr: {
-                        $and: [{ $eq: ['$_id', '$$profileId'] }, { $eq: ['$$claimType', 'team'] }],
-                      },
-                    },
-                  },
-                ],
-                as: 'teamProfile',
-              },
-            },
-            // Dynamic lookup for athlete profiles
-            {
-              $lookup: {
-                from: 'athleteprofiles',
-                let: { profileId: '$profile', claimType: '$claimType' },
-                pipeline: [
-                  {
-                    $match: {
-                      $expr: {
-                        $and: [{ $eq: ['$_id', '$$profileId'] }, { $eq: ['$$claimType', 'athlete'] }],
-                      },
-                    },
-                  },
-                  {
-                    $project: {
-                      _id: 1,
-                      fullName: 1,
-                      profileImageUrl: 1,
-                      email: 1,
-                      slug: 1,
-                    },
-                  },
-                ],
-                as: 'athleteProfile',
-              },
-            },
-            // Merge the profile results into a single field
-            {
-              $addFields: {
-                profile: {
-                  $cond: {
-                    if: { $eq: ['$claimType', 'team'] },
-                    then: { $arrayElemAt: ['$teamProfile', 0] },
-                    else: { $arrayElemAt: ['$athleteProfile', 0] },
-                  },
-                },
-              },
-            },
-            // Clean up temporary fields
-            {
-              $project: {
-                teamProfile: 0,
-                athleteProfile: 0,
-              },
-            },
-            {
-              $unwind: {
-                path: '$user',
-                preserveNullAndEmptyArrays: true,
-              },
-            },
-          ],
-        },
-      },
-    ]);
+    return await this.Schema.aggregate(this.claimPipeline.getFullPipeline(options.filters, options.query, options.sort, options.page, options.limit, 'complete'));
+  }
+
+  async fetch(id: string): Promise<ClaimType | null> {
+    const result = await this.Schema.aggregate(this.claimPipeline.getSimplePipeline(id, 'detailed'));
+    return result.length > 0 ? result[0] : null;
   }
   async fetchClaimStatus(type: string, profileId: string): Promise<{ success: boolean; claim: ClaimType | undefined; profile?: any }> {
     // we are passed in a type, this type is what model we need to query to see if the profile exists

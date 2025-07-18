@@ -3,7 +3,7 @@ import { eventBus } from '../../../lib/eventBus';
 import error from '../../../middleware/error';
 import { AuthenticatedRequest } from '../../../types/AuthenticatedRequest';
 import asyncHandler from '../../../middleware/asyncHandler';
-import { ClaimHandler } from '../handlers/ClaimHandler';
+import { ClaimHandler } from '../handlers/claim/ClaimHandler';
 import { CRUDService } from '../../../utils/baseCRUD';
 
 export default class ClaimService extends CRUDService {

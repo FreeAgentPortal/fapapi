@@ -31,12 +31,12 @@ const mapAthleteData = (data: any) => ({
   // for testing purposes we will create a mock of metrics
   metrics: {
     // set random values so we can test the search functionality
-    dash40: Math.random() * (5 - 4) + 4, //
-    benchPress: Math.floor(Math.random() * (30 - 20 + 1)) + 20, // Random value between 20 and 30
-    verticalJump: Math.floor(Math.random() * (40 - 30 + 1)) + 30, // Random value between 30 and 40
-    broadJump: Math.floor(Math.random() * (120 - 100 + 1)) + 100, // Random value between 100 and 120
-    threeCone: Math.random() * (8 - 6) + 6, // Random value between 6 and 8
-    shuttle: Math.random() * (5 - 4) + 4, // Random value between 4 and 5
+    // dash40: Math.random() * (5 - 4) + 4, //
+    // benchPress: Math.floor(Math.random() * (30 - 20 + 1)) + 20, // Random value between 20 and 30
+    // verticalJump: Math.floor(Math.random() * (40 - 30 + 1)) + 30, // Random value between 30 and 40
+    // broadJump: Math.floor(Math.random() * (120 - 100 + 1)) + 100, // Random value between 100 and 120
+    // threeCone: Math.random() * (8 - 6) + 6, // Random value between 6 and 8
+    // shuttle: Math.random() * (5 - 4) + 4, // Random value between 4 and 5
   },
   birthPlace: data.birthPlace,
   draft: data.draft

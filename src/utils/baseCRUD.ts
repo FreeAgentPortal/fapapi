@@ -155,6 +155,7 @@ export abstract class CRUDService {
         ...(Object.keys(keywordQuery[0]).length > 0 ? keywordQuery : []),
         ...(Array.isArray(filterIncludeOptions) && filterIncludeOptions.length > 0 && Object.keys(filterIncludeOptions[0]).length > 0 ? filterIncludeOptions : []), // Only include if there are filters
       ];
+
       await this.beforeFetchAll({
         filters: AdvFilters.filter(req.query?.filterOptions as string),
         sort: AdvFilters.sort((req.query?.sortOptions as string) || '-createdAt'),
