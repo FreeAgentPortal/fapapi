@@ -1,6 +1,6 @@
 import { Model } from 'mongoose';
 import { ErrorUtil } from '../../../middleware/ErrorUtil';
-import { CRUDHandler } from '../../../utils/baseCRUD';
+import { CRUDHandler, PaginationOptions } from '../../../utils/baseCRUD';
 import ClaimSchema, { ClaimType } from '../model/ClaimSchema';
 import TeamModel from '../../team/model/TeamModel';
 import { AthleteModel } from '../../athlete/models/AthleteModel';
@@ -13,7 +13,6 @@ export class ClaimHandler extends CRUDHandler<ClaimType> {
   }
 
   async create(data: any): Promise<ClaimType> {
-    console.log(`Creating claim for profile ID: ${data.profile}`);
     // Validate the data and create a new claim
     if (!data.profile || !data.claimType) {
       throw new ErrorUtil('Profile ID and claim type are required.', 400);
@@ -35,9 +34,115 @@ export class ClaimHandler extends CRUDHandler<ClaimType> {
     athlete: AthleteModel,
     // extend with other models as needed
   };
-
+  async fetchAll(options: PaginationOptions): Promise<{ entries: ClaimType[]; metadata: any[] }[]> {
+    return await this.Schema.aggregate([
+      {
+        $match: {
+          $and: [...options.filters],
+          ...(options.query.length > 0 && { $or: options.query }),
+        },
+      },
+      {
+        $sort: options.sort,
+      },
+      {
+        $facet: {
+          metadata: [{ $count: 'totalCount' }, { $addFields: { page: options.page, limit: options.limit } }],
+          entries: [
+            { $skip: (options.page - 1) * options.limit },
+            { $limit: options.limit },
+            {
+              $lookup: {
+                from: 'users',
+                localField: 'user',
+                foreignField: '_id',
+                as: 'user',
+                pipeline: [
+                  {
+                    $project: {
+                      _id: 1,
+                      fullName: 1,
+                      profileImageUrl: 1,
+                      email: 1,
+                    },
+                  },
+                ],
+              },
+            },
+            // Dynamic lookup for team profiles
+            {
+              $lookup: {
+                from: 'teamprofiles',
+                let: { profileId: '$profile', claimType: '$claimType' },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $and: [{ $eq: ['$_id', '$$profileId'] }, { $eq: ['$$claimType', 'team'] }],
+                      },
+                    },
+                  },
+                ],
+                as: 'teamProfile',
+              },
+            },
+            // Dynamic lookup for athlete profiles
+            {
+              $lookup: {
+                from: 'athleteprofiles',
+                let: { profileId: '$profile', claimType: '$claimType' },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $and: [{ $eq: ['$_id', '$$profileId'] }, { $eq: ['$$claimType', 'athlete'] }],
+                      },
+                    },
+                  },
+                  {
+                    $project: {
+                      _id: 1,
+                      fullName: 1,
+                      profileImageUrl: 1,
+                      email: 1,
+                      slug: 1,
+                    },
+                  },
+                ],
+                as: 'athleteProfile',
+              },
+            },
+            // Merge the profile results into a single field
+            {
+              $addFields: {
+                profile: {
+                  $cond: {
+                    if: { $eq: ['$claimType', 'team'] },
+                    then: { $arrayElemAt: ['$teamProfile', 0] },
+                    else: { $arrayElemAt: ['$athleteProfile', 0] },
+                  },
+                },
+              },
+            },
+            // Clean up temporary fields
+            {
+              $project: {
+                teamProfile: 0,
+                athleteProfile: 0,
+              },
+            },
+            {
+              $unwind: {
+                path: '$user',
+                preserveNullAndEmptyArrays: true,
+              },
+            },
+          ],
+        },
+      },
+    ]);
+  }
   async fetchClaimStatus(type: string, profileId: string): Promise<{ success: boolean; claim: ClaimType | undefined; profile?: any }> {
-    console.log(`Fetching claim status for profile ID: ${profileId}`);
     // we are passed in a type, this type is what model we need to query to see if the profile exists
     const Model = this.modelMap[type];
 
@@ -63,7 +168,6 @@ export class ClaimHandler extends CRUDHandler<ClaimType> {
 
   async handleClaim(data: { action: 'approve' | 'deny'; message?: string }, claimId: string): Promise<{ claim: ClaimType; profile?: any }> {
     const uploadClient = new LocalUploadClient();
-    console.log(`Handling claim ${data.action} for claim ID: ${claimId}`);
     const claim = await this.Schema.findById(claimId).populate('user');
     if (!claim) {
       throw new ErrorUtil(`Claim with ID ${claimId} not found.`, 404);
@@ -75,7 +179,6 @@ export class ClaimHandler extends CRUDHandler<ClaimType> {
     const user = claim.user as any as UserType;
     // Perform action based on the claim action
     if (data.action === 'approve') {
-      console.log(`Approving claim for user ${user._id} and profile ${profile._id}`);
       // Add user to profile access list
       profile.linkedUsers.push({
         user: user._id,
@@ -95,7 +198,6 @@ export class ClaimHandler extends CRUDHandler<ClaimType> {
       claim.status = 'approved';
       claim.message = data.message || 'Your claim has been approved. You now have access to the profile.';
     } else {
-      console.log(`Denying claim for user ${user._id} and profile ${profile._id}`);
       // clean up sensitive docs, user will need to initiate a new claim if they want to try again
       for (const doc of claim.documents || []) {
         await uploadClient.deleteFile(doc.url);
