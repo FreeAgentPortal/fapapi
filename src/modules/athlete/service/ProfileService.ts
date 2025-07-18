@@ -17,4 +17,15 @@ export default class ProfileService {
       return error(err, req, res);
     }
   });
+
+  public populateFromEspn = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+    try {
+      const results = await this.handler.populateFromEspn(req.params.playerid);
+      eventBus.publish('athlete.profilePopulated', { playerid: req.params.playerid, profileDetails: results });
+      return res.status(201).json({ success: true, payload: results });
+    } catch (err) {
+      console.log(err);
+      return error(err, req, res);
+    }
+  });
 }
