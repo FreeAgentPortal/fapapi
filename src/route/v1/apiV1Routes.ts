@@ -9,6 +9,7 @@ import uploadRoutes from '../../modules/upload/routes/index';
 import notificationRoutes from '../../modules/notification/route/index';
 import adminRoutes from '../../modules/admin/route/index';
 import searchPreferencesRoutes from '../../modules/search-preferences/routes/index';
+import userRoutes from '../../modules/user/route/index';
 
 const router = express.Router();
 
@@ -22,5 +23,6 @@ router.use('/upload', uploadRoutes);
 router.use('/notification', notificationRoutes);
 router.use('/admin', adminRoutes);
 router.use('/search-preference', searchPreferencesRoutes);
+router.use('/user', userRoutes);
 
 export default router;

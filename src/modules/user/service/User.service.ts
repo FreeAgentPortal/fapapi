@@ -1,0 +1,55 @@
+import { Response } from 'express';
+import asyncHandler from '../../../middleware/asyncHandler';
+import { AuthenticatedRequest } from '../../../types/AuthenticatedRequest';
+import { CRUDService } from '../../../utils/baseCRUD';
+import { UserHandler } from '../handler/User.handler';
+import error from '../../../middleware/error';
+import { eventBus } from '../../../lib/eventBus';
+
+export class UserService extends CRUDService {
+  constructor() {
+    super(UserHandler);
+    this.requiresAuth = {
+      create: true,
+      getResource: true,
+      getResources: true,
+      updateResource: true,
+      deleteResource: true,
+    };
+  }
+
+  public updatePassword = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+    try {
+      const userId = req.params.id;
+      console.log(req.body);
+      // set a boolean if req.body.sendEmail or sendNotification is true
+      const sendNotification = req.body.sendNotification;
+      let password = req.body.password;
+      if (!password) {
+        // check if the generateSecure var is passed in and set to true
+        if (req.body.generateSecure) {
+          // generate a secure plain text password to pass to the handler
+          password = await this.handler.generateSecurePassword();
+          console.log(password);
+        } else {
+          return res.status(400).json({ message: 'Password is required' });
+        }
+      }
+      // Validate and update the password
+      const result = await this.handler.update(userId, {
+        password: password,
+      });
+
+      if (sendNotification === true) {
+        eventBus.publish('user.passwordUpdated', {
+          userId,
+          newPassword: password,
+        });
+      }
+      return res.status(200).json(result);
+    } catch (err) {
+      console.error(err);
+      return error(err, req, res);
+    }
+  });
+}

@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import bcyrpt from 'bcryptjs';
+import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import slugify from 'slugify';
@@ -120,8 +120,8 @@ UserSchema.pre('save', async function (next) {
   if (!this.isModified('password')) {
     next();
   }
-  const salt = await bcyrpt.genSalt(10);
-  this.password = await bcyrpt.hash(this.password!, salt);
+  const salt = await bcrypt.genSalt(10);
+  this.password = await bcrypt.hash(this.password!, salt);
 });
 
 // creates the fullName field.
@@ -142,7 +142,7 @@ UserSchema.methods.getSignedJwtToken = function () {
 
 // Match user entered password to hashed password in database
 UserSchema.methods.matchPassword = async function (enteredPassword: string) {
-  return await bcyrpt.compare(enteredPassword, this.password);
+  return await bcrypt.compare(enteredPassword, this.password);
 };
 // enforces that the email string be lower case throughout, as if it isnt, a user with
 // test@email.com and a user Test@email.com do not match, and you can end up with duplicate emails..
@@ -165,4 +165,5 @@ UserSchema.methods.getResetPasswordToken = async function () {
   await this.save({ validateBeforeSave: true });
   return resetToken;
 };
+
 export default mongoose.model<UserType>('User', UserSchema);
