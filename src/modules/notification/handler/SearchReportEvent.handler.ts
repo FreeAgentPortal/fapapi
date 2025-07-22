@@ -36,7 +36,7 @@ export default class SearchReportEventHandler {
       // Create notification for the user
       await Notification.insertNotification(
         event.userId as any,
-        event.userId as any, // Self-notification for system-generated reports
+        undefined as any,
         'New Search Report Available',
         `Your search report for "${event.searchPreferenceName}" is ready with ${event.resultCount} results.`,
         'search.report',
