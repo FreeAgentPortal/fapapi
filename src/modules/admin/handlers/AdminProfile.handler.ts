@@ -39,6 +39,10 @@ export class AdminProfileHandler extends CRUDHandler<AdminType> {
         throw new ErrorUtil('Failed to update user profile references', 500);
       }
 
+      // if permissions where already provided by the frontend in the create step, we dont want to override them
+      if (doc.permissions && doc.permissions.length > 0) {
+        return; // Skip permission assignment if already provided
+      }
       // Assign granulated permissions based on roles
       try {
         const permissions = RolesConfig.getDefaultPermissionsForRoles(doc.roles);
@@ -114,6 +118,17 @@ export class AdminProfileHandler extends CRUDHandler<AdminType> {
       ]);
     } catch (error) {
       throw new ErrorUtil('Failed to fetch admin profiles', 500);
+    }
+  }
+
+  protected async afterDelete(doc: AdminType | null): Promise<void> {
+    // now that we've removed the admin profile, we need to remove the reference from the user
+    if (doc) {
+      const user = await mongoose.model('User').findById(doc.user);
+      if (user) {
+        user.profileRefs.admin = undefined; // Remove admin profile reference
+        await user.save();
+      }
     }
   }
 }
