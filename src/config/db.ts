@@ -7,7 +7,7 @@ export default async () => {
     await mongoose.connect(uri, {
       dbName: process.env.MONGO_DBNAME,
     });
-    console.log(colors.bgGreen.white('MongoDB Connected')); 
+    console.log(colors.bgGreen.white('MongoDB Connected'));
   } catch (error) {
     console.log(error);
     process.exit(1);

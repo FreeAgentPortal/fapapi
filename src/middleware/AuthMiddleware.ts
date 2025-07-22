@@ -3,7 +3,7 @@ import jwt, { JwtPayload } from 'jsonwebtoken';
 import asyncHandler from './asyncHandler';
 import User from '../modules/auth/model/User';
 import { AuthenticatedRequest } from '../types/AuthenticatedRequest';
-import { ErrorUtil } from './ErrorUtil'; 
+import { ErrorUtil } from './ErrorUtil';
 import { ModelMap } from '../utils/ModelMap';
 
 export class AuthMiddleware {
@@ -49,12 +49,17 @@ export class AuthMiddleware {
           return res.status(403).json({ message: `No profile found for service ${service}` });
         }
         req.user.permissions = profile.permissions || [];
+        // push the users roles onto the permissions array for large role based access control
+        req.user.roles = profile.roles || [];
+        // push the roles onto the permissions array for large role based access control
+        req.user.permissions.push(...req.user.roles || []);
       } else {
         req.user.permissions = req.user.permissions || [];
       }
 
       next();
     } catch (err) {
+      console.log(err);
       return res.status(401).json({ message: 'JWT validation failed. ' + err });
     }
   }
@@ -86,7 +91,7 @@ export class AuthMiddleware {
     return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
       const userPermissions = req.user?.permissions || [];
 
-      const hasPermission = requiredPermissions.some((permission) => userPermissions.includes(permission));
+      const hasPermission = requiredPermissions.some((permission) => userPermissions.includes(permission)); 
 
       if (!hasPermission) {
         return res.status(403).json({ message: 'Forbidden: insufficient permissions' });

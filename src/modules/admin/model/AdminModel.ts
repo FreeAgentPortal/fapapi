@@ -12,7 +12,7 @@ export interface AdminType extends mongoose.Document {
 const AdminSchema = new mongoose.Schema(
   {
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
-    roles: { type: [String], enum: ['admin', 'moderator', 'developer', 'support'], default: ['admin'] },
+    roles: { type: [String], enum: ['admin', 'moderator', 'developer', 'support'] },
     permissions: [String], // for fine-grained ACL
   },
   {

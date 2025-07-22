@@ -37,8 +37,7 @@ export class CloudinaryService {
 
         const response = await this.handler.uploadFile(file.buffer, file.name, `users/${user.accessKey}/uploads`);
         urls.push({ url: response.secure_url, fileName: file.name, type: file.fileType });
-      }
-      console.log(urls);
+      } 
       res.status(201).json({ payload: urls });
     } catch (err) {
       console.log(err);

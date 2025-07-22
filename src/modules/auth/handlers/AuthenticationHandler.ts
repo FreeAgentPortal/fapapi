@@ -75,6 +75,7 @@ export class AuthenticationHandler {
         fullName: foundUser.fullName,
         roles: foundUser.role,
         profileRefs: foundUser.profileRefs,
+        profileImageUrl: foundUser.profileImageUrl,
       },
     };
   }

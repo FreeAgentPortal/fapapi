@@ -1,11 +1,11 @@
 import express from 'express';
 import AdminService from '../service/AdminService';
 import { AuthMiddleware } from '../../../middleware/AuthMiddleware';
+import { RolesConfig } from '../util/RolesConfig';
 
 const router = express.Router();
 
 const service = new AdminService();
-
 router.route('/health').get((req, res) => {
   res.status(200).json({
     message: 'Support service is up and running',
@@ -14,7 +14,7 @@ router.route('/health').get((req, res) => {
 });
 
 router.use(AuthMiddleware.protect);
-router.use(AuthMiddleware.authorizeRoles(['*', 'admin', 'moderator', 'developer', 'support']) as any);
+router.use(AuthMiddleware.authorizeRoles(RolesConfig.getDefaultPermissionsForRole('admin')) as any);
 router.route('/profile/:id').get(service.getResource);
 
 router.route('/').post(service.create).get(service.getResources);
