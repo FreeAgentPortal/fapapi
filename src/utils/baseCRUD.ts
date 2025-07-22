@@ -108,7 +108,9 @@ export abstract class CRUDService {
       this.ensureAuthenticated(req as AuthenticatedRequest, 'create');
       let data = { ...req.body };
       if ('user' in req && req.user && typeof req.user === 'object' && '_id' in req.user) {
-        data = { ...data, user: (req.user as any)._id };
+        if (!data.user) {
+          data = { ...data, user: (req.user as any)._id };
+        }
       }
       await this.beforeCreate(data);
       const result = await this.handler.create(data);
