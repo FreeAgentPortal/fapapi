@@ -8,18 +8,17 @@ const router = express.Router();
 const paymentService = new PaymentService();
 
 router.use('/receipt', receiptRoutes);
-
-router.route('/').get((req, res) => {
-  res.status(200).json({ message: 'hello' });
-});
-
-router.route('/:id').get(AuthMiddleware.protect, paymentService.fetchBilling).post(AuthMiddleware.protect, paymentService.updateBilling);
-
 router.route('/health').get((req, res) => {
   res.status(200).json({
     message: 'Payment service is up and running',
     success: true,
   });
 });
+
+router.route('/').get((req, res) => {
+  res.status(200).json({ message: 'hello' });
+});
+
+router.route('/:id').get(AuthMiddleware.protect, paymentService.fetchBilling).post(AuthMiddleware.protect, paymentService.updateBilling);
 
 export default router;

@@ -10,19 +10,23 @@ import notificationRoutes from '../../modules/notification/route/index';
 import adminRoutes from '../../modules/profiles/admin/route/index';
 import searchPreferencesRoutes from '../../modules/search-preferences/routes/index';
 import userRoutes from '../../modules/user/route/index';
+import profileRoutes from '../../modules/profiles/routes/index';
 
 const router = express.Router();
 
 router.use('/auth', authRoutes);
-router.use('/athlete', athleteRoutes);
-router.use('/team', teamRoutes);
 router.use('/support', supportRoutes);
 router.use('/payment', paymentRoutes);
 router.use('/feed', feedRoutes);
 router.use('/upload', uploadRoutes);
 router.use('/notification', notificationRoutes);
-router.use('/admin', adminRoutes);
+router.use('/profiles', profileRoutes);
 router.use('/search-preference', searchPreferencesRoutes);
 router.use('/user', userRoutes);
+
+// TODO: Remove these when the new profile routes are fully integrated
+router.use('/admin', adminRoutes);
+router.use('/team', teamRoutes);
+router.use('/athlete', athleteRoutes);
 
 export default router;
