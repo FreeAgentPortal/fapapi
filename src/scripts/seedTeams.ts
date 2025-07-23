@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
-import TeamModel from '../modules/team/model/TeamModel';
+import TeamModel from '../modules/profiles/team/model/TeamModel';
 
 dotenv.config();
 

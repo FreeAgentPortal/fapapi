@@ -1,7 +1,7 @@
 #!/usr/bin/env ts-node
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
-import { AthleteModel } from '../../athlete/models/AthleteModel';
+import { AthleteModel } from '../../profiles/athlete/models/AthleteModel';
 import { MONGO_URI } from '../../../config/mongouri';
 
 // Load environment variables

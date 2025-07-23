@@ -1,6 +1,6 @@
 import axios from 'axios';
 import dotenv from 'dotenv';
-import { AthleteModel } from '../modules/athlete/models/AthleteModel';
+import { AthleteModel } from '../modules/profiles/athlete/models/AthleteModel';
 import mongoose from 'mongoose';
 
 dotenv.config();
