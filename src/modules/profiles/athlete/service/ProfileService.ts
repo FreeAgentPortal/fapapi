@@ -1,8 +1,8 @@
 import { Response } from 'express';
-import { eventBus } from '../../../lib/eventBus';
-import error from '../../../middleware/error';
-import { AuthenticatedRequest } from '../../../types/AuthenticatedRequest';
-import asyncHandler from '../../../middleware/asyncHandler';
+import { eventBus } from '../../../../lib/eventBus';
+import error from '../../../../middleware/error';
+import { AuthenticatedRequest } from '../../../../types/AuthenticatedRequest';
+import asyncHandler from '../../../../middleware/asyncHandler';
 import { ProfileActionsHandler } from '../handlers/ProfileActionsHandler';
 
 export default class ProfileService {

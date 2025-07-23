@@ -1,5 +1,5 @@
 import express from 'express';
-import { AuthMiddleware } from '../../../middleware/AuthMiddleware';
+import { AuthMiddleware } from '../../../../middleware/AuthMiddleware';
 import TeamService from '../service/TeamService';
 
 const router = express.Router();

@@ -1,8 +1,8 @@
 import { eventBus } from '../../../lib/eventBus';
 import Notification from '../model/Notification';
 import User from '../../auth/model/User';
-import { ErrorUtil } from '../../../middleware/ErrorUtil';
-import { ModelMap } from '../utils/ModelMap';
+import { ErrorUtil } from '../../../middleware/ErrorUtil'; 
+import { ModelMap } from '../../../utils/ModelMap';
 
 export interface SearchReportEvent {
   _id: string; // Event ID

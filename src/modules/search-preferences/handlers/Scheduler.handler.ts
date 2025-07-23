@@ -1,6 +1,6 @@
 import { ISearchPreferences } from '../models/SearchPreferences';
 import { eventBus } from '../../../lib/eventBus';
-import { AthleteModel, IAthlete } from '../../athlete/models/AthleteModel';
+import { AthleteModel, IAthlete } from '../../profiles/athlete/models/AthleteModel';
 import SearchReport, { ISearchReport } from '../models/SearchReport';
 
 export class SchedulerHandler {

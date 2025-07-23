@@ -1,8 +1,8 @@
 import { IAthlete, AthleteModel } from '../models/AthleteModel'; 
-import { ErrorUtil } from '../../../middleware/ErrorUtil';
-import BillingAccount from '../../auth/model/BillingAccount';
+import { ErrorUtil } from '../../../../middleware/ErrorUtil';
+import BillingAccount from '../../../auth/model/BillingAccount';
 import mongoose from 'mongoose';
-import { CRUDHandler } from '../../../utils/baseCRUD';
+import { CRUDHandler } from '../../../../utils/baseCRUD';
 
 export interface AthleteProfileInput {
   fullName: string;

@@ -1,5 +1,5 @@
 import { Request } from 'express';
-import { AuthenticatedRequest } from '../../../types/AuthenticatedRequest';
+import { AuthenticatedRequest } from '../../../../types/AuthenticatedRequest';
 import TeamModel, { ITeamProfile } from '../model/TeamModel';
 
 export default class AuthenticationHandler {

@@ -1,6 +1,6 @@
 import express from 'express';
 import AthleteService from '../service/AthleteService';
-import { AuthMiddleware } from '../../../middleware/AuthMiddleware';
+import { AuthMiddleware } from '../../../../middleware/AuthMiddleware';
 import profileRoutes from './profileRoutes';
 
 const router = express.Router();

@@ -1,6 +1,6 @@
 import mongoose, { Document } from 'mongoose';
-import { ErrorUtil } from '../../../middleware/ErrorUtil';
-import { CRUDHandler, PaginationOptions } from '../../../utils/baseCRUD';
+import { ErrorUtil } from '../../../../middleware/ErrorUtil';
+import { CRUDHandler, PaginationOptions } from '../../../../utils/baseCRUD';
 import AdminModel, { AdminType } from '../model/AdminModel';
 import { RolesConfig } from '../util/RolesConfig';
 

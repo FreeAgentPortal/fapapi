@@ -2,22 +2,17 @@ import { Model } from 'mongoose';
 import { ErrorUtil } from '../../../../middleware/ErrorUtil';
 import { CRUDHandler, PaginationOptions } from '../../../../utils/baseCRUD';
 import ClaimSchema, { ClaimType } from '../../model/ClaimSchema';
-import TeamModel from '../../../team/model/TeamModel';
-import { AthleteModel } from '../../../athlete/models/AthleteModel';
 import { UserType } from '../../model/User';
 import { LocalUploadClient } from '../../clients/UploadClient';
 import { ClaimPipeline } from '../../pipelines/ClaimPipeline';
+import { ModelMap } from '../../../../utils/ModelMap';
 
 export class ClaimHandler {
   private claimPipeline: ClaimPipeline;
-  private modelMap: Record<string, Model<any>> = {
-    team: TeamModel,
-    athlete: AthleteModel,
-    // extend with other models as needed
-  };
-
+  private modelMap: Record<string, Model<any>>;
   constructor(private Schema: Model<ClaimType> = ClaimSchema) {
     this.claimPipeline = new ClaimPipeline();
+    this.modelMap = ModelMap;
   }
 
   async create(data: any): Promise<ClaimType> {

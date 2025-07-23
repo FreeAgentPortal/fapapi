@@ -1,14 +1,14 @@
 import { Request, Response } from 'express';
 import TeamProfileHandler from '../handlers/ProfileHandler';
-import { eventBus } from '../../../lib/eventBus';
+import { eventBus } from '../../../../lib/eventBus';
 import { ITeamProfile } from '../model/TeamModel';
-import { AuthenticatedRequest } from '../../../types/AuthenticatedRequest';
+import { AuthenticatedRequest } from '../../../../types/AuthenticatedRequest';
 import AuthenticationHandler from '../handlers/AuthenticationHandler';
-import { AdvFilters } from '../../../utils/advFilter/AdvFilters';
-import error from '../../../middleware/error';
-import { CRUDService } from '../../../utils/baseCRUD';
-import asyncHandler from '../../../middleware/asyncHandler';
-import { ErrorUtil } from '../../../middleware/ErrorUtil';
+import { AdvFilters } from '../../../../utils/advFilter/AdvFilters';
+import error from '../../../../middleware/error';
+import { CRUDService } from '../../../../utils/baseCRUD';
+import asyncHandler from '../../../../middleware/asyncHandler';
+import { ErrorUtil } from '../../../../middleware/ErrorUtil';
 
 export default class TeamService extends CRUDService {
   constructor(private readonly authHandler: AuthenticationHandler = new AuthenticationHandler()) {

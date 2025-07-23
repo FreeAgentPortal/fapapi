@@ -1,10 +1,10 @@
 // services/AdminService.ts
 import { Request, Response } from 'express';
-import { AuthenticatedRequest } from '../../../types/AuthenticatedRequest';
-import { CRUDService } from '../../../utils/baseCRUD';
+import { AuthenticatedRequest } from '../../../../types/AuthenticatedRequest';
+import { CRUDService } from '../../../../utils/baseCRUD';
 import { AdminProfileHandler } from '../handlers/AdminProfile.handler';
 import AdminModel from '../model/AdminModel';
-import error from '../../../middleware/error';
+import error from '../../../../middleware/error';
 import { RolesConfig } from '../util/RolesConfig';
 
 type AdminProfileInput = {
