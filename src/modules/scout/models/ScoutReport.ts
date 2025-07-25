@@ -1,5 +1,9 @@
 import mongoose from 'mongoose';
 
+export interface IRatingField {
+  score: number;
+  comments?: string;
+}
 export interface IScoutReport extends mongoose.Document {
   _id: mongoose.Types.ObjectId;
   athleteId: mongoose.Types.ObjectId;
@@ -8,38 +12,7 @@ export interface IScoutReport extends mongoose.Document {
   league: string;
   reportType: 'game' | 'evaluation' | 'camp' | 'combine' | 'interview' | 'other';
   diamondRating: number; // number set automatically by aggregation
-  ratingBreakdown: {
-    athleticism: {
-      // speed, strength, agility
-      score: number;
-      comments?: string;
-    };
-    technique: {
-      // skills, form, mechanics
-      score: number;
-      comments?: string;
-    };
-    iq: {
-      // mental game, decision making, game awareness
-      score: number;
-      comments?: string;
-    };
-    workEthic: {
-      // effort, hustle, practice habits
-      score: number;
-      comments?: string;
-    };
-    potential: {
-      // future upside, growth potential
-      score: number;
-      comments?: string;
-    };
-    durability: {
-      // injury history, physical resilience
-      score: number;
-      comments?: string;
-    };
-  };
+  ratingBreakdown: Record<string, IRatingField>; // Dynamic rating fields
   observations?: string; // detailed notes on performance
   strengths?: string[]; // key strengths observed
   weaknesses?: string[]; // areas for improvement
@@ -92,28 +65,8 @@ const Schema = new mongoose.Schema(
       // Remove default value - will be calculated from ratingBreakdown
     },
     ratingBreakdown: {
-      // none of these are required
-      athleticism: {
-        score: { type: Number },
-        comments: { type: String },
-      },
-      technique: {
-        score: { type: Number },
-        comments: { type: String },
-      },
-      iq: {
-        score: { type: Number },
-        comments: { type: String },
-      },
-      workEthic: {
-        score: { type: Number },
-        comments: { type: String },
-      },
-      potential: {
-        score: { type: Number },
-        comments: { type: String },
-      },
-      durability: {
+      type: Map,
+      of: {
         score: { type: Number },
         comments: { type: String },
       },
