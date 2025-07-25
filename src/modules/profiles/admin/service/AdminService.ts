@@ -5,7 +5,7 @@ import { CRUDService } from '../../../../utils/baseCRUD';
 import { AdminProfileHandler } from '../handlers/AdminProfile.handler';
 import AdminModel from '../model/AdminModel';
 import error from '../../../../middleware/error';
-import { RolesConfig } from '../util/RolesConfig';
+import { RolesConfig } from '../../../../utils/RolesConfig';
 
 type AdminProfileInput = {
   user: string;
@@ -34,5 +34,4 @@ export default class AdminService extends CRUDService {
 
     return await profile.save();
   }
-
 }

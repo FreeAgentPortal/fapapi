@@ -291,4 +291,14 @@ export class RolesConfig {
     // Users can only assign roles at their level or below
     return userHighestLevel >= maxRoleToAssign;
   }
+
+  /**
+   * Check if a user has a specific permission
+   * @param userPermissions - Array of permissions the user has
+   * @param permission - The permission to check
+   * @returns True if user has the permission
+   */
+  static hasPermission(userPermissions: string[], permission: string): boolean {
+    return userPermissions.includes(permission);
+  }
 }

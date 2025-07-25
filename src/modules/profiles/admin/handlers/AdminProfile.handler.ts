@@ -2,7 +2,7 @@ import mongoose, { Document } from 'mongoose';
 import { ErrorUtil } from '../../../../middleware/ErrorUtil';
 import { CRUDHandler, PaginationOptions } from '../../../../utils/baseCRUD';
 import AdminModel, { AdminType } from '../model/AdminModel';
-import { RolesConfig } from '../util/RolesConfig';
+import { RolesConfig } from '../../../../utils/RolesConfig';
 
 export class AdminProfileHandler extends CRUDHandler<AdminType> {
   constructor() {
@@ -110,6 +110,22 @@ export class AdminProfileHandler extends CRUDHandler<AdminType> {
                 $unwind: {
                   path: '$user',
                   preserveNullAndEmptyArrays: true,
+                },
+              },
+              {
+                // get count of permissions array
+                $addFields: {
+                  permissionsCount: { $size: '$permissions' },
+                },
+              },
+              {
+                $project: {
+                  _id: 1,
+                  user: 1,
+                  roles: 1,
+                  permissionsCount: 1,
+                  createdAt: 1,
+                  updatedAt: 1,
                 },
               },
             ],

@@ -1,7 +1,7 @@
 import express from 'express';
 import AdminService from '../service/AdminService';
 import { AuthMiddleware } from '../../../../middleware/AuthMiddleware';
-import { RolesConfig } from '../util/RolesConfig';
+import { RolesConfig } from '../../../../utils/RolesConfig';
 
 const router = express.Router();
 

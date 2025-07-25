@@ -51,6 +51,13 @@ export interface IScoutReport extends mongoose.Document {
   tags?: string[]; // tags for categorization
   isPublic?: boolean; // whether the report is public or private, can teams see it? or does it only affect the athlete's rating?
   isFinalized?: boolean; // whether the report is finalized or still draft
+  isDraft?: boolean; // whether the report is a draft or ready to be processed
+
+  // actionable fields
+  status?: 'pending' | 'approved' | 'denied'; // current status of the report
+  message?: string; // message from admin on approval/denial
+
+  // timestamps
   createdAt: Date;
   updatedAt: Date;
 }
@@ -82,7 +89,7 @@ const Schema = new mongoose.Schema(
     },
     diamondRating: {
       type: Number,
-      default: 0, // will be set automatically by aggregation
+      // Remove default value - will be calculated from ratingBreakdown
     },
     ratingBreakdown: {
       // none of these are required
@@ -138,7 +145,11 @@ const Schema = new mongoose.Schema(
     },
     isFinalized: {
       type: Boolean,
-      default: false, // default to draft
+      default: false, // default to not finalized, this means the report has not been processed by an admin yet
+    },
+    isDraft: {
+      type: Boolean,
+      default: true, // default to draft
     },
   },
   {
@@ -147,4 +158,3 @@ const Schema = new mongoose.Schema(
 );
 
 export default mongoose.model<IScoutReport>('ScoutReport', Schema);
-

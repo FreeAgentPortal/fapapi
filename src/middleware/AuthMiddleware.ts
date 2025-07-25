@@ -52,7 +52,7 @@ export class AuthMiddleware {
         // push the users roles onto the permissions array for large role based access control
         req.user.roles = profile.roles || [];
         // push the roles onto the permissions array for large role based access control
-        req.user.permissions.push(...req.user.roles || []);
+        req.user.permissions.push(...(req.user.roles || []));
       } else {
         req.user.permissions = req.user.permissions || [];
       }
@@ -91,8 +91,8 @@ export class AuthMiddleware {
     return (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
       const userPermissions = req.user?.permissions || [];
 
-      const hasPermission = requiredPermissions.some((permission) => userPermissions.includes(permission)); 
-
+      const hasPermission = requiredPermissions.some((permission) => userPermissions.includes(permission));
+      
       if (!hasPermission) {
         return res.status(403).json({ message: 'Forbidden: insufficient permissions' });
       }
