@@ -12,7 +12,7 @@ export class ScoutProfileHandler extends CRUDHandler<IScout> {
   protected async afterCreate(doc: IScout): Promise<void> {
     try {
       // Find the user by id and update the profileRefs
-      const user = await mongoose.model('User').findById(doc.userId);
+      const user = await mongoose.model('User').findById(doc.user);
       if (!user) {
         // Delete the scout profile since user wasn't found
         await this.Schema.findByIdAndDelete(doc._id);
