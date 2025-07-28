@@ -10,7 +10,7 @@ export class SendGridProvider implements EmailProvider {
     if (templateId) {
       await sgMail.send({
         to,
-        from: from || 'noreply@pyreprocessing.com',
+        from: from || 'noreply@thefreeagentportal.com',
         subject,
         templateId,
         dynamicTemplateData: data,
@@ -18,7 +18,7 @@ export class SendGridProvider implements EmailProvider {
     } else if (html) {
       await sgMail.send({
         to,
-        from: from || 'noreply@pyreprocessing.com',
+        from: from || 'noreply@thefreeagentportal.com',
         subject,
         html,
       });
