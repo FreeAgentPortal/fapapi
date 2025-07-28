@@ -12,11 +12,11 @@ router.route('/health').get((req, res) => {
     success: true,
   });
 });
-
 router.use(AuthMiddleware.protect);
+router.route('/:id').get(service.getResource).put(service.updateResource);
 router.use(AuthMiddleware.authorizeRoles(['*', 'admin', 'moderator', 'developer', 'support']) as any);
 router.route('/').post(service.create).get(service.getResources);
-router.route('/:id').get(service.getResource).put(service.updateResource).delete(service.removeResource);
+router.route('/:id').delete(service.removeResource);
 router.route('/:id/reset-password').post(service.updatePassword);
 
 // authenticated routes

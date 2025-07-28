@@ -21,7 +21,6 @@ export class UserService extends CRUDService {
   public updatePassword = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
     try {
       const userId = req.params.id;
-      console.log(req.body);
       // set a boolean if req.body.sendEmail or sendNotification is true
       const sendNotification = req.body.sendNotification;
       let password = req.body.password;

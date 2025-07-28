@@ -2,7 +2,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 
 export interface IScout extends Document {
   _id: mongoose.Types.ObjectId;
-  userId: mongoose.Types.ObjectId; // User ID of the scout
+  user: mongoose.Types.ObjectId; // User ID of the scout
   displayName?: string; // Full name of the scout
   contactNumber?: string; // Contact number of the scout
   email?: string; // Email address of the scout
@@ -18,7 +18,7 @@ export interface IScout extends Document {
 
 const ScoutSchema = new Schema<IScout>(
   {
-    userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    user: { type: Schema.Types.ObjectId, ref: 'User', required: true },
     displayName: { type: String },
     contactNumber: { type: String },
     email: { type: String },
