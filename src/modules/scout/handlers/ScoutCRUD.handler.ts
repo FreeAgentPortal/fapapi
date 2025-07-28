@@ -20,7 +20,7 @@ export class ScoutCRUDHandler extends CRUDHandler<IScoutReport> {
         throw new ErrorUtil('Athlete not found', 404);
       }
       // next attempt to locate the scout profile, of the user submitting the report
-      const scoutProfile = await this.modelMap['admin'].findOne({ user: data.user }); // user is the req.user who is submitting the report
+      const scoutProfile = await this.modelMap['scout_profile'].findOne({ user: data.user }); // user is the req.user who is submitting the report
       if (!scoutProfile) {
         throw new ErrorUtil('Scout profile not found', 404);
       }
@@ -79,7 +79,7 @@ export class ScoutCRUDHandler extends CRUDHandler<IScoutReport> {
             },
             {
               $lookup: {
-                from: 'admins',
+                from: 'scoutprofiles',
                 localField: 'scoutId',
                 foreignField: '_id',
                 as: 'scout',

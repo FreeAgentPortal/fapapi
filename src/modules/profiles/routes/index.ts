@@ -3,12 +3,14 @@ import express from 'express';
 import adminRoutes from '../admin/route/index';
 import athleteRoutes from '../athlete/route/index';
 import teamRoutes from '../team/route/index';
+import scoutRoutes from '../scout/routes/index';
 
 const router = express.Router();
 
 router.use('/admin', adminRoutes);
 router.use('/athlete', athleteRoutes);
 router.use('/team', teamRoutes);
+router.use('/scout', scoutRoutes);
 
 router.get('/health', (req, res) => {
   res.status(200).json({ status: 'profiles module online' });

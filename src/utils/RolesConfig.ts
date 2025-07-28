@@ -142,6 +142,10 @@ export class RolesConfig {
       'support.create',
       'analytics.read',
       'analytics.users',
+      'scout.reports.create',
+      'scout.reports.update',
+      'scout.reports.delete',
+      'scout.reports.view',
     ],
   };
 
