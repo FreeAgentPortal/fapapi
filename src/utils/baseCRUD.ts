@@ -144,7 +144,7 @@ export abstract class CRUDService {
   public getResources = async (req: Request, res: Response): Promise<Response> => {
     try {
       this.ensureAuthenticated(req as AuthenticatedRequest, 'getResources');
-      const pageSize = Number(req.query?.limit) || 10;
+      const pageSize = Number(req.query?.pageLimit) || 10;
       const page = Number(req.query?.pageNumber) || 1;
       // Generate the keyword query
       const keywordQuery = AdvFilters.query(this.queryKeys, req.query?.keyword as string);

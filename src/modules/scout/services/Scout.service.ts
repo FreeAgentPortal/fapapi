@@ -8,6 +8,14 @@ import asyncHandler from '../../../middleware/asyncHandler';
 export class ScoutService extends CRUDService {
   constructor(private readonly actionsHandler: ScoutActionsHandler = new ScoutActionsHandler()) {
     super(ScoutCRUDHandler);
+    this.requiresAuth = {
+      create: true,
+      update: true,
+      delete: true,
+      getResources: false, // Public access to list resources
+      getResource: false, // Public access to view a single resource
+      reportSubmission: true, // Requires authentication for report submission
+    };
   }
 
   public reportSubmission = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {

@@ -18,6 +18,7 @@ router.route('/:id').get(service.getResource);
 router.use(AuthMiddleware.protect);
 router.route('/').post(service.create);
 router.route('/:id').put(service.updateResource).delete(service.removeResource);
+router.route("/favorite-athlete/:athleteId").post(service.toggleFavoriteAthlete);
 
 
 // authenticated routes
