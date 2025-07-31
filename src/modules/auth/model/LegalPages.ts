@@ -12,7 +12,6 @@ const LegalSchema = new Schema<LegalAttributes>(
   {
     type: {
       type: String,
-      enum: ['terms', 'privacy', 'cookie'],
       required: true,
     },
     title: {

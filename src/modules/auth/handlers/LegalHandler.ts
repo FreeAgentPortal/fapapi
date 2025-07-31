@@ -8,4 +8,10 @@ export class LegalHandler extends CRUDHandler<LegalType> {
   constructor() {
     super(LegalPages);
   }
+
+  async fetch(id: string): Promise<any | null> {
+    return await this.Schema.findOne({
+      $or: [{ _id: id }, { type: id }],
+    }).lean();
+  }
 }
