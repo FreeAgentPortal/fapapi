@@ -18,7 +18,7 @@ export class ScoutActionsHandler {
     // attempt to locate the report by Id
     const report = await this.modelMap['scout_report'].findById(reportid);
     if (!report) {
-      throw new ErrorUtil('Scout report not found', 404); 
+      throw new ErrorUtil('Scout report not found', 404);
     }
 
     // Check if report is already processed
@@ -95,18 +95,19 @@ export class ScoutActionsHandler {
     const validScores: number[] = [];
     const scoreBreakdown: { [key: string]: number } = {};
     const categoriesProcessed: string[] = [];
-
+    console.log(ratingBreakdown);
     // Dynamically process all properties in the ratingBreakdown object
-    Object.keys(ratingBreakdown).forEach((category) => {
-      const categoryData = ratingBreakdown[category];
-
+    for (const [category, categoryData] of ratingBreakdown.entries()) {
+      // const categoryData = ratingBreakdown[category];
       // Check if this category has valid score data
       if (categoryData && typeof categoryData === 'object' && typeof categoryData.score === 'number' && categoryData.score >= 1 && categoryData.score <= 5) {
+        console.log(`[Scout] Processing category: ${category} with score: ${categoryData.score}`);
         validScores.push(categoryData.score);
         scoreBreakdown[category] = categoryData.score;
         categoriesProcessed.push(category);
+        console.log(`[Scout] Valid score found for category "${category}": ${categoryData.score}`);
       }
-    });
+    }
 
     // Require at least 3 categories to be rated for a meaningful evaluation
     if (validScores.length < 3) {

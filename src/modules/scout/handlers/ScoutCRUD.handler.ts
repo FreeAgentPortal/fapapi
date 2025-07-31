@@ -25,7 +25,7 @@ export class ScoutCRUDHandler extends CRUDHandler<IScoutReport> {
         throw new ErrorUtil('Scout profile not found', 404);
       }
       // ensure the scout profile has the necessary permissions
-      if (!RolesConfig.hasPermission(scoutProfile.permissions, 'scouts.create')) {
+      if (!RolesConfig.hasPermission(scoutProfile.permissions, 'scout.reports.create')) {
         throw new ErrorUtil('Insufficient permissions', 403);
       }
       // 2. create the scout report
