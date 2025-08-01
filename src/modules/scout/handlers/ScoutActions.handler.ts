@@ -67,6 +67,7 @@ export class ScoutActionsHandler {
       // Update the report - set calculated diamond rating and finalize
       report.diamondRating = calculatedDiamondRating;
       report.isFinalized = true;
+      report.status = 'approved';
       await report.save();
 
       // Update athlete's diamond rating

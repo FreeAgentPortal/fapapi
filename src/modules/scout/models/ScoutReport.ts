@@ -100,6 +100,11 @@ const Schema = new mongoose.Schema(
       type: Boolean,
       default: false, // default to not finalized, this means the report has not been processed by an admin yet
     },
+    status: {
+      type: String,
+      enum: ['pending', 'approved', 'denied'],
+      default: 'pending', // default to pending
+    },
     isDraft: {
       type: Boolean,
       default: true, // default to draft
