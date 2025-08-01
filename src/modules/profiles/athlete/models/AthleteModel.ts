@@ -44,6 +44,7 @@ export interface IAthlete extends Document {
   experienceYears?: number; // Years of playing experience
   testimony?: string;
   profileImageUrl?: string;
+  isActive?: boolean; // Whether the athlete is currently active
   highlightVideos?: string[]; // Max 5
   diamondRating?: number; // 1–5, assigned by scouts later
   createdAt: Date;
@@ -125,7 +126,7 @@ const AthleteSchema = new Schema<IAthlete>(
         message: 'You may upload up to 5 highlight videos only.',
       },
     },
-
+    isActive: { type: Boolean, default: true }, // Whether the athlete is currently active
     diamondRating: { type: Number, min: 1, max: 5 },
   },
   { timestamps: true }
