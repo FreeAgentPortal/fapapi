@@ -10,8 +10,8 @@ export default class LegalService extends CRUDService {
   constructor() {
     super(LegalHandler);
     this.requiresAuth = {
-      getResource: true,
-      getResources: true,
+      getResource: false,
+      getResources: false,
       create: true,
       updateResource: true,
       removeResource: true,
