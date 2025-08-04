@@ -80,8 +80,8 @@ const SupportSchema = new Schema<SupportAttributes>(
     },
     status: {
       type: String,
-      enum: ['Open', 'Closed', 'Pending', 'Solved', 'New'],
-      default: 'New',
+      enum: ['open', 'closed', 'pending', 'solved', 'new'],
+      default: 'new',
     },
     priority: {
       type: String,

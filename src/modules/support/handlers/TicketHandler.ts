@@ -165,8 +165,7 @@ export class TicketHandler extends CRUDHandler<SupportType> {
 
   // Update a ticket (e.g., reply or status change)
   async update(ticketId: string, data: any): Promise<SupportType> {
-    const item = await SupportTicket.findById(ticketId);
-    console.log(data);
+    const item = await SupportTicket.findById(ticketId); 
 
     if (!item) {
       throw new ErrorUtil('Ticket not found', 404);
@@ -265,6 +264,7 @@ export class TicketHandler extends CRUDHandler<SupportType> {
                       fullName: 1,
                       email: 1,
                       profileImageUrl: 1,
+                      role: 1,
                     },
                   },
                 ],
@@ -315,7 +315,7 @@ export class TicketHandler extends CRUDHandler<SupportType> {
     }
 
     // update the ticket status
-    ticket.status = isUser ? 'Open' : 'Pending';
+    ticket.status = isUser ? 'open' : 'pending';
 
     // build a return object that can be used in the event emitter
     const user = data.user || null;
