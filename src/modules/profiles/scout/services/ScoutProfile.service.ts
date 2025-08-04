@@ -20,4 +20,14 @@ export class ScoutProfileService extends CRUDService {
       return res.status(500).json({ error: 'Internal Server Error' });
     }
   });
+
+  public fetchFavoritedAthletes = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+    try {
+      const result = await this.scoutProfileActionsHandler.fetchFavoritedAthletes(req.user.profileRefs['scout'] as any);
+      return res.status(200).json({ success: true, payload: result });
+    } catch (err) {
+      console.error('[ScoutProfileService] Error fetching favorited athletes:', err);
+      return res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
 }

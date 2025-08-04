@@ -252,6 +252,24 @@ export class TicketHandler extends CRUDHandler<SupportType> {
                 ],
               },
             },
+            {
+              $lookup: {
+                from: 'users',
+                localField: 'user',
+                foreignField: '_id',
+                as: 'sender',
+                pipeline: [
+                  {
+                    $project: {
+                      _id: 1,
+                      fullName: 1,
+                      email: 1,
+                      profileImageUrl: 1,
+                    },
+                  },
+                ],
+              },
+            },
           ],
         },
       },

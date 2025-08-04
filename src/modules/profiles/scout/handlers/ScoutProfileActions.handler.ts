@@ -1,4 +1,5 @@
 import { ErrorUtil } from '../../../../middleware/ErrorUtil';
+import { IAthlete } from '../../athlete/models/AthleteModel';
 import { IScout, ScoutModel } from '../model/ScoutProfile';
 
 export class ScoutProfileActionsHandler {
@@ -34,6 +35,29 @@ export class ScoutProfileActionsHandler {
     } catch (error) {
       console.error('[ScoutProfileActions] Error toggling favorite athlete:', error);
       throw new ErrorUtil('Failed to toggle favorite athlete', 500);
+    }
+  }
+
+
+  async fetchFavoritedAthletes(scoutId: string): Promise<IAthlete[]> {
+    try {
+      const scoutProfile = await this.Schema.findById(scoutId).populate({
+        path: 'favoritedAthletes',
+        select: '_id fullName profileImageUrl diamondRating'
+      });
+      if (!scoutProfile) {
+        throw new ErrorUtil('Scout profile not found', 404);
+      }
+      // Ensure favoritedAthletes is initialized as an array
+      if (!Array.isArray(scoutProfile.favoritedAthletes)) {
+        scoutProfile.favoritedAthletes = [] as any[];
+      }
+
+
+      return scoutProfile.favoritedAthletes as unknown as IAthlete[];
+    } catch (error) {
+      console.error('[ScoutProfileActions] Error fetching favorited athletes:', error);
+      throw new ErrorUtil('Failed to fetch favorited athletes', 500);
     }
   }
 }
