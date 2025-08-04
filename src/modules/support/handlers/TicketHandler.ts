@@ -270,6 +270,9 @@ export class TicketHandler extends CRUDHandler<SupportType> {
                 ],
               },
             },
+            {
+              $unwind: { path: '$sender', preserveNullAndEmptyArrays: true },
+            }
           ],
         },
       },
