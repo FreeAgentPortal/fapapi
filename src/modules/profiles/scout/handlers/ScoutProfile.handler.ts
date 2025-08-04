@@ -82,7 +82,7 @@ export class ScoutProfileHandler extends CRUDHandler<IScout> {
               {
                 $lookup: {
                   from: 'users',
-                  localField: 'userId',
+                  localField: 'user',
                   foreignField: '_id',
                   as: 'user',
                   pipeline: [
