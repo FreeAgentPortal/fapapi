@@ -12,7 +12,7 @@ export class ScoutActionsHandler {
    * action comes from admin panel for submission of scout report, this handler
    * processes the action and updates the scout report, as well as updating the athlete's diamond rating
    */
-  async handleScoutReportSubmission(data: { action: 'approve' | 'deny'; message?: string }, reportid: string): Promise<void> {
+  async handleScoutReportSubmission(data: { action: 'approve' | 'deny'; message?: string }, reportid: string): Promise<{ success: boolean; message: string; data?: any }> {
     console.log('[Scout] Handling Scout Report Submission:', reportid);
 
     // attempt to locate the report by Id
@@ -47,7 +47,15 @@ export class ScoutActionsHandler {
       report.denialMessage = data.message || 'Report denied by admin';
       await report.save();
       console.log(`[Scout] Report ${reportid} denied successfully.`);
-      return;
+      return {
+        success: true,
+        message: 'Scout report denied successfully',
+        data: {
+          isApproved: false,
+          reportId: report._id,
+          athleteId: athlete._id,
+        },
+      };
     }
     try {
       // Get count of already processed reports for this athlete (excluding current report)
@@ -77,6 +85,19 @@ export class ScoutActionsHandler {
       console.log(`[Scout] Report ${reportid} processed successfully.`);
       console.log(`[Scout] Calculated diamond rating: ${calculatedDiamondRating}`);
       console.log(`[Scout] Athlete ${athlete._id} diamond rating updated from ${athlete.diamondRating} to ${newDiamondRating}`);
+
+      return {
+        success: true,
+        message: 'Scout report processed successfully',
+        data: {
+          isApproved: true,
+          reportId: report._id,
+          scoutId: report.scoutId,
+          athleteId: athlete._id,
+          newDiamondRating,
+          ratingBreakdownDetails: this.getRatingCalculationDetails(report.ratingBreakdown),
+        },
+      }
     } catch (error) {
       console.error('[Scout] Error processing scout report:', error);
       throw new ErrorUtil('Failed to process scout report', 500);

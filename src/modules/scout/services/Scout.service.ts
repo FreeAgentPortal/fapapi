@@ -4,6 +4,7 @@ import { ScoutActionsHandler } from '../handlers/ScoutActions.handler';
 import { ScoutCRUDHandler } from '../handlers/ScoutCRUD.handler';
 import { AuthenticatedRequest } from '../../../types/AuthenticatedRequest';
 import asyncHandler from '../../../middleware/asyncHandler';
+import { eventBus } from '../../../lib/eventBus';
 
 export class ScoutService extends CRUDService {
   constructor(private readonly actionsHandler: ScoutActionsHandler = new ScoutActionsHandler()) {
@@ -21,6 +22,10 @@ export class ScoutService extends CRUDService {
   public reportSubmission = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
     try {
       const result = await this.actionsHandler.handleScoutReportSubmission(req.body, req.params.id as string);
+
+      // emit an event for notifications
+      eventBus.publish('scout.report.submitted', result.data);
+
       return res.status(200).json({
         success: true,
         message: 'Scout report processed successfully',
