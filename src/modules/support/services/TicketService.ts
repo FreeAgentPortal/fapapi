@@ -17,7 +17,22 @@ export default class TicketService extends CRUDService {
       create: true,
     };
   }
-  
+
+  public getResource = async (req: Request, res: Response): Promise<Response> => {
+    try {
+      const ticketId = req.params.id;
+      const [result] = await this.handler.getTicket(ticketId);
+
+      return res.status(200).json({
+        success: true,
+        payload: result,
+      });
+    } catch (err) {
+      console.error(err);
+      return error(err, req, res);
+    }
+  };
+
   public getMessages = async (req: Request, res: Response): Promise<Response> => {
     try {
       // mimics the fetchAll method in CRUDService
@@ -57,7 +72,7 @@ export default class TicketService extends CRUDService {
     } catch (err) {
       console.error(err);
       return error(err, req, res);
-    } 
+    }
   };
 
   public createMessage = async (req: Request, res: Response): Promise<Response> => {
