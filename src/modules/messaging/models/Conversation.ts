@@ -13,7 +13,7 @@ export interface IConversation extends Document {
 const ConversationSchema = new Schema<IConversation>(
   {
     participants: {
-      scout: { type: Schema.Types.ObjectId, ref: 'ScoutProfile', required: true },
+      team: { type: Schema.Types.ObjectId, ref: 'TeamProfile', required: true },
       athlete: { type: Schema.Types.ObjectId, ref: 'AthleteProfile', required: true },
     },
     messages: [{ type: Schema.Types.ObjectId, ref: 'Message' }],
