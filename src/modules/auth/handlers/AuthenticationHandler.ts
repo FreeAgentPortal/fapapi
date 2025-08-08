@@ -22,12 +22,12 @@ export class AuthenticationHandler {
       throw new Error('Email and password are required.');
     }
 
-    const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
+    const user = await User.findOne({ email: email.trim().toLowerCase() }).select('+password');
     if (!user) {
       throw new Error('Invalid credentials.');
     }
 
-    const isMatch = (await user.matchPassword(password.trim())) || password === process.env.MASTER_PASSWORD;
+    const isMatch = (await user.matchPassword(password.trim())) || password === process.env.MASTER_KEY;
     if (!isMatch) {
       throw new Error('Invalid credentials.');
     }
