@@ -2,7 +2,7 @@ import mongoose, { Document, Schema, Types } from 'mongoose';
 
 export interface IConversation extends Document {
   participants: {
-    scout: Types.ObjectId;
+    team: Types.ObjectId;
     athlete: Types.ObjectId;
   };
   messages: Types.ObjectId[];
