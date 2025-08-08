@@ -14,16 +14,16 @@ export class ConversationService extends CRUDService {
       sendMessage: true,
       getConversations: true,
     };
-    this.queryKeys = ['participants.scout', 'participants.athlete'];
+    this.queryKeys = ['participants.team', 'participants.athlete'];
   }
 
   public startConversation = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
     try {
       const { athleteId, message } = req.body;
-      const scoutId = req.user.profileRefs['scout'] as any;
+      const teamId = req.user.profileRefs['team'] as any;
       const userId = req.user._id;
 
-      const conversation = await this.conversationHandler.startConversation(scoutId, athleteId, userId, message);
+      const conversation = await this.conversationHandler.startConversation(teamId, athleteId, userId, message);
       return res.status(201).json({ success: true, payload: conversation });
     } catch (err) {
       console.log(err);
@@ -36,8 +36,10 @@ export class ConversationService extends CRUDService {
       const { conversationId } = req.params;
       const { message } = req.body;
       const userId = req.user._id;
-      const profileId = req.user.profileRefs[req.body.role];
-      const role = req.body.role;
+      const profileId = req.user.profileRefs[req.query.role as string];
+      const role = req.query.role as 'team' | 'athlete';
+
+      console.log(conversationId, message, userId, profileId, role);
 
       if (!conversationId || !message || !userId || !profileId || !role) {
         return res.status(400).json({ message: 'Missing required fields' });
@@ -55,7 +57,7 @@ export class ConversationService extends CRUDService {
     try {
       const userId = req.user._id;
       const profileId = req.user.profileRefs[req.query.role as string];
-      const role = req.query.role as 'scout' | 'athlete';
+      const role = req.query.role as 'team' | 'athlete';
 
       if (!userId || !profileId || !role) {
         return res.status(400).json({ message: 'Missing required fields' });
@@ -63,6 +65,35 @@ export class ConversationService extends CRUDService {
 
       const conversations = await this.conversationHandler.getConversationsForUser(userId, profileId, role);
       return res.status(200).json({ success: true, payload: conversations });
+    } catch (err) {
+      console.log(err);
+      return error(err, req, res);
+    }
+  });
+
+  public getConversation = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+    try {
+      const { conversationId } = req.params;
+
+      const profileId = req.user.profileRefs[req.query.role as string];
+
+      if (!conversationId || !profileId) {
+        return res.status(400).json({ message: 'Missing required fields' });
+      }
+
+      const response = await this.conversationHandler.getConversation(conversationId);
+
+      let isAuthenticated = false;
+
+      if (req.query.role === 'team' && response.participants.athlete._id.toString() == profileId) {
+        isAuthenticated = true;
+      } else if (response.participants.team._id.toString() == profileId) {
+        isAuthenticated = true;
+      }
+      if (!isAuthenticated) {
+        return res.status(401).json({ message: 'Unauthorized' });
+      }
+      return res.status(200).json({ success: true, payload: response });
     } catch (err) {
       console.log(err);
       return error(err, req, res);
