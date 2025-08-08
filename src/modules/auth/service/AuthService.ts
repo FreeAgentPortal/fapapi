@@ -40,7 +40,7 @@ export default class AuthService {
   public getMe = async (req: Request, res: Response): Promise<Response> => {
     try {
       const result = await this.authHandler.getMe(req as AuthenticatedRequest);
-      return res.status(200).json({success: true, ...result});
+      return res.status(200).json({ success: true, ...result });
     } catch (err: any) {
       console.log(err);
       return error(err, req, res);
@@ -67,8 +67,8 @@ export default class AuthService {
 
   public resetPassword = async (req: Request, res: Response): Promise<Response> => {
     try {
-      const { token, newPassword } = req.body;
-      const user = await this.passwordRecoveryHandler.resetPassword(token, newPassword);
+      const { token, password } = req.body;
+      const user = await this.passwordRecoveryHandler.resetPassword(token, password);
       // Emit event for password reset
       eventBus.publish('password.reset.complete', {
         user,
