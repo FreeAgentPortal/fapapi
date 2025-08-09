@@ -6,7 +6,7 @@ import { Types } from 'mongoose';
 import TeamModel from '../../profiles/team/model/TeamModel';
 
 export class ConversationHandler {
-  async startConversation(teamId: string, athleteId: string, userId: string, initialMessage: string): Promise<IConversation> {
+  async startConversation(teamId: string, athleteId: string, userId: string, initialMessage: string) {
     const team = await TeamModel.findById(teamId);
     if (!team) {
       throw new ErrorUtil('Team profile not found', 404);
@@ -34,7 +34,7 @@ export class ConversationHandler {
       messages: [],
     });
 
-    const message = new MessageModel({
+    const newMessage = new MessageModel({
       conversation: conversation._id,
       sender: {
         user: userId,
@@ -44,12 +44,12 @@ export class ConversationHandler {
       content: initialMessage,
     });
 
-    await message.save();
+    await newMessage.save();
 
-    conversation.messages.push(message._id as Types.ObjectId);
+    conversation.messages.push(newMessage._id as Types.ObjectId);
     await conversation.save();
 
-    return conversation;
+    return { conversation, newMessage };
   }
 
   async sendMessage(conversationId: string, senderId: string, senderProfileId: string, senderRole: 'team' | 'athlete', content: string): Promise<IMessage> {
@@ -65,6 +65,11 @@ export class ConversationHandler {
         profile: senderProfileId,
         role: senderRole,
       },
+      receiver: {
+        user: conversation.participants[senderRole === 'team' ? 'athlete' : 'team'],
+        profile: conversation.participants[senderRole === 'team' ? 'athlete' : 'team'],
+        role: senderRole === 'team' ? 'athlete' : 'team',
+      },
       content: content,
     });
 
@@ -79,14 +84,14 @@ export class ConversationHandler {
     if (role === 'team') {
       return ConversationModel.find({ 'participants.team': profileId }).populate('participants.athlete', 'fullName profileImageUrl');
     } else {
-      return ConversationModel.find({ 'participants.athlete': profileId }).populate('participants.team', 'displayName');
+      return ConversationModel.find({ 'participants.athlete': profileId }).populate('participants.team', 'name logos');
     }
   }
 
   async getConversation(conversationId: string): Promise<IConversation> {
     const conversation = await ConversationModel.findById(conversationId)
       .populate('participants.athlete', 'fullName profileImageUrl')
-      .populate('participants.team', 'displayName')
+      .populate('participants.team', 'name logos')
       .populate('messages');
     if (!conversation) {
       throw new ErrorUtil('Conversation not found', 404);

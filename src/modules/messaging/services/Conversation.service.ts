@@ -5,6 +5,7 @@ import { ConversationHandler } from '../handlers/Conversation.handler';
 import error from '../../../middleware/error';
 import { CRUDService } from '../../../utils/baseCRUD';
 import { ConversationCrudHandler } from '../handlers/ConversationCrud.handler';
+import { eventBus } from '../../../lib/eventBus';
 
 export class ConversationService extends CRUDService {
   constructor(private readonly conversationHandler: ConversationHandler = new ConversationHandler()) {
@@ -23,7 +24,10 @@ export class ConversationService extends CRUDService {
       const teamId = req.user.profileRefs['team'] as any;
       const userId = req.user._id;
 
-      const conversation = await this.conversationHandler.startConversation(teamId, athleteId, userId, message);
+      const { conversation, newMessage } = await this.conversationHandler.startConversation(teamId, athleteId, userId, message);
+
+      eventBus.publish('conversation.message', { message: newMessage });
+
       return res.status(201).json({ success: true, payload: conversation });
     } catch (err) {
       console.log(err);
@@ -39,13 +43,14 @@ export class ConversationService extends CRUDService {
       const profileId = req.user.profileRefs[req.query.role as string];
       const role = req.query.role as 'team' | 'athlete';
 
-      console.log(conversationId, message, userId, profileId, role);
-
       if (!conversationId || !message || !userId || !profileId || !role) {
         return res.status(400).json({ message: 'Missing required fields' });
       }
 
       const sentMessage = await this.conversationHandler.sendMessage(conversationId, userId, profileId, role, message);
+
+      eventBus.publish('conversation.message', { message: sentMessage });
+
       return res.status(201).json({ success: true, payload: sentMessage });
     } catch (err) {
       console.log(err);
