@@ -37,9 +37,12 @@ export class ConversationHandler {
     const newMessage = new MessageModel({
       conversation: conversation._id,
       sender: {
-        user: userId,
         profile: teamId,
         role: 'team',
+      },
+      receiver: {
+        profile: conversation.participants.athlete,
+        role: 'athlete',
       },
       content: initialMessage,
     });
@@ -61,12 +64,10 @@ export class ConversationHandler {
     const message = new MessageModel({
       conversation: conversationId,
       sender: {
-        user: senderId,
         profile: senderProfileId,
         role: senderRole,
       },
       receiver: {
-        user: conversation.participants[senderRole === 'team' ? 'athlete' : 'team'],
         profile: conversation.participants[senderRole === 'team' ? 'athlete' : 'team'],
         role: senderRole === 'team' ? 'athlete' : 'team',
       },
