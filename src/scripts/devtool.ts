@@ -78,13 +78,13 @@ class DevTool {
   async customTask(): Promise<void> {
     console.log('🛠️  Running custom task...');
 
-    const athletes = await this.modelMap['athlete'].find({});
-    for (const athlete of athletes) {
-      // set the isActive field to true
-      if (athlete.isActive === undefined) {
-        athlete.isActive = true;
-        await athlete.save();
-        console.log(`Updated athlete ${athlete._id} to active`);
+    const teams = await this.modelMap['team'].find({});
+    // for every team currently in the database we want to set their logoUrl field to the first logo in the logos array
+    for (const team of teams) {
+      if (team.logos && team.logos.length > 0) {
+        team.logoUrl = team.logos[0].href;
+        await team.save();
+        console.log(`Updated team ${team._id} logoUrl to ${team.logoUrl}`);
       }
     }
 

@@ -12,12 +12,12 @@ export default class TeamProfileHandler extends CRUDHandler<ITeamProfile> {
     const { name, email, phone, userId } = data;
 
     // Check if user already has a profile
-    const existing = await TeamModel.findOne({ linkedUsers: userId });
+    const existing = await this.Schema.findOne({ linkedUsers: userId });
     if (existing) {
       throw new Error('User already linked to a team profile');
     }
 
-    const profile = await TeamModel.create({
+    const profile = await this.Schema.create({
       name,
       email,
       phone,
