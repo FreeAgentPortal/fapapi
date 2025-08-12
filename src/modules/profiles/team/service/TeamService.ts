@@ -21,7 +21,6 @@ export default class TeamService extends CRUDService {
   }
   public checkResource = async (req: Request, res: Response): Promise<Response> => {
     try {
-      console.log(req);
       const exists = await this.authHandler.checkResourceExists(req);
       return res.status(200).json({
         exists,
@@ -39,4 +38,20 @@ export default class TeamService extends CRUDService {
       throw new ErrorUtil('Failed to create team profile', 400);
     }
   };
+
+  public inviteTeam = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    try {
+      const { teamData, invitationData, additionalData } = req.body;
+      // creates the team profile
+      const profile = await this.handler.create({ ...teamData });
+
+      // send invitation email through the email service
+      eventBus.publish('team.invited', { profile, invitationData, additionalData });
+
+      return res.status(201).json(profile);
+    } catch (err) {
+      console.error('Error inviting team:', err);
+      return error(err, req, res);
+    }
+  });
 }
