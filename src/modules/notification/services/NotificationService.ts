@@ -2,6 +2,7 @@
 import { EmailService } from '../email/EmailService';
 import NAuthService from './NAuthService';
 import NClaimService from './NClaimService';
+import NConversationService from './NConversationService';
 import NSupportService from './NSupportService';
 import NTeamsEventService from './NTeamsEvent.service';
 import NUserService from './NUserService';
@@ -14,6 +15,7 @@ export default class NotificationService {
     private readonly nticketService: NSupportService = new NSupportService(),
     private readonly searchReportEventService: SearchReportEventService = new SearchReportEventService(),
     private readonly nuserService: NUserService = new NUserService(),
+    private readonly nconversationService: NConversationService = new NConversationService(),
     private readonly nteamsEventService: NTeamsEventService = new NTeamsEventService()
   ) {}
   public init() {
@@ -23,6 +25,7 @@ export default class NotificationService {
     this.nticketService.init();
     this.searchReportEventService.init();
     this.nuserService.init();
+    this.nconversationService.init();
     this.nteamsEventService.init();
   }
 }
