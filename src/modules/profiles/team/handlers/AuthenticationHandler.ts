@@ -11,9 +11,7 @@ export default class AuthenticationHandler {
    * @throws {Error} - Throws an error if the request is malformed or if the resource cannot be checked
    */
   async checkResourceExists(req: Request): Promise<boolean> {
-    console.log(req.query.keyword)
     const { resource } = req.query as { resource?: Record<string, string> };
-    console.log(resource)
     // we will get a query parameter resource that will be an array of key-value pairs
     // i.e. ?resource[email]=someemail@test.com&resource[username]=someusername
     const resourceQuery = req.query.resource;
@@ -32,11 +30,8 @@ export default class AuthenticationHandler {
       [key]: value,
     }));
 
-    console.log(orConditions)
-
     // Execute query
     const existing = await TeamModel.findOne({ $or: orConditions }).lean().exec();
-    console.log(!!existing)
     return !!existing;
   }
 }

@@ -1,37 +1,27 @@
-import { Model } from 'mongoose';
 import { ErrorUtil } from '../../../middleware/ErrorUtil';
-import AdminModel from '../../profiles/admin/model/AdminModel';
-import { AthleteModel } from '../../profiles/athlete/models/AthleteModel';
-import { ClaimType } from '../../auth/model/ClaimSchema';
-import User, { UserType } from '../../auth/model/User';
-import TeamModel from '../../profiles/team/model/TeamModel';
 import { EmailService } from '../email/EmailService';
 import Notification from '../model/Notification';
 
-export default class TeamEventsHandler { 
+export default class TeamEventsHandler {
   async onTeamInvited(event: { profile: any; invitationData: any; additionalData: any }) {
     const { profile, invitationData, additionalData } = event;
-
-    // Create a notification for the team invitation
-    await Notification.insertNotification(
-      profile._id as any,
-      null as any,
-      'Team Invited',
-      `You have been invited to join the team: ${profile.name}`,
-      'team.invited',
-      profile._id as any
-    );
 
     // Send invitation email
     await EmailService.sendEmail({
       to: invitationData.email,
       subject: 'You Have Been Invited to Join a Team',
-      templateId: 'd-1234567890abcdef1234567890abcdef',
+      templateId: 'd-bd8a348f14db4bf68fa9e5428afd27a3',
       data: {
-        currentYear: new Date().getFullYear(),
-        subject: 'You Have Been Invited to Join a Team',
+        inviteeName: invitationData.inviteeName,
+        inviterName: 'Damond Talbot',
+        inviterMessage: invitationData.inviteMessage,
         teamName: profile.name,
-        ...additionalData
+        inviteUrl: `https://auth.thefreeagentportal.com/auth/claim?slug=${profile.slug}&type=team`,
+        expiresInHours: 48,
+        supportEmail: 'support@freeagentportal.com',
+        logoUrl: 'https://res.cloudinary.com/dsltlng97/image/upload/v1752863629/placeholder-logo_s7jg3y.png',
+        year: new Date().getFullYear(),
+        subject: `You Have Been Invited to Join the ${profile.name} Team`,
       },
     });
   }
