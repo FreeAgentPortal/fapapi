@@ -6,6 +6,7 @@ import ScoutReport from '../modules/scout/models/ScoutReport';
 import { ScoutModel } from '../modules/profiles/scout/model/ScoutProfile';
 import { ConversationModel } from '../modules/messaging/models/Conversation';
 import { MessageModel } from '../modules/messaging/models/Message';
+import User from '../modules/auth/model/User';
 
 export const ModelMap: Record<string, Model<any>> = {
   team: TeamModel,
@@ -15,5 +16,6 @@ export const ModelMap: Record<string, Model<any>> = {
   scout_profile: ScoutModel,
   conversation: ConversationModel,
   message: MessageModel,
+  user: User
   // extend with other models as needed
 };

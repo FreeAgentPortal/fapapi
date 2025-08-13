@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document, Types } from 'mongoose';
+import slugify from 'slugify';
 
 export interface ITeamProfile extends Document {
   name: string;
@@ -19,6 +20,8 @@ export interface ITeamProfile extends Document {
   linkedUsers: Types.ObjectId[]; // References to users with access
   alertsEnabled: boolean;
   verifiedDomain?: string; // e.g., "example.edu"
+  claimToken?: string; // Token for claiming the team
+  claimTokenExpiresAt?: Date; // Expiration date for the claim token
   openToTryouts?: boolean; // Whether the team is open to new athletes
   createdAt: Date;
   updatedAt: Date;
@@ -44,8 +47,8 @@ const TeamProfileSchema: Schema = new Schema<ITeamProfile>(
     },
     logoUrl: {
       type: String,
-      match: /^(https?:\/\/.*\.(?:png|jpg|jpeg|gif|svg))$/,
-      default: null, // Optional field
+      // match: /^(https?:\/\/.*\.(?:png|jpg|jpeg|gif|svg))$/,
+      // default: null, // Optional field
     },
     verifiedDomain: {
       type: String,
@@ -94,8 +97,18 @@ const TeamProfileSchema: Schema = new Schema<ITeamProfile>(
         shortText: { type: String },
       },
     ],
+    claimToken: { type: String, default: null },
+    claimTokenExpiresAt: { type: Date, default: null },
   },
   { timestamps: true }
 );
+
+// fix the slug
+TeamProfileSchema.pre<ITeamProfile>('save', function (next) {
+  if (!this.slug) {
+    this.slug = slugify(this.name, { lower: true });
+  }
+  next();
+});
 
 export default mongoose.model<ITeamProfile>('TeamProfile', TeamProfileSchema);

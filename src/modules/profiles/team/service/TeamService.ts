@@ -9,6 +9,7 @@ import error from '../../../../middleware/error';
 import { CRUDService } from '../../../../utils/baseCRUD';
 import asyncHandler from '../../../../middleware/asyncHandler';
 import { ErrorUtil } from '../../../../middleware/ErrorUtil';
+import mongoose from 'mongoose';
 
 export default class TeamService extends CRUDService {
   constructor(private readonly authHandler: AuthenticationHandler = new AuthenticationHandler()) {
@@ -16,6 +17,7 @@ export default class TeamService extends CRUDService {
     this.requiresAuth = {
       updateResource: true,
       create: true,
+      validateToken: true,
     };
     this.queryKeys = ['name', 'description', 'tags'];
   }
@@ -43,7 +45,7 @@ export default class TeamService extends CRUDService {
     try {
       const { teamData, invitationData, additionalData } = req.body;
       // creates the team profile
-      const profile = await this.handler.create({ ...teamData });
+      const profile = await this.handler.inviteTeam({ ...teamData });
 
       // send invitation email through the email service
       eventBus.publish('team.invited', { profile, invitationData, additionalData });
@@ -51,6 +53,24 @@ export default class TeamService extends CRUDService {
       return res.status(201).json(profile);
     } catch (err) {
       console.error('Error inviting team:', err);
+      return error(err, req, res);
+    }
+  });
+
+  public validateToken = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+    try {
+      const { token } = req.body;
+
+      const { isValid, team } = await this.handler.validateToken(token);
+      // update team linkedUsers array with the user id, and set the claimToken and expiry to undefined
+      await this.handler.attach(team._id, req.user._id);
+
+      // event emitter to send a notification to the user
+      eventBus.publish('team.token.validated', { userId: req.user.id, teamId: team._id });
+
+      return res.status(200).json({ valid: isValid });
+    } catch (err) {
+      console.error('Error validating token:', err);
       return error(err, req, res);
     }
   });

@@ -12,6 +12,10 @@ router.route('/health').get((req, res) => {
     success: true,
   });
 });
+
+router.route('/invite').post(AuthMiddleware.protect, service.inviteTeam); // invite a team
+router.route('/validate-token').post(AuthMiddleware.protect, service.validateToken); // validate claim token
+
 router.route('/check').get(service.checkResource); // check if a resource exists in the database
 router.route('/').get(service.getResources).post(AuthMiddleware.protect, service.create); // ideally this would never be used as profiles should be created during registration
 router
