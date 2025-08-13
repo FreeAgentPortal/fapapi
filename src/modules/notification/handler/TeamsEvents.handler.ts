@@ -16,7 +16,7 @@ export default class TeamEventsHandler {
         inviterName: 'Damond Talbot',
         inviterMessage: invitationData.inviteMessage,
         teamName: profile.name,
-        inviteUrl: `https://auth.thefreeagentportal.com/auth/claim?slug=${profile.slug}&type=team&token=${profile.claimToken}`,
+        inviteUrl: `https://auth.thefreeagentportal.com/auth/claim?slug=${profile.slug}&type=team&token=${additionalData.token}`,
         expiresInHours: 48,
         supportEmail: 'support@freeagentportal.com',
         logoUrl: 'https://res.cloudinary.com/dsltlng97/image/upload/v1752863629/placeholder-logo_s7jg3y.png',
