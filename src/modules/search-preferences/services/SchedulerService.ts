@@ -82,6 +82,7 @@ export class SchedulerService {
 
       // Generate the report
       const reportData = await SchedulerHandler.generateReport(searchPreference);
+      console.log('[SchedulerService] Report generated successfully', reportData);
 
       // Update the dateLastRan
       await SearchPreferences.findByIdAndUpdate(preferenceId, { dateLastRan: new Date() }, { new: true });
@@ -93,6 +94,7 @@ export class SchedulerService {
           reportId: reportData.reportId,
           resultCount: reportData.results.length,
           generatedAt: reportData.generatedAt,
+          _id: reportData._id,
         },
       });
     } catch (err) {
