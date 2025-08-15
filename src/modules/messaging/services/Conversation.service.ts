@@ -90,7 +90,7 @@ export class ConversationService extends CRUDService {
 
       let isAuthenticated = false;
 
-      if (req.query.role === 'team' && response.participants.athlete._id.toString() == profileId) {
+      if (req.query.role === 'athlete' && response.participants.athlete._id.toString() == profileId) {
         isAuthenticated = true;
       } else if (response.participants.team._id.toString() == profileId) {
         isAuthenticated = true;
