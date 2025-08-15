@@ -84,9 +84,28 @@ export default class TeamProfileHandler extends CRUDHandler<ITeamProfile> {
     // if no token is found, return early
     if (!doc) {
       throw new ErrorUtil('Invalid or expired token', 400);
-    } 
+    }
     const team = await this.Schema.findOne({ _id: doc.teamProfile });
     if (!team) throw new ErrorUtil('Invalid or expired token', 400);
     return { isValid: !!team, team, token: doc };
+  }
+
+  protected async afterDelete(doc: ITeamProfile | null): Promise<void> {
+    if (!doc) return;
+
+    for (const user of doc.linkedUsers) {
+      // we need to remove the linked user's profileRef, ONLY IF the profile reference exists, and is the id of the team removed
+      const u = await this.modelMap['user'].findOne({
+        _id: user.user,
+        'profileRefs.team': doc._id,
+      });
+
+      // if user is found with a reference to this profile, remove the profileRef
+      if (u) {
+        await this.modelMap['user'].findByIdAndUpdate(user.user, {
+          $pull: { 'profileRefs.team': doc._id },
+        });
+      }
+    }
   }
 }

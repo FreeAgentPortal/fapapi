@@ -23,7 +23,7 @@ router
   .route('/:id')
   .get(service.getResource) // get public profile by id
   .put(AuthMiddleware.protect, service.updateResource) // update profile by user id
-  .delete(AuthMiddleware.protect, AuthMiddleware.authorizeRoles(['admin', 'developer']) as any, service.removeResource); // delete profile by user id
+  .delete(AuthMiddleware.protect, AuthMiddleware.authorizeRoles(['admin', 'developer', 'teams.delete']) as any, service.removeResource); // delete profile by user id
 router.route('/profile/:id').get(AuthMiddleware.protect, service.getResource); // get profile by user id
 
 // authenticated routes
