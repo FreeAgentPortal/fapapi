@@ -26,7 +26,7 @@ export class ConversationService extends CRUDService {
 
       const { conversation, newMessage } = await this.conversationHandler.startConversation(teamId, athleteId, userId, message);
 
-      eventBus.publish('conversation.message', { message: newMessage });
+      eventBus.publish('conversation.started', { conversation: conversation });
 
       return res.status(201).json({ success: true, payload: conversation });
     } catch (err) {
