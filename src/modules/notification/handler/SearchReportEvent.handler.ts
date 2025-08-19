@@ -23,7 +23,7 @@ export default class SearchReportEventHandler {
       console.log(`[SearchReportEventHandler] Processing report generated event for user: ${event.userId}`);
 
       // find the model we want to use with the modelMap
-      const Model = ModelMap[event.ownerType];
+      const Model = ModelMap[event.ownerType as keyof typeof ModelMap];
       if (!Model) {
         throw new ErrorUtil(`Invalid owner type: ${event.ownerType}`, 400);
       }
