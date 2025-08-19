@@ -17,6 +17,7 @@ export class ScoutService extends CRUDService {
       getResource: false, // Public access to view a single resource
       reportSubmission: true, // Requires authentication for report submission
     };
+    this.queryKeys = ['tags', 'status', 'scout.name', 'athlete.name']; // Define query keys for filtering
   }
 
   public reportSubmission = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {

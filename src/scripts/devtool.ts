@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
-import { ModelMap } from '../utils/ModelMap';
+import { ModelKey, ModelMap } from '../utils/ModelMap';
 
 // Add other models as needed
 
@@ -17,7 +17,7 @@ dotenv.config();
 
 class DevTool {
   private isConnected = false;
-  private modelMap: Record<string, mongoose.Model<any>> = ModelMap;
+  private modelMap: Record<ModelKey, mongoose.Model<any>> = ModelMap;
   /**
    * Connect to MongoDB database
    */
@@ -78,17 +78,71 @@ class DevTool {
   async customTask(): Promise<void> {
     console.log('🛠️  Running custom task...');
 
-    const teams = await this.modelMap['team'].find({});
-    // for every team currently in the database we want to set their logoUrl field to the first logo in the logos array
-    for (const team of teams) {
-      if (team.logos && team.logos.length > 0) {
-        team.logoUrl = team.logos[0].href;
-        await team.save();
-        console.log(`Updated team ${team._id} logoUrl to ${team.logoUrl}`);
+    const reports = await this.modelMap['scout_report'].find({}).populate({
+      path: 'athleteId',
+      select: 'fullName',
+    });
+
+    console.log(`Found ${reports.length} scout reports to process...`);
+
+    let successCount = 0;
+    let skippedCount = 0;
+
+    for (let i = 0; i < reports.length; i++) {
+      const r = reports[i];
+      console.log(`\nProcessing report ${i + 1}/${reports.length}:`, r._id);
+      console.log(`   🔍 Scout User ID: ${r.scoutId}`);
+
+      try {
+        let athleteName = 'Unknown Athlete';
+        let scoutName = 'Unknown Scout';
+        let shouldUpdate = false;
+
+        // Get athlete name if available
+        if (r.athleteId && r.athleteId.fullName) {
+          athleteName = r.athleteId.fullName;
+          console.log(`   📋 Athlete: ${athleteName}`);
+        } else {
+          console.log('   ⚠️  Athlete not found or missing fullName');
+        }
+
+        // Get scout name if available
+        if (r.scoutId) {
+          console.log(`   🔍 Scout User ID: ${r.scoutId}`);
+
+          // Find the scout admin profile
+          const scout = await this.modelMap['scout_profile'].findOne({ _id: r.scoutId }).populate({
+            path: 'user',
+            select: 'fullName',
+          }); 
+          if (scout && scout.user && scout.user.fullName) {
+            scoutName = scout.user.fullName;
+            console.log(`   👤 Scout: ${scoutName}`);
+          } else {
+            console.log('   ⚠️  Scout admin profile or user not found');
+          }
+        } else {
+          console.log('   ⚠️  Scout not found or missing user reference');
+        }
+
+        // Update the report with denormalized data (even if some data is missing)
+        r.scout = { name: scoutName };
+        r.athlete = { name: athleteName };
+
+        await r.save();
+        successCount++;
+        console.log(`   ✅ Updated report: Scout="${scoutName}", Athlete="${athleteName}"`);
+      } catch (error) {
+        skippedCount++;
+        console.error(`   ❌ Error processing report ${r._id}:`, error instanceof Error ? error.message : error);
+        continue; // Continue with next report
       }
     }
 
-    console.log('✅ Custom task completed');
+    console.log(`\n📊 Results Summary:`);
+    console.log(`   ✅ Successfully updated: ${successCount} reports`);
+    console.log(`   ❌ Skipped due to errors: ${skippedCount} reports`);
+    console.log('\n✅ Custom task completed');
   }
 
   /**

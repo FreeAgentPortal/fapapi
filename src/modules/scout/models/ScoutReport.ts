@@ -19,7 +19,12 @@ export interface IScoutReport extends mongoose.Document {
   verifiedMetrics?: string[]; // metrics that were verified during the report
   unverifiedMetrics?: string[]; // metrics that were not verified
   recommendations?: string; // suggestions for improvement
-
+  athlete: {
+    name: string;
+  }
+  scout: {
+    name: string;
+  }
   //metadata
   tags?: string[]; // tags for categorization
   isPublic?: boolean; // whether the report is public or private, can teams see it? or does it only affect the athlete's rating?
@@ -40,7 +45,7 @@ const Schema = new mongoose.Schema(
     athleteId: {
       type: mongoose.Types.ObjectId,
       required: true,
-      ref: 'Athlete',
+      ref: 'AthleteProfile',
     },
     scoutId: {
       type: mongoose.Types.ObjectId,
@@ -108,6 +113,12 @@ const Schema = new mongoose.Schema(
     isDraft: {
       type: Boolean,
       default: true, // default to draft
+    },
+    athlete: {
+      name: { type: String },
+    },
+    scout: {
+      name: { type: String },
     },
   },
   {
