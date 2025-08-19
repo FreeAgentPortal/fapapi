@@ -16,6 +16,7 @@ export class UserService extends CRUDService {
       updateResource: true,
       deleteResource: true,
     };
+    this.queryKeys = ['fullName', 'email', 'phoneNumber'];
   }
 
   public updatePassword = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
