@@ -9,5 +9,6 @@ export default class NConversationService {
   constructor(private readonly handler: ConversationEventHandler = new ConversationEventHandler()) {}
   public init() {
     eventBus.subscribe('conversation.message', this.handler.messageSent);
+    eventBus.subscribe('conversation.started', this.handler.conversationStarted);
   }
 }
