@@ -13,6 +13,10 @@ router.route('/health').get((req, res) => {
   });
 });
 
+// Additional routes for favorite athletes
+router.route('/favorite-athlete').get(AuthMiddleware.protect, service.fetchFavoritedAthletes);
+router.route('/favorite-athlete/:athleteId').post(AuthMiddleware.protect, service.toggleFavoriteAthlete);
+
 router.route('/:id/invite-user').post(AuthMiddleware.protect, service.inviteUserToTeam); // invite a user to an existing team
 router.route('/invite').post(AuthMiddleware.protect, service.inviteTeam); // invite a team
 router.route('/validate-token').post(AuthMiddleware.protect, service.validateToken); // validate claim token

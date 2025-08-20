@@ -15,6 +15,7 @@ export interface ITeamProfile extends Document {
   abbreviation?: string; // e.g., "SF" for San Francisco 49ers
   shortDisplayName?: string; // e.g., "49ers"
   positionsNeeded?: string[]; // e.g., ["QB", "WR", "OL"]
+  favoritedAthletes?: Types.ObjectId[];
   color: string; // e.g., "#AA0000" for team color
   alternateColor?: string; // e.g., "#FFFFFF" for alternate color
   isActive?: boolean; // Whether the team is currently active

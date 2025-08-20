@@ -4,6 +4,7 @@ import { CRUDHandler } from '../../../../utils/baseCRUD';
 import { Types } from 'mongoose';
 import { ModelMap } from '../../../../utils/ModelMap';
 import { ErrorUtil } from '../../../../middleware/ErrorUtil';
+import { IAthlete } from '../../athlete/models/AthleteModel';
 
 export default class TeamProfileHandler extends CRUDHandler<ITeamProfile> {
   private modelMap: Record<string, any>;
@@ -106,6 +107,60 @@ export default class TeamProfileHandler extends CRUDHandler<ITeamProfile> {
           $pull: { 'profileRefs.team': doc._id },
         });
       }
+    }
+  }
+
+  /**
+   * Handles adding/removing favorited athletes for a team profile.
+   * @param {string} teamId - The ID of the scout profile.
+   * @param {string} athleteId - The ID of the athlete to favorite/unfavorite.
+   * @returns {Promise<IScout>} - The updated scout profile.
+   */
+  async toggleFavoriteAthlete(teamId: string, athleteId: string): Promise<ITeamProfile> {
+    try {
+      const teamProfile = await this.Schema.findById(teamId);
+      if (!teamProfile) {
+        throw new ErrorUtil('Scout profile not found', 404);
+      }
+      // Ensure favoritedAthletes is initialized as an array
+      if (!Array.isArray(teamProfile.favoritedAthletes)) {
+        teamProfile.favoritedAthletes = [];
+      }
+      // check the favoritedAthletes array to see if the athlete is already favorited, if it is, remove it, otherwise add it
+      const index = teamProfile.favoritedAthletes.indexOf(athleteId as any);
+      if (index > -1) {
+        // Athlete is already favorited, remove it
+        teamProfile.favoritedAthletes.splice(index, 1);
+      } else {
+        // Athlete is not favorited, add it
+        teamProfile.favoritedAthletes.push(athleteId as any);
+      }
+      await teamProfile.save();
+      return teamProfile;
+    } catch (error) {
+      console.error('[TeamProfileActions] Error toggling favorite athlete:', error);
+      throw new ErrorUtil('Failed to toggle favorite athlete', 500);
+    }
+  }
+
+  async fetchFavoritedAthletes(teamId: string): Promise<IAthlete[]> {
+    try {
+      const teamProfile = await this.Schema.findById(teamId).populate({
+        path: 'favoritedAthletes',
+        select: '_id fullName profileImageUrl diamondRating',
+      });
+      if (!teamProfile) {
+        throw new ErrorUtil('Team profile not found', 404);
+      }
+      // Ensure favoritedAthletes is initialized as an array
+      if (!Array.isArray(teamProfile.favoritedAthletes)) {
+        teamProfile.favoritedAthletes = [] as any[];
+      }
+
+      return teamProfile.favoritedAthletes as unknown as IAthlete[];
+    } catch (error) {
+      console.error('[TeamProfileActions] Error fetching favorited athletes:', error);
+      throw new ErrorUtil('Failed to fetch favorited athletes', 500);
     }
   }
 }
