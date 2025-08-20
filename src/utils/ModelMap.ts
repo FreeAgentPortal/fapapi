@@ -8,8 +8,11 @@ import { ConversationModel } from '../modules/messaging/models/Conversation';
 import { MessageModel } from '../modules/messaging/models/Message';
 import User from '../modules/auth/model/User';
 import Token from '../modules/auth/model/TokenSchema';
+import { ResumeProfile } from '../modules/profiles/resume/models/ResumeProfile';
 
-export const ModelMap: Record<string, Model<any>> = {
+export type ModelKey = 'team' | 'athlete' | 'admin' | 'scout_report' | 'scout_profile' | 'conversation' | 'message' | 'user' | 'token' | 'resume';
+
+export const ModelMap: Record<ModelKey, Model<any>> = {
   team: TeamModel,
   athlete: AthleteModel,
   admin: AdminModel,
@@ -19,5 +22,6 @@ export const ModelMap: Record<string, Model<any>> = {
   message: MessageModel,
   user: User,
   token: Token,
+  resume: ResumeProfile,
   // extend with other models as needed
 };

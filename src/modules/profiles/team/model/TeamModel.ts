@@ -10,6 +10,8 @@ export interface TeamMember {
 export interface ITeamProfile extends Document {
   name: string;
   email?: string;
+  coachName?: string;
+  league?: string;
   phone?: string;
   slug?: string; // Optional slug for URL-friendly team name
   abbreviation?: string; // e.g., "SF" for San Francisco 49ers
@@ -47,6 +49,9 @@ const TeamProfileSchema: Schema = new Schema<ITeamProfile>(
     positionsNeeded: {
       type: [String],
       default: [],
+    },
+    league: {
+      type: String,
     },
     location: {
       type: String,
@@ -97,6 +102,7 @@ const TeamProfileSchema: Schema = new Schema<ITeamProfile>(
         height: { type: Number },
       },
     ],
+    coachName: { type: String },
     links: [
       {
         language: { type: String },

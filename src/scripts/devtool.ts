@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
-import { ModelMap } from '../utils/ModelMap';
+import { ModelKey, ModelMap } from '../utils/ModelMap';
 
 // Add other models as needed
 
@@ -17,7 +17,7 @@ dotenv.config();
 
 class DevTool {
   private isConnected = false;
-  private modelMap: Record<string, mongoose.Model<any>> = ModelMap;
+  private modelMap: Record<ModelKey, mongoose.Model<any>> = ModelMap;
   /**
    * Connect to MongoDB database
    */
@@ -76,19 +76,19 @@ class DevTool {
    * ===================================
    */
   async customTask(): Promise<void> {
-    console.log('🛠️  Running custom task...');
-
-    const teams = await this.modelMap['team'].find({});
-    // for every team currently in the database we want to set their logoUrl field to the first logo in the logos array
-    for (const team of teams) {
-      if (team.logos && team.logos.length > 0) {
-        team.logoUrl = team.logos[0].href;
+    console.log('🛠️  Running custom task...'); 
+    try {
+      const teams = await this.modelMap['team'].find({});
+      console.log(`Found ${teams.length} teams.`);
+      for(const team of teams){
+        team.league = 'NFL';
         await team.save();
-        console.log(`Updated team ${team._id} logoUrl to ${team.logoUrl}`);
       }
+    } catch (error) {
+      console.log('❌ Error in custom task:', error);
     }
 
-    console.log('✅ Custom task completed');
+    console.log('\n✅ Custom task completed');
   }
 
   /**

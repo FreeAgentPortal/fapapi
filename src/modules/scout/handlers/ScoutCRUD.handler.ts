@@ -33,6 +33,8 @@ export class ScoutCRUDHandler extends CRUDHandler<IScoutReport> {
         athleteId: athlete._id,
         scoutId: scoutProfile._id,
         ...data,
+        athlete: { name: athlete.fullName },
+        scout: { name: data.user.fullName },
       });
 
       return newReport;

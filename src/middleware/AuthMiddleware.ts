@@ -43,7 +43,7 @@ export class AuthMiddleware {
       // query the admin table for the profile associated with the user
       if (service) {
         const serviceName = Array.isArray(service) ? service[0] : service;
-        const Model = ModelMap[serviceName] || {};
+        const Model = ModelMap[serviceName as keyof typeof ModelMap] || {};
         const profile = await Model.findOne({ user: req.user._id });
         if (!profile) {
           return res.status(403).json({ message: `No profile found for service ${service}` });

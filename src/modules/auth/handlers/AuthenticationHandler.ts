@@ -42,6 +42,10 @@ export class AuthenticationHandler {
       { expiresIn: '7d' }
     );
 
+    // update the last signed in date
+    user.lastSignedIn = new Date();
+    await user.save();
+
     return {
       message: 'Login successful.',
       token,
