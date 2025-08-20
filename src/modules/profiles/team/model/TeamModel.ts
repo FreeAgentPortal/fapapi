@@ -57,6 +57,7 @@ const TeamProfileSchema: Schema = new Schema<ITeamProfile>(
       // match: /^(https?:\/\/.*\.(?:png|jpg|jpeg|gif|svg))$/,
       // default: null, // Optional field
     },
+    favoritedAthletes: { type: [{ type: Schema.Types.ObjectId, ref: 'AthleteProfile' }], default: [] },
     verifiedDomain: {
       type: String,
       match: /^[\w.-]+\.(edu|org|nfl)$/,
