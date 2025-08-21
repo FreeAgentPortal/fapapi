@@ -89,7 +89,7 @@ function restartServer(callback: any) {
 app.use(errorHandler);
 
 app.get('/', (req: Request, res: Response) => {
-  res.sendFile(path.join(__dirname, '../public/index.html'));
+  res.status(201).sendFile(path.join(__dirname, '../public/index.html'));
 });
 
 const numCPUs = os.cpus().length;

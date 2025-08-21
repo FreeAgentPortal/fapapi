@@ -33,4 +33,10 @@ router.use('/admin', adminRoutes);
 router.use('/team', teamRoutes);
 router.use('/athlete', athleteRoutes);
 
+router.route('/').get((req, res) => {
+  res.status(200).json({
+    message: 'API V1 is working',
+  });
+});
+
 export default router;
