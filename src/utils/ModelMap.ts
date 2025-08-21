@@ -12,7 +12,7 @@ import { ResumeProfile } from '../modules/profiles/resume/models/ResumeProfile';
 
 export type ModelKey = 'team' | 'athlete' | 'admin' | 'scout_report' | 'scout_profile' | 'conversation' | 'message' | 'user' | 'token' | 'resume';
 
-export const ModelMap: Record<ModelKey, Model<any>> = {
+export const ModelMap: Record<ModelKey, any> = {
   team: TeamModel,
   athlete: AthleteModel,
   admin: AdminModel,
@@ -23,5 +23,4 @@ export const ModelMap: Record<ModelKey, Model<any>> = {
   user: User,
   token: Token,
   resume: ResumeProfile,
-  // extend with other models as needed
 };

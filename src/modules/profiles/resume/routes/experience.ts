@@ -7,7 +7,6 @@ const router = express.Router();
 const service = new ExperienceService(); 
 
 router.use(AuthMiddleware.protect);
-router.route('/').post(service.create);
 router.route('/:id').put(service.updateResource).delete(service.removeResource);
 
 
