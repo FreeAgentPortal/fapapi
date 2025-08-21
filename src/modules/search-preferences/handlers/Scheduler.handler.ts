@@ -147,6 +147,8 @@ export class SchedulerHandler {
     if (matchConditions.length > 0) {
       pipeline.push({
         $match: {
+          // only isActive athletes
+          isActive: true,
           $and: matchConditions,
         },
       });
