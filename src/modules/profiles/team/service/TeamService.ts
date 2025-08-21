@@ -116,4 +116,25 @@ export default class TeamService extends CRUDService {
       return error(err, req, res);
     }
   });
+
+  public toggleFavoriteAthlete = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+    try {
+      const { athleteId } = req.params;
+      const result = await this.handler.toggleFavoriteAthlete(req.user.profileRefs['team'] as any, athleteId);
+      return res.status(200).json({ success: true, payload: result });
+    } catch (err) {
+      console.error('[TeamProfileService] Error toggling favorite athlete:', err);
+      return res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
+
+  public fetchFavoritedAthletes = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+    try {
+      const result = await this.handler.fetchFavoritedAthletes(req.user.profileRefs['team'] as any);
+      return res.status(200).json({ success: true, payload: result });
+    } catch (err) {
+      console.error('[TeamProfileService] Error fetching favorited athletes:', err);
+      return res.status(500).json({ error: 'Internal Server Error' });
+    }
+  });
 }
