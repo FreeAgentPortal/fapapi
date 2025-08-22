@@ -9,7 +9,8 @@ const service = new QAService();
 
 router.use(AuthMiddleware.protect);
 router.route('/').post(service.create);
-router.route('/:id').put(service.updateResource).delete(service.removeResource);
+router.route('/:id').put(service.updateResource)
+router.route("/:id/:itemId").delete(service.deleteResource);
 
 
 // authenticated routes

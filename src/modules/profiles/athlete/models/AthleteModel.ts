@@ -35,6 +35,7 @@ export interface IAthlete extends Document {
       abbreviation: string;
     }
   ];
+  
   graduationYear?: number;
   bio?: string;
   highSchool?: string;

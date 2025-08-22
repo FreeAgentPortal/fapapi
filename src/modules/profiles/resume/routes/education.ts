@@ -1,10 +1,10 @@
 import express from 'express'; 
 import { AuthMiddleware } from '../../../../middleware/AuthMiddleware'; 
-import AwardsService from '../services/Awards.service';
+import EducationService from '../services/Education.service';
 
 const router = express.Router();
 
-const service = new AwardsService(); 
+const service = new EducationService(); 
 
 router.use(AuthMiddleware.protect);
 router.route('/').post(service.create);

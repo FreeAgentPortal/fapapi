@@ -6,6 +6,7 @@ import experienceRoutes from './experience';
 import mediaRoutes from './media';
 import qaRoutes from './qa';
 import referenceRoutes from './references';
+import educationRoutes from './education';
 
 const router = express.Router();
 
@@ -19,6 +20,7 @@ router.route('/health').get((req, res) => {
 });
 
 router.use('/awards', awardsRoutes);
+router.use('/education', educationRoutes);
 router.use('/experience', experienceRoutes);
 router.use('/media', mediaRoutes);
 router.use('/qa', qaRoutes);
