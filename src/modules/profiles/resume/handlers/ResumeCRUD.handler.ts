@@ -8,4 +8,10 @@ export default class ResumeCRUDHandler extends CRUDHandler<IResumeProfile> {
     super(ResumeProfile);
     this.modelMap = ModelMap;
   }
+
+  async fetch(id: string): Promise<any | null> {
+    return await this.Schema.findOne({
+      'owner.ref': id,
+    }).lean();
+  }
 }

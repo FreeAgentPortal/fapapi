@@ -20,21 +20,23 @@ export abstract class BaseResumeCRUDHandler extends CRUDHandler<IResumeProfile> 
    * This enforces the (owner.kind, owner.ref) uniqueness.
    */
   async getOrCreateResume(ownerKind: OwnerKind, ownerRef: string): Promise<IResumeProfile> {
-    const ref = new Types.ObjectId(ownerRef);
-
     // Try fast path
+    console.log(ownerRef);
     const existing = await this.modelMap['resume'].findOne({
       'owner.kind': ownerKind,
-      'owner.ref': ref,
+      'owner.ref': ownerRef,
     });
-    if (existing) return existing;
+    if (existing) {
+      console.log(`[BaseResumeCRUDHandler] Found existing resume for ${ownerKind}/${ownerRef}`);
+      return existing;
+    }
 
     // Create atomically (handles race via unique index)
     return await this.modelMap['resume'].findOneAndUpdate(
-      { 'owner.kind': ownerKind, 'owner.ref': ref },
+      { 'owner.kind': ownerKind, 'owner.ref': ownerRef },
       {
         $setOnInsert: {
-          owner: { kind: ownerKind, ref },
+          owner: { kind: ownerKind, ref: ownerRef },
           experiences: [],
           education: [],
           awards: [],
@@ -45,7 +47,7 @@ export abstract class BaseResumeCRUDHandler extends CRUDHandler<IResumeProfile> 
           version: 1,
         },
       },
-      { new: true, upsert: true }
+      { upsert: true }
     );
   }
 
@@ -54,6 +56,7 @@ export abstract class BaseResumeCRUDHandler extends CRUDHandler<IResumeProfile> 
    * If `data._id` is absent, we generate one so the client can address it later.
    */
   async addItem(ownerKind: OwnerKind, ownerRef: string, data: any): Promise<IResumeProfile> {
+    console.log(ownerKind, ownerRef, data);
     const resume = await this.getOrCreateResume(ownerKind, ownerRef);
     const itemId = data._id ? new Types.ObjectId(data._id) : new Types.ObjectId();
 
@@ -106,7 +109,7 @@ export abstract class BaseResumeCRUDHandler extends CRUDHandler<IResumeProfile> 
       }
     );
 
-    // refreshes owner snapshot 
+    // refreshes owner snapshot
     await refreshOwnerSnapshot(resume._id);
 
     return updated;
