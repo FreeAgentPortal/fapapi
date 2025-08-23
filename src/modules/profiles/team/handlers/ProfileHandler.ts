@@ -147,7 +147,7 @@ export default class TeamProfileHandler extends CRUDHandler<ITeamProfile> {
     try {
       const teamProfile = await this.Schema.findById(teamId).populate({
         path: 'favoritedAthletes',
-        select: '_id fullName profileImageUrl diamondRating',
+        select: '_id fullName birthdate positions profileImageUrl diamondRating',
       });
       if (!teamProfile) {
         throw new ErrorUtil('Team profile not found', 404);
