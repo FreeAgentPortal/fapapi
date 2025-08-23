@@ -13,9 +13,9 @@ export default class AwardsService extends CRUDService {
   public create = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
     try {
       const {
-        owner: { ownerKind, ownerRef },
+        owner: { kind: ownerKind, ref: ownerRef },
       } = req.body;
-      const result = await this.handler.createAward(ownerKind, ownerRef, req.body);
+      const result = await this.handler.addAward(ownerKind, ownerRef, req.body);
       return res.status(201).json(result);
     } catch (err) {
       return error(err, req, res);
@@ -25,7 +25,7 @@ export default class AwardsService extends CRUDService {
     try {
       const { id } = req.params;
       const {
-        owner: { ownerKind, ownerRef },
+        owner: { kind: ownerKind, ref: ownerRef },
       } = req.body;
       const patch = req.body;
       const result = await this.handler.updateAward(ownerKind, ownerRef, id, patch);
@@ -39,7 +39,7 @@ export default class AwardsService extends CRUDService {
   public deleteResource = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
     const { id, itemId } = req.params;
     try {
-      const result = await this.handler.deleteAward(id, itemId);
+      const result = await this.handler.removeAward(id, itemId);
       return res.status(200).json(result);
     } catch (err) {
       return error(err, req, res);

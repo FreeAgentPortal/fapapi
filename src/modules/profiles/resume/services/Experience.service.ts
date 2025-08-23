@@ -16,7 +16,6 @@ export default class ExperienceService extends CRUDService {
         owner: { kind: ownerKind, ref: ownerRef },
       } = req.body;
 
-      console.log(req.body);
       const result = await this.handler.addExperience(ownerKind, ownerRef, req.body);
       return res.status(201).json(result);
     } catch (err) {

@@ -19,12 +19,12 @@ router.route('/health').get((req, res) => {
   });
 });
 
-router.use('/awards', awardsRoutes);
+router.use('/award', awardsRoutes);
 router.use('/education', educationRoutes);
 router.use('/experience', experienceRoutes);
 router.use('/media', mediaRoutes);
 router.use('/qa', qaRoutes);
-router.use('/references', referenceRoutes);
+router.use('/reference', referenceRoutes);
 
 router.route('/').get(service.getResources);
 router.use(AuthMiddleware.protect);
