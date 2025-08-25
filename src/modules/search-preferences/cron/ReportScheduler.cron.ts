@@ -4,6 +4,9 @@ import { SchedulerHandler } from '../handlers/Scheduler.handler';
 
 export class ReportSchedulerCron {
   private static isRunning = false;
+  // keep a running total of success and failures
+  private static successCount = 0;
+  private static errorCount = 0;
 
   /**
    * Initialize the daily report generation cron job
@@ -46,6 +49,10 @@ export class ReportSchedulerCron {
     console.log('[ReportScheduler] Starting daily report generation process...');
 
     try {
+      // Reset totals
+      ReportSchedulerCron.successCount = 0;
+      ReportSchedulerCron.errorCount = 0;
+
       // Get all search preferences that are ready for report generation
       const duePreferences = await ReportSchedulerCron.getDueSearchPreferences();
 
@@ -73,6 +80,9 @@ export class ReportSchedulerCron {
           errorCount++;
         }
       }
+
+      ReportSchedulerCron.successCount += successCount;
+      ReportSchedulerCron.errorCount += errorCount;
 
       console.log(`[ReportScheduler] Daily report generation completed. Success: ${successCount}, Errors: ${errorCount}`);
     } catch (error) {
@@ -179,7 +189,7 @@ export class ReportSchedulerCron {
   /**
    * Get status of the cron job
    */
-  public static getStatus(): { isRunning: boolean; nextRun?: Date } {
+  public static getStatus(): { isRunning: boolean; nextRun?: Date, successCount: number; errorCount: number } {
     // Get next scheduled run time (midnight)
     const now = new Date();
     const nextRun = new Date(now);
@@ -188,6 +198,8 @@ export class ReportSchedulerCron {
 
     return {
       isRunning: ReportSchedulerCron.isRunning,
+      successCount: ReportSchedulerCron.successCount,
+      errorCount: ReportSchedulerCron.errorCount,
       nextRun,
     };
   }

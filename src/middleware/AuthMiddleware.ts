@@ -35,7 +35,7 @@ export class AuthMiddleware {
       const service = req.headers['x-service-name'];
       const token = req.headers.authorization!.split(' ')[1];
       const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload;
-      req.user = await User.findById(decoded.userId).select('-password');
+      req.user = await User.findById(decoded.userId).select('-password'); 
       if (!req.user) {
         return res.status(401).json({ message: 'User not found.' });
       }
@@ -92,7 +92,7 @@ export class AuthMiddleware {
       const userPermissions = req.user?.permissions || [];
 
       const hasPermission = requiredPermissions.some((permission) => userPermissions.includes(permission));
-      
+
       if (!hasPermission) {
         return res.status(403).json({ message: 'Forbidden: insufficient permissions' });
       }
