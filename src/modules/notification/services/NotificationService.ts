@@ -1,5 +1,6 @@
 // modules/notification/NotificationService.ts
 import { EmailService } from '../email/EmailService';
+import NAthleteEventsService from './NAthleteEvents.service';
 import NAuthService from './NAuthService';
 import NClaimService from './NClaimService';
 import NConversationService from './NConversationService';
@@ -16,7 +17,8 @@ export default class NotificationService {
     private readonly searchReportEventService: SearchReportEventService = new SearchReportEventService(),
     private readonly nuserService: NUserService = new NUserService(),
     private readonly nconversationService: NConversationService = new NConversationService(),
-    private readonly nteamsEventService: NTeamsEventService = new NTeamsEventService()
+    private readonly nteamsEventService: NTeamsEventService = new NTeamsEventService(),
+    private readonly nathleteEventService: NAthleteEventsService = new NAthleteEventsService(),
   ) {}
   public init() {
     EmailService.init('sendgrid');
@@ -27,5 +29,6 @@ export default class NotificationService {
     this.nuserService.init();
     this.nconversationService.init();
     this.nteamsEventService.init();
+    this.nathleteEventService.init();
   }
 }

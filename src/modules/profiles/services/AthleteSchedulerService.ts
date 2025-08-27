@@ -130,7 +130,7 @@ export class AthleteSchedulerService {
    */
   public static async getIncompleteProfiles(req: Request, res: Response): Promise<Response> {
     try {
-      const { page = 1, limit = 20 } = req.query;
+      const { pageNumber: page = 1, limit = 20 } = req.query;
       const pageNum = parseInt(page as string);
       const limitNum = parseInt(limit as string);
 
@@ -150,14 +150,14 @@ export class AthleteSchedulerService {
 
       return res.status(200).json({
         success: true,
-        data: {
-          profiles: profilesWithStatus,
-          pagination: {
-            page: pageNum,
-            limit: limitNum,
-            total: result.total,
-            pages: result.pages,
-          },
+        payload: profilesWithStatus,
+        metadata: {
+          prevPage: pageNum - 1,
+          nextPage: pageNum + 1,
+          page: pageNum,
+          limit: limitNum,
+          totalCount: result.total,
+          pages: result.pages,
         },
       });
     } catch (err) {

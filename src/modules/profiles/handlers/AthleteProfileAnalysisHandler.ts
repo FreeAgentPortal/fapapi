@@ -8,15 +8,38 @@ export class AthleteProfileAnalysisHandler {
    */
   public static async getIncompleteAthleteProfiles(): Promise<IAthlete[]> {
     try {
-      // Build query to find profiles that are missing key fields
-      const query = {
-        $and: [
-          // Must be active
-          { isActive: true },
-          // Must have been created more than 24 hours ago (give users time to complete)
-          { createdAt: { $lt: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
-          // Must be missing at least one key field
-          {
+      // Use aggregation to check for missing fields including resume
+      const incompleteProfiles = await AthleteModel.aggregate([
+        {
+          $match: {
+            // Must be active
+            isActive: true,
+            // Must have been created more than 24 hours ago (give users time to complete)
+            createdAt: { $lt: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+          },
+        },
+        {
+          $lookup: {
+            from: 'resumeprofiles', // MongoDB collection name (plural, lowercase)
+            let: { athleteId: '$_id' }, // Pass athlete ID as variable
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $and: [
+                      { $eq: ['$owner.kind', 'AthleteProfile'] }, // Must be AthleteProfile type
+                      { $eq: ['$owner.ref', '$$athleteId'] }, // Must match the athlete ID
+                    ],
+                  },
+                },
+              },
+            ],
+            as: 'resumeData',
+          },
+        },
+        {
+          $match: {
+            // Must be missing at least one key field
             $or: [
               // Missing profile image
               { profileImageUrl: { $exists: false } },
@@ -30,12 +53,41 @@ export class AthleteProfileAnalysisHandler {
               { measurements: { $exists: false } },
               { measurements: null },
               { $expr: { $eq: [{ $size: { $objectToArray: '$measurements' } }, 0] } },
+              // Missing resume (empty array)
+              { $expr: { $eq: [{ $size: '$resumeData' }, 0] } },
             ],
           },
-        ],
-      };
-
-      const incompleteProfiles = await AthleteModel.find(query).populate('userId', 'email firstName lastName fullName').lean();
+        },
+        {
+          $lookup: {
+            from: 'users', // Populate userId
+            localField: 'userId',
+            foreignField: '_id',
+            as: 'userId',
+            pipeline: [
+              {
+                $project: {
+                  email: 1,
+                  firstName: 1,
+                  lastName: 1,
+                  fullName: 1,
+                },
+              },
+            ],
+          },
+        },
+        {
+          $unwind: {
+            path: '$userId',
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $project: {
+            resumeData: 0, // Remove the resume data from results to keep it clean
+          },
+        },
+      ]);
 
       return incompleteProfiles as IAthlete[];
     } catch (error) {
@@ -62,7 +114,7 @@ export class AthleteProfileAnalysisHandler {
       if (incompleteProfiles.length === 0) {
         console.log('[AthleteProfileAnalysis] No incomplete athlete profiles found');
         return { successCount: 0, errorCount: 0, skippedCount: 0, totalProcessed: 0 };
-      }
+      } 
 
       console.log(`[AthleteProfileAnalysis] Found ${incompleteProfiles.length} incomplete athlete profiles\n`);
 
@@ -161,8 +213,43 @@ export class AthleteProfileAnalysisHandler {
         $or: [{ measurements: { $exists: false } }, { measurements: null }, { $expr: { $eq: [{ $size: { $objectToArray: '$measurements' } }, 0] } }],
       });
 
-      // TODO: Add resume check when resume integration is implemented
-      const missingResume = 0;
+      const missingResume = await AthleteModel.aggregate([
+        {
+          $match: {
+            // Find all active athletes
+            isActive: true,
+          },
+        },
+        {
+          $lookup: {
+            from: 'resumeprofiles', // MongoDB collection name (plural, lowercase)
+            let: { athleteId: '$_id' }, // Pass athlete ID as variable
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $and: [
+                      { $eq: ['$owner.kind', 'AthleteProfile'] }, // Must be AthleteProfile type
+                      { $eq: ['$owner.ref', '$$athleteId'] }, // Must match the athlete ID
+                    ],
+                  },
+                },
+              },
+            ],
+            as: 'resumeData',
+          },
+        },
+        {
+          $match: {
+            // Only count athletes who have NO resume (empty array)
+            resumeData: { $size: 0 },
+          },
+        },
+        {
+          $count: 'missingResumeCount', // Count the results
+        },
+      ]);
+      const missingResumeCount = missingResume[0]?.missingResumeCount || 0;
 
       const completionRate = totalAthletes > 0 ? ((totalAthletes - incompleteProfiles.length) / totalAthletes) * 100 : 100;
 
@@ -174,7 +261,7 @@ export class AthleteProfileAnalysisHandler {
           profileImage: missingProfileImage,
           metrics: missingMetrics,
           measurements: missingMeasurements,
-          resume: missingResume,
+          resume: missingResumeCount,
         },
       };
     } catch (error) {
@@ -195,12 +282,36 @@ export class AthleteProfileAnalysisHandler {
     pages: number;
   }> {
     try {
-      // Build query for incomplete profiles
-      const query = {
-        $and: [
-          { isActive: true },
-          { createdAt: { $lt: new Date(Date.now() - 24 * 60 * 60 * 1000) } },
-          {
+      // Use aggregation to check for missing fields including resume
+      const aggregationPipeline = [
+        {
+          $match: {
+            isActive: true,
+            createdAt: { $lt: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+          },
+        },
+        {
+          $lookup: {
+            from: 'resumeprofiles', // MongoDB collection name (plural, lowercase)
+            let: { athleteId: '$_id' }, // Pass athlete ID as variable
+            pipeline: [
+              {
+                $match: {
+                  $expr: {
+                    $and: [
+                      { $eq: ['$owner.kind', 'AthleteProfile'] }, // Must be AthleteProfile type
+                      { $eq: ['$owner.ref', '$$athleteId'] }, // Must match the athlete ID
+                    ],
+                  },
+                },
+              },
+            ],
+            as: 'resumeData',
+          },
+        },
+        {
+          $match: {
+            // Must be missing at least one key field
             $or: [
               { profileImageUrl: { $exists: false } },
               { profileImageUrl: null },
@@ -211,18 +322,51 @@ export class AthleteProfileAnalysisHandler {
               { measurements: { $exists: false } },
               { measurements: null },
               { $expr: { $eq: [{ $size: { $objectToArray: '$measurements' } }, 0] } },
+              // Missing resume (empty array)
+              { $expr: { $eq: [{ $size: '$resumeData' }, 0] } },
             ],
           },
-        ],
-      };
+        },
+        {
+          $lookup: {
+            from: 'users', // Populate userId
+            localField: 'userId',
+            foreignField: '_id',
+            as: 'userId',
+            pipeline: [
+              {
+                $project: {
+                  email: 1,
+                  firstName: 1,
+                  lastName: 1,
+                  fullName: 1,
+                },
+              },
+            ],
+          },
+        },
+        {
+          $unwind: {
+            path: '$userId',
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $project: {
+            resumeData: 0, // Remove the resume data from results to keep it clean
+          },
+        },
+      ];
 
-      const total = await AthleteModel.countDocuments(query);
-      const profiles = await AthleteModel.find(query)
-        .populate('userId', 'email firstName lastName fullName')
-        .sort({ createdAt: -1 })
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .lean();
+      // Get total count using the same pipeline
+      const totalPipeline = [...aggregationPipeline, { $count: 'total' }];
+      const totalResult = await AthleteModel.aggregate(totalPipeline);
+      const total = totalResult[0]?.total || 0;
+
+      // Get paginated results
+      const profilesPipeline = [...aggregationPipeline, { $sort: { createdAt: -1 as const } }, { $skip: (page - 1) * limit }, { $limit: limit }];
+
+      const profiles = await AthleteModel.aggregate(profilesPipeline);
 
       return {
         profiles: profiles as IAthlete[],
