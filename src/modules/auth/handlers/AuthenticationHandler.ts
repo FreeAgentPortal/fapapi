@@ -50,6 +50,7 @@ export class AuthenticationHandler {
       message: 'Login successful.',
       token,
       isEmailVerified: user.isEmailVerified,
+      profileRefs: user.profileRefs,
     };
   }
 
