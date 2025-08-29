@@ -153,7 +153,7 @@ class StripeProcessing extends PaymentProcessor {
         // Parse expiration date (assuming format like "1225" or "12/25")
         const expString = details.creditCardDetails.ccexp || '';
         let expMonth, expYear;
-        
+
         if (expString.includes('/')) {
           [expMonth, expYear] = expString.split('/');
         } else if (expString.length === 4) {

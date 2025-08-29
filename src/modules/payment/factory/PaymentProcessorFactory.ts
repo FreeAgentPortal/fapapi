@@ -1,5 +1,5 @@
-import PyreProcessing from "../classes/PyreProcessor";
-import StripeProcessing from "../classes/StripeProcessor";
+import PyreProcessing from '../classes/PyreProcessor';
+import StripeProcessing from '../classes/StripeProcessor';
 
 interface ProcessorConfig {
   name: string;
@@ -20,10 +20,10 @@ interface ProcessorConfig {
 class PaymentProcessorFactory {
   private static processorConfigs: ProcessorConfig[] = [
     {
-      name: "stripe",
+      name: 'stripe',
       priority: 1, // Higher priority (preferred)
       enabled: true,
-      requiredEnvVars: ["STRIPE_SECRET_KEY"],
+      requiredEnvVars: ['STRIPE_SECRET_KEY'],
       testConnection: async () => {
         try {
           const Stripe = require('stripe');
@@ -37,13 +37,13 @@ class PaymentProcessorFactory {
           console.warn('[PaymentFactory] Stripe connection test failed:', error?.message || 'Unknown error');
           return false;
         }
-      }
+      },
     },
     {
-      name: "pyre",
+      name: 'pyre',
       priority: 2, // Lower priority (fallback)
       enabled: true,
-      requiredEnvVars: ["PYRE_API_URL", "PYRE_API_KEY"],
+      requiredEnvVars: ['PYRE_API_URL', 'PYRE_API_KEY'],
       testConnection: async () => {
         try {
           const axios = require('axios');
@@ -59,8 +59,8 @@ class PaymentProcessorFactory {
           console.warn('[PaymentFactory] Pyre connection test failed:', error?.message || 'Unknown error');
           return false;
         }
-      }
-    }
+      },
+    },
   ];
 
   /**
@@ -70,10 +70,10 @@ class PaymentProcessorFactory {
    */
   chooseProcessor(processorType: string) {
     switch (processorType) {
-      case "pyre":
-      case "pyreprocessing":
+      case 'pyre':
+      case 'pyreprocessing':
         return new PyreProcessing();
-      case "stripe":
+      case 'stripe':
         return new StripeProcessing();
       default:
         throw new Error(`Invalid processor type: ${processorType}`);
@@ -88,40 +88,40 @@ class PaymentProcessorFactory {
    * @param {string} options.fallbackProcessor - processor to use if all preferred fail
    * @returns {Promise<{processor: PaymentProcessor, processorName: string, reason: string}>}
    */
-  async smartChooseProcessor(options: {
-    preferredProcessors?: string[];
-    testConnections?: boolean;
-    fallbackProcessor?: string;
-  } = {}) {
+  async smartChooseProcessor(
+    options: {
+      preferredProcessors?: string[];
+      testConnections?: boolean;
+      fallbackProcessor?: string;
+    } = {}
+  ) {
     const {
       preferredProcessors = [], // Empty means use priority order
       testConnections = true,
-      fallbackProcessor = "pyre"
+      fallbackProcessor = 'pyre',
     } = options;
 
     // Get processors to test, either from preferences or by priority
-    let processorsToTest = preferredProcessors.length > 0 
-      ? this.getProcessorsByPreference(preferredProcessors)
-      : this.getProcessorsByPriority();
+    let processorsToTest = preferredProcessors.length > 0 ? this.getProcessorsByPreference(preferredProcessors) : this.getProcessorsByPriority();
 
     // Test each processor in order
     for (const config of processorsToTest) {
       const availability = await this.testProcessorAvailability(config, testConnections);
-      
+
       if (availability.available) {
         const processor = this.chooseProcessor(config.name);
         return {
           processor,
           processorName: config.name,
-          reason: availability.reason
+          reason: availability.reason,
         };
       }
     }
 
     // All preferred processors failed, try fallback
     console.warn('[PaymentFactory] All preferred processors unavailable, using fallback:', fallbackProcessor);
-    const fallbackConfig = PaymentProcessorFactory.processorConfigs.find(c => c.name === fallbackProcessor);
-    
+    const fallbackConfig = PaymentProcessorFactory.processorConfigs.find((c) => c.name === fallbackProcessor);
+
     if (fallbackConfig) {
       const availability = await this.testProcessorAvailability(fallbackConfig, false); // Skip connection test for fallback
       if (availability.configValid) {
@@ -129,7 +129,7 @@ class PaymentProcessorFactory {
         return {
           processor,
           processorName: fallbackProcessor,
-          reason: `Fallback processor - ${availability.reason}`
+          reason: `Fallback processor - ${availability.reason}`,
         };
       }
     }
@@ -144,14 +144,14 @@ class PaymentProcessorFactory {
    */
   async getAvailableProcessors(testConnections: boolean = true) {
     const results = [];
-    
+
     for (const config of PaymentProcessorFactory.processorConfigs) {
       const availability = await this.testProcessorAvailability(config, testConnections);
       results.push({
         name: config.name,
         priority: config.priority,
         available: availability.available,
-        reason: availability.reason
+        reason: availability.reason,
       });
     }
 
@@ -168,12 +168,12 @@ class PaymentProcessorFactory {
     }
 
     // Check required environment variables
-    const missingEnvVars = config.requiredEnvVars.filter(envVar => !process.env[envVar]);
+    const missingEnvVars = config.requiredEnvVars.filter((envVar) => !process.env[envVar]);
     if (missingEnvVars.length > 0) {
-      return { 
-        available: false, 
-        configValid: false, 
-        reason: `Missing environment variables: ${missingEnvVars.join(', ')}` 
+      return {
+        available: false,
+        configValid: false,
+        reason: `Missing environment variables: ${missingEnvVars.join(', ')}`,
       };
     }
 
@@ -192,10 +192,10 @@ class PaymentProcessorFactory {
           return { available: false, configValid: true, reason: 'Connection test failed' };
         }
       } catch (error: any) {
-        return { 
-          available: false, 
-          configValid: true, 
-          reason: `Connection test error: ${error?.message || 'Unknown error'}` 
+        return {
+          available: false,
+          configValid: true,
+          reason: `Connection test error: ${error?.message || 'Unknown error'}`,
         };
       }
     }
@@ -207,7 +207,7 @@ class PaymentProcessorFactory {
   private getProcessorsByPreference(preferredProcessors: string[]): ProcessorConfig[] {
     const configs = [];
     for (const preferred of preferredProcessors) {
-      const config = PaymentProcessorFactory.processorConfigs.find(c => c.name === preferred);
+      const config = PaymentProcessorFactory.processorConfigs.find((c) => c.name === preferred);
       if (config) {
         configs.push(config);
       }
@@ -223,7 +223,7 @@ class PaymentProcessorFactory {
    * @description Enable or disable a processor
    */
   static setProcessorEnabled(processorName: string, enabled: boolean) {
-    const config = this.processorConfigs.find(c => c.name === processorName);
+    const config = this.processorConfigs.find((c) => c.name === processorName);
     if (config) {
       config.enabled = enabled;
     }
@@ -233,7 +233,7 @@ class PaymentProcessorFactory {
    * @description Update processor priority
    */
   static setProcessorPriority(processorName: string, priority: number) {
-    const config = this.processorConfigs.find(c => c.name === processorName);
+    const config = this.processorConfigs.find((c) => c.name === processorName);
     if (config) {
       config.priority = priority;
     }

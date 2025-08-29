@@ -1,6 +1,5 @@
-import PyreProcessing from "../../payment/classes/PyreProcessor";
-import StripeProcessing from "../../payment/classes/StripeProcessor";
-
+import PyreProcessing from '../../payment/classes/PyreProcessor';
+import StripeProcessing from '../../payment/classes/StripeProcessor';
 
 /**
  * @description PaymentProcessorFactory class, this class is responsible for creating
@@ -20,12 +19,12 @@ class PaymentProcessorFactory {
    */
   chooseProcessor(processorType: string) {
     switch (processorType) {
-      case "pyreprocessing":
+      case 'pyreprocessing':
         return new PyreProcessing();
-      case "stripe":
+      case 'stripe':
         return new StripeProcessing();
       default:
-        throw new Error("Invalid processor type");
+        throw new Error('Invalid processor type');
     }
   }
 }

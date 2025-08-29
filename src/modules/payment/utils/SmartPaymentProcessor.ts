@@ -25,7 +25,7 @@ export class SmartPaymentProcessor {
       preferredProcessors: [], // Use priority order
       testConnections: process.env.NODE_ENV === 'production',
       fallbackProcessor: 'pyre',
-      environment: process.env.NODE_ENV as any || 'development'
+      environment: (process.env.NODE_ENV as any) || 'development',
     };
 
     const finalOptions = { ...defaultOptions, ...options };
@@ -48,7 +48,7 @@ export class SmartPaymentProcessor {
     return await this.factory.smartChooseProcessor({
       preferredProcessors: finalOptions.preferredProcessors,
       testConnections: finalOptions.testConnections,
-      fallbackProcessor: finalOptions.fallbackProcessor
+      fallbackProcessor: finalOptions.fallbackProcessor,
     });
   }
 
@@ -58,7 +58,7 @@ export class SmartPaymentProcessor {
   static async isPaymentSystemHealthy(): Promise<boolean> {
     try {
       const processors = await this.factory.getAvailableProcessors(true);
-      return processors.some(p => p.available);
+      return processors.some((p) => p.available);
     } catch {
       return false;
     }
@@ -71,15 +71,15 @@ export class SmartPaymentProcessor {
     try {
       const processors = await this.factory.getAvailableProcessors(true);
       return {
-        healthy: processors.some(p => p.available),
+        healthy: processors.some((p) => p.available),
         processors: processors,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
     } catch (error: any) {
       return {
         healthy: false,
         error: error?.message || 'Unknown error',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
     }
   }
@@ -89,7 +89,6 @@ export class SmartPaymentProcessor {
  * Example: Update your BillingHandler to use smart selection
  */
 export class UpdatedBillingHandler {
-  
   /**
    * Example of how to update your updateVault method
    */
@@ -107,7 +106,7 @@ export class UpdatedBillingHandler {
     // NEW WAY - Smart Selection:
     const { processor, processorName, reason } = await SmartPaymentProcessor.getProcessor({
       preferredProcessors: ['stripe', 'pyre'], // Prefer Stripe, fallback to Pyre
-      testConnections: true
+      testConnections: true,
     });
 
     console.log(`[Billing] Using ${processorName}: ${reason}`);
@@ -168,7 +167,7 @@ export class UpdatedBillingHandler {
       amount: amount,
       currency: 'usd',
       initiated_by: 'system',
-      stored_credential_indicator: 'recurring'
+      stored_credential_indicator: 'recurring',
     });
   }
 }
@@ -179,17 +178,17 @@ export class UpdatedBillingHandler {
 export async function paymentHealthCheck(req: any, res: any) {
   try {
     const status = await SmartPaymentProcessor.getPaymentSystemStatus();
-    
+
     res.status(status.healthy ? 200 : 503).json({
       service: 'payment-system',
       status: status.healthy ? 'healthy' : 'unhealthy',
-      details: status
+      details: status,
     });
   } catch (error: any) {
     res.status(500).json({
       service: 'payment-system',
       status: 'error',
-      error: error?.message || 'Unknown error'
+      error: error?.message || 'Unknown error',
     });
   }
 }

@@ -16,9 +16,9 @@ export class PaymentService {
     try {
       // Let the factory choose the best processor automatically
       const { processor, processorName, reason } = await this.factory.smartChooseProcessor();
-      
+
       console.log(`Using ${processorName}: ${reason}`);
-      
+
       // Process payment using the selected processor
       const result = await processor.vaultTransaction({
         customer_vault_id: customerId,
@@ -26,13 +26,13 @@ export class PaymentService {
         amount: amount,
         currency: 'usd',
         initiated_by: 'system',
-        stored_credential_indicator: 'recurring'
+        stored_credential_indicator: 'recurring',
       });
-      
+
       return {
         success: result?.success ?? false,
         processor: processorName,
-        data: result
+        data: result,
       };
     } catch (error) {
       console.error('Smart payment processing failed:', error);
@@ -49,18 +49,18 @@ export class PaymentService {
       const { processor, processorName, reason } = await this.factory.smartChooseProcessor({
         preferredProcessors: ['stripe', 'pyre'], // Try Stripe first, then Pyre
         testConnections: true, // Test actual connections
-        fallbackProcessor: 'pyre' // Use Pyre if all preferred fail
+        fallbackProcessor: 'pyre', // Use Pyre if all preferred fail
       });
-      
+
       console.log(`Selected ${processorName}: ${reason}`);
-      
+
       return await processor.vaultTransaction({
         customer_vault_id: customerId,
         security_key: '', // Not needed for Stripe, but required by interface
         amount: amount,
         currency: 'usd',
         initiated_by: 'system',
-        stored_credential_indicator: 'recurring'
+        stored_credential_indicator: 'recurring',
       });
     } catch (error) {
       console.error('Payment processing failed:', error);
@@ -75,28 +75,28 @@ export class PaymentService {
     try {
       // First, check what processors are available
       const availableProcessors = await this.factory.getAvailableProcessors(true);
-      
+
       console.log('Available processors:');
-      availableProcessors.forEach(p => {
+      availableProcessors.forEach((p) => {
         console.log(`- ${p.name}: ${p.available ? '✅' : '❌'} (${p.reason})`);
       });
-      
+
       // Find the first available processor
-      const firstAvailable = availableProcessors.find(p => p.available);
-      
+      const firstAvailable = availableProcessors.find((p) => p.available);
+
       if (!firstAvailable) {
         throw new Error('No payment processors are available');
       }
-      
+
       const processor = this.factory.chooseProcessor(firstAvailable.name);
-      
+
       return await processor.vaultTransaction({
         customer_vault_id: customerId,
         security_key: '', // Not needed for Stripe, but required by interface
         amount: amount,
         currency: 'usd',
         initiated_by: 'system',
-        stored_credential_indicator: 'recurring'
+        stored_credential_indicator: 'recurring',
       });
     } catch (error) {
       console.error('Payment processing failed:', error);
@@ -111,9 +111,9 @@ export class PaymentService {
   async processPaymentByEnvironment(amount: number, customerId: string) {
     const isDev = process.env.NODE_ENV === 'development';
     const isTest = process.env.NODE_ENV === 'test';
-    
+
     let preferences: string[];
-    
+
     if (isDev || isTest) {
       // In development, prefer processors that are easier to test
       preferences = ['stripe']; // Stripe has better test cards
@@ -121,22 +121,22 @@ export class PaymentService {
       // In production, prefer based on cost or reliability
       preferences = ['pyre', 'stripe']; // Pyre might have better rates
     }
-    
+
     const { processor, processorName, reason } = await this.factory.smartChooseProcessor({
       preferredProcessors: preferences,
       testConnections: !isTest, // Skip connection tests in test environment
-      fallbackProcessor: 'stripe'
+      fallbackProcessor: 'stripe',
     });
-    
+
     console.log(`Environment: ${process.env.NODE_ENV}, Using: ${processorName} (${reason})`);
-    
+
     return await processor.vaultTransaction({
       customer_vault_id: customerId,
       security_key: '', // Not needed for Stripe, but required by interface
       amount: amount,
       currency: 'usd',
       initiated_by: 'system',
-      stored_credential_indicator: 'recurring'
+      stored_credential_indicator: 'recurring',
     });
   }
 
@@ -147,17 +147,17 @@ export class PaymentService {
     try {
       const processors = await this.factory.getAvailableProcessors(true);
       const healthStatus = {
-        overall: processors.some(p => p.available) ? 'healthy' : 'unhealthy',
+        overall: processors.some((p) => p.available) ? 'healthy' : 'unhealthy',
         processors: processors,
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
-      
+
       return healthStatus;
     } catch (error: any) {
       return {
         overall: 'error',
         error: error?.message || 'Unknown error',
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       };
     }
   }
@@ -167,7 +167,6 @@ export class PaymentService {
  * Configuration Management Examples
  */
 export class PaymentConfigurationManager {
-  
   /**
    * Disable a processor (useful for maintenance)
    */
@@ -175,7 +174,7 @@ export class PaymentConfigurationManager {
     PaymentProcessorFactory.setProcessorEnabled(processorName, false);
     console.log(`Disabled processor: ${processorName}`);
   }
-  
+
   /**
    * Change processor priority (lower number = higher priority)
    */
@@ -183,7 +182,7 @@ export class PaymentConfigurationManager {
     PaymentProcessorFactory.setProcessorPriority(processorName, priority);
     console.log(`Set ${processorName} priority to ${priority}`);
   }
-  
+
   /**
    * Emergency fallback to single processor
    */
@@ -191,10 +190,10 @@ export class PaymentConfigurationManager {
     // Disable all processors except the preferred one
     PaymentProcessorFactory.setProcessorEnabled('stripe', false);
     PaymentProcessorFactory.setProcessorEnabled('pyre', false);
-    
+
     // Enable only the preferred processor
     PaymentProcessorFactory.setProcessorEnabled(preferredProcessor, true);
-    
+
     console.log(`Emergency mode: Only ${preferredProcessor} enabled`);
   }
 }

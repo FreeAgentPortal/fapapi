@@ -27,10 +27,10 @@ describe('PaymentProcessorFactory', () => {
 
   test('should support both pyre and pyreprocessing for backwards compatibility', () => {
     const factory = new PaymentProcessorFactory();
-    
+
     const processor1 = factory.chooseProcessor('pyre');
     const processor2 = factory.chooseProcessor('pyreprocessing');
-    
+
     expect(processor1.getProcessorName()).toBe('pyreprocessing');
     expect(processor2.getProcessorName()).toBe('pyreprocessing');
   });
@@ -39,25 +39,24 @@ describe('PaymentProcessorFactory', () => {
 // Manual test function (for development)
 export async function testProcessorCreation() {
   console.log('Testing PaymentProcessorFactory...');
-  
+
   const factory = new PaymentProcessorFactory();
-  
+
   try {
     // Test Pyre processor
     const pyreProcessor = factory.chooseProcessor('pyre');
     console.log('✅ Pyre processor created:', pyreProcessor.getProcessorName());
-    
+
     // Test Stripe processor
     const stripeProcessor = factory.chooseProcessor('stripe');
     console.log('✅ Stripe processor created:', stripeProcessor.getProcessorName());
-    
+
     console.log('🎉 All processors created successfully!');
-    
+
     // Test that both have the same interface
     console.log('\nTesting interface compatibility:');
     console.log('Pyre methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(pyreProcessor)));
     console.log('Stripe methods:', Object.getOwnPropertyNames(Object.getPrototypeOf(stripeProcessor)));
-    
   } catch (error) {
     console.error('❌ Error testing processors:', error);
   }
