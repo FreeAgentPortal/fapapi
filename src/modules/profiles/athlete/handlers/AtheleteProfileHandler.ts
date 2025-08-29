@@ -1,4 +1,4 @@
-import { IAthlete, AthleteModel } from '../models/AthleteModel'; 
+import { IAthlete, AthleteModel } from '../models/AthleteModel';
 import { ErrorUtil } from '../../../../middleware/ErrorUtil';
 import BillingAccount from '../../../auth/model/BillingAccount';
 import mongoose from 'mongoose';
@@ -51,6 +51,8 @@ export class AthleteProfileHandler extends CRUDHandler<IAthlete> {
     if (!billing) {
       throw new ErrorUtil('billing information not found', 400);
     }
+    console.log(`[AthleteProfileHandler] - Fetching Details for profile ${profile._id}`);
+    console.log(billing);
     return {
       ...profile,
       needsBillingSetup: !billing.vaulted,
@@ -82,7 +84,7 @@ export class AthleteProfileHandler extends CRUDHandler<IAthlete> {
               $project: {
                 _id: 0,
                 subscribed: { $cond: [{ $eq: ['$subscriber.profileId', '$$athleteId'] }, true, false] },
-                targetProfileId: '$target.profileId', 
+                targetProfileId: '$target.profileId',
               },
             },
           ],
