@@ -122,10 +122,11 @@ const UserSchema = new mongoose.Schema(
 UserSchema.pre('save', async function (next) {
   //conditional will check to see if the password is being modified so it wont update the password constantly.
   if (!this.isModified('password')) {
-    next();
+    return next();
   }
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password!, salt);
+  next();
 });
 
 // creates the fullName field.
