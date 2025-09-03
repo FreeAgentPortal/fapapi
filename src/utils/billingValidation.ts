@@ -62,34 +62,27 @@ export class BillingValidator {
     }
 
     // Check if trial is ending soon and no payment method
-    if (billing.status === 'trialing' && !billing.vaulted) {
-      const trialEndDate = new Date(billing.createdAt);
-      trialEndDate.setDate(trialEndDate.getDate() + billing.trialLength);
-      const daysUntilTrialEnd = Math.ceil((trialEndDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+    // if (billing.status === 'trialing' && !billing.vaulted) {
+    //   const trialEndDate = new Date(billing.createdAt);
+    //   trialEndDate.setDate(trialEndDate.getDate() + billing.trialLength);
+    //   const daysUntilTrialEnd = Math.ceil((trialEndDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
 
-      if (daysUntilTrialEnd <= 7) {
-        reasons.push(`Trial ending in ${daysUntilTrialEnd} days without payment method`);
-        recommendations.push('Add payment method before trial expires');
-        severity = 'critical';
-      } else if (daysUntilTrialEnd <= 14) {
-        reasons.push(`Trial ending in ${daysUntilTrialEnd} days without payment method`);
-        recommendations.push('Consider adding payment method soon');
-        if (severity !== 'critical') severity = 'warning';
-      }
-    }
+    //   if (daysUntilTrialEnd <= 7) {
+    //     reasons.push(`Trial ending in ${daysUntilTrialEnd} days without payment method`);
+    //     recommendations.push('Add payment method before trial expires');
+    //     severity = 'critical';
+    //   } else if (daysUntilTrialEnd <= 14) {
+    //     reasons.push(`Trial ending in ${daysUntilTrialEnd} days without payment method`);
+    //     recommendations.push('Consider adding payment method soon');
+    //     if (severity !== 'critical') severity = 'warning';
+    //   }
+    // }
 
     // Check if missing required processor information
     if (billing.vaulted && !billing.processor) {
       reasons.push('Payment method vaulted but processor information missing');
       recommendations.push('Contact support to resolve payment processor configuration');
       if (severity !== 'critical') severity = 'warning';
-    }
-
-    // Check if missing vault ID but marked as vaulted
-    if (billing.vaulted && !billing.vaultId) {
-      reasons.push('Marked as vaulted but missing vault ID');
-      recommendations.push('Re-vault payment method or contact support');
-      severity = 'critical';
     }
 
     return {
