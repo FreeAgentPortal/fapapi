@@ -402,7 +402,7 @@ class PaynetworxProcessor extends PaymentProcessor {
         },
       },
       Attributes: {
-        EntryMode: 'manual',
+        EntryMode: 'card-on-file',
         ProcessingSpecifiers: {
           InitiatedByECommerce: true,
         },

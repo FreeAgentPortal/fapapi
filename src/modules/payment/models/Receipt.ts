@@ -70,7 +70,6 @@ const ReceiptSchema = new mongoose.Schema(
     userId: {
       type: Types.ObjectId,
       ref: 'User',
-      required: true,
     },
 
     // Transaction details
@@ -117,6 +116,21 @@ const ReceiptSchema = new mongoose.Schema(
       },
       response: {
         type: mongoose.Schema.Types.Mixed,
+      },
+    },
+
+    customer: {
+      email: {
+        type: String,
+        required: true,
+      },
+      name: {
+        type: String,
+        required: true,
+      },
+      phone: {
+        type: String,
+        required: true,
       },
     },
 
