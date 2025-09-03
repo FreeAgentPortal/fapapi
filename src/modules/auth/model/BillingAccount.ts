@@ -23,6 +23,19 @@ export interface BillingAccountType extends mongoose.Document {
   plan: PlanType;
   // is yearly? whether or not the subscription is yearly
   isYearly?: boolean;
+  // Payment processor specific data map
+  paymentProcessorData?: {
+    pnx?: {
+      tokenId?: string;
+      tokenName?: string;
+    };
+    pyreprocessing?: {
+      vaultId?: string;
+      customerId?: string;
+      [key: string]: any;
+    };
+    [processorName: string]: any;
+  };
 }
 
 const Schema = new mongoose.Schema(
@@ -35,7 +48,7 @@ const Schema = new mongoose.Schema(
     profileId: {
       type: mongoose.Types.ObjectId,
       required: true,
-      ref: 'Profile',
+      ref: 'AthleteProfile',
     },
     isYearly: {
       type: Boolean,
@@ -89,6 +102,11 @@ const Schema = new mongoose.Schema(
     needsUpdate: {
       type: Boolean,
       default: false,
+    },
+    // Payment processor specific data map
+    paymentProcessorData: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
     },
   },
   {

@@ -10,7 +10,6 @@ export default class PaymentService {
 
   public updateBilling = asyncHandler(async (req: Request & AuthenticatedRequest, res: Response): Promise<Response> => {
     try {
-      console.log(req.body);
       const results = await this.billingHandler.updateVault(req as any);
       return res.status(201).json({ message: 'billing updated', success: true });
     } catch (err: any) {
@@ -27,4 +26,5 @@ export default class PaymentService {
       return error(err, req, res);
     }
   });
+ 
 }

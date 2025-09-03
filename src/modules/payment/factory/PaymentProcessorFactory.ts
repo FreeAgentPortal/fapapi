@@ -1,3 +1,4 @@
+import PaynetworxProcessor from "../classes/paynetworx";
 import PyreProcessing from "../classes/PyreProcessor";
 
 /**
@@ -20,6 +21,8 @@ class PaymentProcessorFactory {
     switch (processorType) {
       case "pyre":
         return new PyreProcessing();
+      case "paynetworx":
+        return new PaynetworxProcessor();
       default:
         throw new Error("Invalid processor type");
     }
