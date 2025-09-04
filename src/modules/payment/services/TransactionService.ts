@@ -17,4 +17,22 @@ export default class TransactionService {
       return error(err, req, res);
     }
   });
+  public refundTransaction = asyncHandler(async (req: Request & AuthenticatedRequest, res: Response): Promise<Response> => {
+    try {
+      const results = await this.transactionHandler.refundTransaction(req.params.id as any, req.body.amount);
+      return res.status(201).json({ message: 'transaction refunded', success: true, data: results.data });
+    } catch (err: any) {
+      console.log(err);
+      return error(err, req, res);
+    }
+  });
+  public voidTransaction = asyncHandler(async (req: Request & AuthenticatedRequest, res: Response): Promise<Response> => {
+    try {
+      const results = await this.transactionHandler.voidTransaction(req.params.id as any);
+      return res.status(201).json({ message: 'transaction voided', success: true, data: results.data });
+    } catch (err: any) {
+      console.log(err);
+      return error(err, req, res);
+    }
+  });
 }

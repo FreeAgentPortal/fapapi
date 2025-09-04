@@ -75,4 +75,91 @@ export default class TransactionHandler {
       throw error;
     }
   };
+
+  public refundTransaction = async (transactionId: string, amount: number): Promise<any> => {
+    try {
+      // find the receipt for the transaction
+      const receipt = await this.modelMap['receipt'].findById({ _id: transactionId });
+      if (!receipt) {
+        throw new Error('Transaction not found');
+      }
+      const processor = this.getProcessor();
+      const billingInfo = await this.modelMap['billing'].findById(receipt.billingAccountId);
+      if (!billingInfo) {
+        throw new Error('Billing information not found');
+      }
+
+      // run the refund through the payment processor
+      const results = (await processor.refundTransaction({
+        transactionId,
+        amount,
+        customerId: billingInfo.customer,
+        ...billingInfo.paymentProcessorData[processor.getProcessorName() as any],
+      })) as any;
+
+      console.log(results);
+      if (!results.success) {
+        throw new Error('Refund processing failed');
+      }
+      // update the receipt to reflect the refund
+      const refundReceipt = await this.modelMap['receipt'].findOneAndUpdate(
+        { transactionId },
+        {
+          $set: {
+            status: 'refunded',
+            amount: receipt.amount - amount,
+            updatedAt: new Date(),
+          },
+        },
+        { new: true }
+      );
+
+      return { success: true, data: refundReceipt };
+    } catch (error) {
+      console.error('Error processing refund:', error);
+      throw error;
+    }
+  };
+
+  public voidTransaction = async (transactionId: string): Promise<any> => {
+    try {
+      // find the receipt for the transaction
+      const receipt = await this.modelMap['receipt'].findById({ _id: transactionId });
+      if (!receipt) {
+        throw new Error('Transaction not found');
+      }
+      const processor = this.getProcessor();
+      const billingInfo = await this.modelMap['billing'].findById(receipt.billingAccountId);
+      if (!billingInfo) {
+        throw new Error('Billing information not found');
+      }
+      // run the void through the payment processor
+      const results = (await processor.voidTransaction({
+        transactionId,
+        customerId: billingInfo.customer,
+        ...billingInfo.paymentProcessorData[processor.getProcessorName() as any],
+      })) as any; 
+      if (!results.success) {
+        throw new Error('Void processing failed' + (results.message ? `: ${results.message}` : ''));
+      }
+      // update the receipt to reflect the void
+      const voidReceipt = await this.modelMap['receipt'].findOneAndUpdate(
+        { transactionId },
+        {
+          $set: {
+            status: 'voided',
+            // set amount to 0 since the transaction was voided
+            amount: 0,
+            updatedAt: new Date(),
+          },
+        },
+        { new: true }
+      );
+
+      return { success: true, data: voidReceipt };
+    } catch (error) {
+      console.error('Error processing void:', error);
+      throw error;
+    }
+  };
 }
