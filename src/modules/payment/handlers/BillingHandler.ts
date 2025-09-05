@@ -64,9 +64,9 @@ export class BillingHandler {
       if (!billing.paymentProcessorData) {
         billing.paymentProcessorData = {};
       }
-
+      const name = processor.getProcessorName();
       // Set PayNetWorx specific data
-      billing.paymentProcessorData.pnx = {
+      billing.paymentProcessorData[name] = {
         tokenId: vaultResponse.data.tokenId,
         tokenName: vaultResponse.data.tokenName,
       };
