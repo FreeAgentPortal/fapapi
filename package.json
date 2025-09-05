@@ -7,7 +7,7 @@
     "seed:athletes": "ts-node src/scripts/seedAthletes.ts",
     "test:scheduler": "ts-node src/modules/search-preferences/utils/runSchedulerTests.ts",
     "devtool": "ts-node src/scripts/devtool.ts",
-    "start": "node dist/server.js",
+    "start": "npm install & node dist/server.js",
     "build": "tsc",
     "dev": "ts-node-dev src/server.ts",
     "test": "jest",
