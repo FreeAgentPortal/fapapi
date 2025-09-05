@@ -22,11 +22,11 @@ class PyreProcessing extends PaymentProcessor {
     super();
   }
 
-  processPayment(details: CommonTransactionType, user: UserType) {}
+  processPayment(details: CommonTransactionType) {}
 
-  async captureTransaction(details: CommonCaptureTypes, user: UserType) {}
-  async voidTransaction(details: CommonVoidTypes, order: any) {}
-  async refundTransaction(details: CommonRefundTypes, order: any) {}
+  async captureTransaction(details: CommonCaptureTypes) {}
+  async voidTransaction(details: CommonVoidTypes) {}
+  async refundTransaction(details: CommonRefundTypes) {}
   async createVault(
     customerId: string,
     details: {

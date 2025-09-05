@@ -14,7 +14,7 @@ export class ReceiptHandler {
       throw new ErrorUtil('Could not find billing information', 404);
     }
     // instantiate the payment processor factory using the billing processor to choose the processor
-    const processor = new PaymentProcessorFactory().chooseProcessor(billing.processor || 'pyre');
+    const processor = new PaymentProcessorFactory().chooseProcessor(billing.processor || 'paynetworx');
     // fetch the receipts from the processor
     const receipts = await processor.fetchTransactions(billing.customerId);
     if (!receipts.success) {
