@@ -32,7 +32,7 @@ jobs:
       - name: Zip artifact for deployment
         # We want to ensure that only the necessary files are included in the zip
         # that would be dist, package.json, and any other necessary files
-        run: zip -r release.zip dist public package.json package-lock.json
+        run: zip -r release.zip #dist public package.json package-lock.json
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
