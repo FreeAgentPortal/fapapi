@@ -35,7 +35,11 @@ export interface IAthlete extends Document {
       abbreviation: string;
     }
   ];
-  
+  agent?: {
+    name?: string;
+    email?: string;
+    phone?: string;
+  };
   graduationYear?: number;
   bio?: string;
   highSchool?: string;
@@ -73,6 +77,11 @@ const AthleteSchema = new Schema<IAthlete>(
       type: Map,
       of: String || Number,
       default: {},
+    },
+    agent: {
+      name: { type: String },
+      email: { type: String },
+      phone: { type: String },
     },
     links: [
       {
