@@ -81,6 +81,7 @@ export class AuthenticationHandler {
         roles: foundUser.role,
         profileRefs: foundUser.profileRefs,
         profileImageUrl: foundUser.profileImageUrl,
+        acceptedPolicies: foundUser.acceptedPolicies || {},
       },
     };
   }
