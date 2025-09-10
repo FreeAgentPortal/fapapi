@@ -10,7 +10,7 @@ import morgan from 'morgan';
 // import { cronJobs } from ('./utils/cronJobs.js';
 import path from 'path';
 import cors from 'cors';
-import nodemon from 'nodemon';
+// import nodemon from 'nodemon';
 import colors from 'colors';
 import socket from './utils/socket';
 import { cronJobs } from './cronjobs/cronjobs';
@@ -80,7 +80,7 @@ app.post('/webhook', (req, res) => {
 
 // Function to restart the server
 function restartServer(callback: any) {
-  nodemon.restart();
+  // nodemon.restart();
   callback();
 }
 

@@ -1,5 +1,6 @@
 import { ReportSchedulerCron } from '../modules/search-preferences/cron/ReportScheduler.cron';
 import { AthleteSchedulerCron } from '../modules/profiles/cron/AthleteScheduler.cron';
+import { PaymentSchedulerCron } from '../modules/payment/cron/PaymentScheduler.cron';
 
 export const cronJobs = async () => {
   // only init if not in development mode
@@ -13,6 +14,9 @@ export const cronJobs = async () => {
 
   // Initialize the athlete profile completion reminder cron job
   AthleteSchedulerCron.init();
+
+  // Initialize the payment processing cron job
+  PaymentSchedulerCron.init();
 
   console.log('[CronJobs] All cron jobs initialized successfully');
 };

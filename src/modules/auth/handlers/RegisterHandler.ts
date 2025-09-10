@@ -128,8 +128,7 @@ export class RegisterHandler {
     // unique tail to the access key to avoid collisions
     const uniqueTail = this.user._id.toString().slice(-6);
     this.user.accessKey = `${sluggedName}-${uniqueTail}`;
-    // save the user with the access key
-    await this.user.save();
+    // Note: We'll save the user once at the end of createProfiles() to avoid multiple saves
   }
 
   /**
@@ -162,6 +161,7 @@ export class RegisterHandler {
       }
     }
 
+    // Set both profileRefs and accessKey, then save only once
     this.user.profileRefs = this.profileRefs;
     await this.user.save();
   }

@@ -9,8 +9,10 @@ import { MessageModel } from '../modules/messaging/models/Message';
 import User from '../modules/auth/model/User';
 import Token from '../modules/auth/model/TokenSchema';
 import { ResumeProfile } from '../modules/profiles/resume/models/ResumeProfile';
+import BillingAccount from '../modules/auth/model/BillingAccount';
+import Receipt from '../modules/payment/models/Receipt';
 
-export type ModelKey = 'team' | 'athlete' | 'admin' | 'scout_report' | 'scout_profile' | 'conversation' | 'message' | 'user' | 'token' | 'resume';
+export type ModelKey = 'team' | 'athlete' | 'admin' | 'scout_report' | 'scout_profile' | 'conversation' | 'message' | 'user' | 'token' | 'resume' | 'billing' | 'receipt';
 
 export const ModelMap: Record<ModelKey, any> = {
   team: TeamModel,
@@ -23,4 +25,6 @@ export const ModelMap: Record<ModelKey, any> = {
   user: User,
   token: Token,
   resume: ResumeProfile,
+  billing: BillingAccount,
+  receipt: Receipt,
 };

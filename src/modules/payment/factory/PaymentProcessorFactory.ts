@@ -1,4 +1,5 @@
-import PyreProcessing from '../classes/PyreProcessor';
+import PaynetworxProcessor from "../classes/paynetworx";
+import PyreProcessing from "../classes/PyreProcessor";
 import StripeProcessing from '../classes/StripeProcessor';
 
 interface ProcessorConfig {
@@ -73,6 +74,8 @@ class PaymentProcessorFactory {
       case 'pyre':
       case 'pyreprocessing':
         return new PyreProcessing();
+      case "paynetworx":
+        return new PaynetworxProcessor();
       case 'stripe':
         return new StripeProcessing();
       default:

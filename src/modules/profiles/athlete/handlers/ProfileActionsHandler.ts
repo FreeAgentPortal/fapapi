@@ -4,6 +4,7 @@ import { ErrorUtil } from '../../../../middleware/ErrorUtil';
 import BillingAccount from '../../../auth/model/BillingAccount';
 import { AthleteProfileHandler } from './AtheleteProfileHandler';
 import { CRUDHandler } from '../../../../utils/baseCRUD';
+import { BillingValidator } from '../../../../utils/billingValidation';
 
 /**
  * Handles creation, retrieval, and modification of athlete profiles.
@@ -13,13 +14,20 @@ export class ProfileActionsHandler {
     const crudHandler = new AthleteProfileHandler();
     const profile = await crudHandler.fetch(data.id);
     if (!profile) throw new ErrorUtil('Unable to fetch Profile', 400);
+
     const billing = await BillingAccount.findOne({ profileId: profile._id });
     if (!billing) {
       throw new ErrorUtil('billing information not found', 400);
     }
-    return {
+
+    // Use the comprehensive billing validator
+    const billingValidation = BillingValidator.validateBillingAccount(billing);
+    console.log('Billing validation result:', billingValidation);
+
+    return { 
       ...profile,
-      needsBillingSetup: billing.needsUpdate,
+      needsBillingSetup: billingValidation.needsUpdate,
+      billingValidation,
     } as any as IAthlete;
   }
 
