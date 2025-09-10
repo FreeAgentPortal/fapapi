@@ -6,6 +6,7 @@ import { AuthenticatedRequest } from '../../../types/AuthenticatedRequest';
 import axios from 'axios';
 import BillingAccount from '../model/BillingAccount';
 import { ErrorUtil } from '../../../middleware/ErrorUtil';
+import SignInLog from '../model/SignInLog';
 
 export class AuthenticationHandler {
   /**
@@ -45,6 +46,14 @@ export class AuthenticationHandler {
     // update the last signed in date
     user.lastSignedIn = new Date();
     await user.save();
+
+    // Log the sign-in event
+    const ipAddress = req.headers['x-forwarded-for']?.toString() || req.socket.remoteAddress || '';
+    await SignInLog.create({
+      userId: user._id,
+      ipAddress,
+      signedInAt: new Date(),
+    });
 
     return {
       message: 'Login successful.',
