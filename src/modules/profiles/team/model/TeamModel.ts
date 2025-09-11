@@ -26,6 +26,14 @@ export interface ITeamProfile extends Document {
   logos?: [{ href: string; alt: string; width: number; height: number }]; // Array of logo objects with href and alt text
   links?: [{ language: string; href: string; text: string; shortText: string }];
   location: string; // e.g., "CA", "TX"
+  bio: string;
+  history: string;
+  benefits: [
+    {
+      title: string;
+      description: string;
+    }
+  ];
   linkedUsers: TeamMember[]; // References to users with access
   alertsEnabled: boolean;
   verifiedDomain?: string; // e.g., "example.edu"
@@ -57,6 +65,18 @@ const TeamProfileSchema: Schema = new Schema<ITeamProfile>(
       type: String,
       required: true,
     },
+    bio: {
+      type: String,
+    },
+    history: {
+      type: String,
+    },
+    benefits: [
+      {
+        title: { type: String },
+        description: { type: String },
+      },
+    ],
     logoUrl: {
       type: String,
       // match: /^(https?:\/\/.*\.(?:png|jpg|jpeg|gif|svg))$/,
