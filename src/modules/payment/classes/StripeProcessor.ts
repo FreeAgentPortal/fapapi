@@ -26,7 +26,7 @@ class StripeProcessing extends PaymentProcessor {
     });
   }
 
-  processPayment(details: CommonTransactionType, user: UserType) {
+  processPayment(details: CommonTransactionType, user?: UserType) {
     // Implementation for direct payment processing
     // This could be used for one-time payments
   }
