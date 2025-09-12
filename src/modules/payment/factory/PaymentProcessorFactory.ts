@@ -1,6 +1,5 @@
-import PaynetworxProcessor from "../classes/paynetworx";
-import PyreProcessing from "../classes/PyreProcessor";
-import StripeProcessing from '../classes/StripeProcessor';
+import PaynetworxProcessor from '../classes/paynetworx';
+import PyreProcessing from '../classes/PyreProcessor';
 
 interface ProcessorConfig {
   name: string;
@@ -20,29 +19,29 @@ interface ProcessorConfig {
  */
 class PaymentProcessorFactory {
   private static processorConfigs: ProcessorConfig[] = [
-    {
-      name: 'stripe',
-      priority: 1, // Higher priority (preferred)
-      enabled: true,
-      requiredEnvVars: ['STRIPE_SECRET_KEY'],
-      testConnection: async () => {
-        try {
-          const Stripe = require('stripe');
-          const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-            apiVersion: '2025-08-27.basil',
-          });
-          // Test connection by retrieving account info
-          await stripe.accounts.retrieve();
-          return true;
-        } catch (error: any) {
-          console.warn('[PaymentFactory] Stripe connection test failed:', error?.message || 'Unknown error');
-          return false;
-        }
-      },
-    },
+    //   {
+    //     name: 'stripe',
+    //     priority: 1, // Higher priority (preferred)
+    //     enabled: true,
+    //     requiredEnvVars: ['STRIPE_SECRET_KEY'],
+    //     testConnection: async () => {
+    //       try {
+    //         const Stripe = require('stripe');
+    //         const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+    //           apiVersion: '2025-08-27.basil',
+    //         });
+    //         // Test connection by retrieving account info
+    //         await stripe.accounts.retrieve();
+    //         return true;
+    //       } catch (error: any) {
+    //         console.warn('[PaymentFactory] Stripe connection test failed:', error?.message || 'Unknown error');
+    //         return false;
+    //       }
+    //     },
+    //   },
     {
       name: 'pyre',
-      priority: 2, // Lower priority (fallback)
+      priority: 1, // Lower priority (fallback)
       enabled: true,
       requiredEnvVars: ['PYRE_API_URL', 'PYRE_API_KEY'],
       testConnection: async () => {
@@ -74,10 +73,10 @@ class PaymentProcessorFactory {
       case 'pyre':
       case 'pyreprocessing':
         return new PyreProcessing();
-      case "paynetworx":
+      case 'paynetworx':
         return new PaynetworxProcessor();
-      case 'stripe':
-        return new StripeProcessing();
+      // case 'stripe':
+      //   return new StripeProcessing();
       default:
         throw new Error(`Invalid processor type: ${processorType}`);
     }
