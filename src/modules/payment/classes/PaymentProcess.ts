@@ -33,6 +33,9 @@ class PaymentProcessor {
   fetchTransactions(paymentDetails: any, ...args: any[]) {
     throw new Error('Not implemented');
   }
+  vaultTransaction(paymentDetails: any, ...args: any[]) {
+    throw new Error('Not implemented');
+  }
   getProcessorName(): string {
     return 'PaymentProcessor';
   }
