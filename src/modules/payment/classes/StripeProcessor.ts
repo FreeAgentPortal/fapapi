@@ -1,7 +1,6 @@
 import Stripe from 'stripe';
 import PaymentProcessor from './PaymentProcess';
 import { CommonTransactionType } from '../../../types/CommonTransactionType';
-import { UserType } from '../models/User';
 import CommonCaptureTypes from '../../../types/CommonCaptureTypes';
 import CommonVoidTypes from '../../../types/CommonVoidTypes';
 import CommonRefundTypes from '../../../types/CommonRefundTypes';
@@ -26,12 +25,14 @@ class StripeProcessing extends PaymentProcessor {
     });
   }
 
-  processPayment(details: CommonTransactionType, user: UserType) {
-    // Implementation for direct payment processing
-    // This could be used for one-time payments
+  processPayment(details: CommonTransactionType | any) {
+    return this.vaultTransaction({
+      customer_vault_id: details.customer.id,
+      amount: details.amount,
+    });
   }
 
-  async captureTransaction(details: CommonCaptureTypes, user: UserType) {
+  async captureTransaction(details: CommonCaptureTypes) {
     try {
       const paymentIntent = await this.stripe.paymentIntents.capture(details.transactionId);
       return {
@@ -48,7 +49,7 @@ class StripeProcessing extends PaymentProcessor {
     }
   }
 
-  async voidTransaction(details: CommonVoidTypes, order: any) {
+  async voidTransaction(details: CommonVoidTypes) {
     try {
       const paymentIntent = await this.stripe.paymentIntents.cancel(details.transactionId);
       return {
@@ -65,13 +66,17 @@ class StripeProcessing extends PaymentProcessor {
     }
   }
 
-  async refundTransaction(details: CommonRefundTypes, order: any) {
+  async refundTransaction(details: CommonRefundTypes): Promise<{ success: boolean; message: string; data?: any }> {
     try {
+      console.log(`[StripeProcessor] Processing refund for transaction ${details.transactionId} amount ${details.amount}`);
+      console.log(`[StripeProcessor] Creating refund intent`);
       const refund = await this.stripe.refunds.create({
         payment_intent: details.transactionId,
         amount: details.amount ? Math.round(details.amount * 100) : undefined, // Convert to cents
         reason: 'requested_by_customer',
       });
+
+      console.log(`[StripeProcessor] Refund intent created: ${refund.id}`);
       return {
         success: true,
         message: 'Refund processed successfully',
@@ -117,6 +122,7 @@ class StripeProcessing extends PaymentProcessor {
       };
       paymentMethod?: 'creditcard' | 'ach';
       customer_vault?: string;
+      stripeToken?: string;
     }
   ) {
     try {
@@ -149,26 +155,11 @@ class StripeProcessing extends PaymentProcessor {
 
       let paymentMethod;
 
-      if (details.paymentMethod === 'creditcard' && details.creditCardDetails) {
-        // Parse expiration date (assuming format like "1225" or "12/25")
-        const expString = details.creditCardDetails.ccexp || '';
-        let expMonth, expYear;
-
-        if (expString.includes('/')) {
-          [expMonth, expYear] = expString.split('/');
-        } else if (expString.length === 4) {
-          expMonth = expString.substring(0, 2);
-          expYear = expString.substring(2, 4);
-        }
-
-        // Create payment method
+      if (details.paymentMethod === 'creditcard' && details.stripeToken) {
+        // Use the tokenized card from frontend (PCI compliant)
         paymentMethod = await this.stripe.paymentMethods.create({
           type: 'card',
-          card: {
-            number: details.creditCardDetails.ccnumber,
-            exp_month: parseInt(expMonth || ''),
-            exp_year: parseInt(`20${expYear}` || ''),
-          },
+          card: { token: details.stripeToken },
           billing_details: {
             name: `${details.first_name} ${details.last_name || ''}`.trim(),
             email: details.email,
@@ -274,7 +265,6 @@ class StripeProcessing extends PaymentProcessor {
    */
   async vaultTransaction(details: {
     customer_vault_id: string;
-    security_key?: string; // Not needed for Stripe, but keeping interface consistent
     amount: number;
     currency?: string;
     initiated_by?: string;
@@ -282,11 +272,14 @@ class StripeProcessing extends PaymentProcessor {
     payment_method_id?: string; // Optional specific payment method ID
   }) {
     try {
-      const amountInCents = Math.round(details.amount * 100); // Convert to cents
+      console.log(`[StripeProcessor] Processing vault transaction for customer ${details.customer_vault_id} amount ${details.amount}`);
+      // Stripe expects amount in the smallest currency unit (e.g., cents for USD)
+      const amountInCents = Math.round(details.amount * 100);
 
       // Get customer's default payment method if not specified
       let paymentMethodId = details.payment_method_id;
       if (!paymentMethodId) {
+        console.log(`[StripeProcessor] Retrieving default payment method for customer ${details.customer_vault_id}`);
         const customer = await this.stripe.customers.retrieve(details.customer_vault_id);
         if ('invoice_settings' in customer && customer.invoice_settings?.default_payment_method) {
           paymentMethodId = customer.invoice_settings.default_payment_method as string;
@@ -303,6 +296,8 @@ class StripeProcessing extends PaymentProcessor {
         }
       }
 
+      console.log(`[StripeProcessor] Using payment method ${paymentMethodId} for customer ${details.customer_vault_id}`);
+      console.log(`[StripeProcessor] Creating payment intent for amount ${amountInCents} cents`);
       // Create and confirm payment intent
       const paymentIntent = await this.stripe.paymentIntents.create({
         amount: amountInCents,
@@ -316,6 +311,8 @@ class StripeProcessing extends PaymentProcessor {
           stored_credential_indicator: details.stored_credential_indicator || 'recurring',
         },
       });
+
+      console.log(`[StripeProcessor] Payment intent created: ${paymentIntent.id}`);
 
       return {
         success: true,

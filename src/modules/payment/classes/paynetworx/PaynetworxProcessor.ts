@@ -107,7 +107,7 @@ class PaynetworxProcessor extends PaymentProcessor {
         success: true,
         data: {
           ...response.data,
-          transactionid: response.data.TransactionID,
+          transactionId: response.data.TransactionID,
         },
       };
     } catch (error: any) {

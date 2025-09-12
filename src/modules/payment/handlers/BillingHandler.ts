@@ -4,20 +4,25 @@ import { AuthenticatedRequest } from '../../../types/AuthenticatedRequest';
 import BillingAccount from '../../auth/model/BillingAccount';
 import PaymentProcessorFactory from '../factory/PaymentProcessorFactory';
 import { PaymentHandler } from './PaymentHandler';
-import { getPaymentSafeCountryCode } from '../utils/countryHelpers'; 
+import { getPaymentSafeCountryCode } from '../utils/countryHelpers';
 
 export class BillingHandler {
   constructor(private readonly paymentHandler: PaymentHandler = new PaymentHandler()) {}
   async updateVault(req: AuthenticatedRequest): Promise<Boolean> {
     const { id } = req.params;
     const { paymentFormValues, selectedPlans, billingCycle, paymentMethod } = req.body;
+    console.log(paymentFormValues);
 
     // first step find the billing information from the provided profile id
     const billing = await BillingAccount.findOne({ profileId: id }).populate('payor profileId');
     if (!billing) {
       throw new ErrorUtil('Could not find billing information', 404);
     }
-    const processor = new PaymentProcessorFactory().chooseProcessor('paynetworx');
+    const processorResult = await new PaymentProcessorFactory().smartChooseProcessor();
+    const processor = processorResult.processor;
+    if (!processor) {
+      throw new ErrorUtil('No payment processor is configured', 500);
+    }
 
     // Check if the selected plan is free
     const selectedPlan = selectedPlans[0];
@@ -35,25 +40,18 @@ export class BillingHandler {
 
       // we need to update our vaulting
       const vaultResponse = await processor.createVault(billing.customerId, {
-        first_name: paymentFormValues.first_name,
-        last_name: paymentFormValues.last_name,
+        ...paymentFormValues,
         email: billing.email,
         paymentMethod: paymentMethod,
-        address1: paymentFormValues.address1,
-        address2: paymentFormValues.address2,
-        city: paymentFormValues.city,
-        state: paymentFormValues.state,
-        zip: paymentFormValues.zip,
         country: getPaymentSafeCountryCode(paymentFormValues.country),
         phone: billing.payor?.phoneNumber,
         creditCardDetails: {
-          ccnumber: paymentFormValues.ccnumber,
-          ccexp: paymentFormValues.ccexp,
+          ccnumber: paymentFormValues?.ccnumber,
+          ccexp: paymentFormValues?.ccexp,
         } as any,
-        cvv: paymentFormValues.cvv,
-        achDetails: paymentFormValues.achDetails,
+        cvv: paymentFormValues?.cvv,
+        achDetails: paymentFormValues?.achDetails,
       } as any);
-
       if (!vaultResponse.success) {
         throw new ErrorUtil(vaultResponse.message, 400);
       }
@@ -65,10 +63,8 @@ export class BillingHandler {
         billing.paymentProcessorData = {};
       }
       const name = processor.getProcessorName();
-      // Set PayNetWorx specific data
       billing.paymentProcessorData[name] = {
-        tokenId: vaultResponse.data.tokenId,
-        tokenName: vaultResponse.data.tokenName,
+        ...vaultResponse.data, // since processors can return different data its safest to just store what we get back to use later.
       };
     } else {
       // Handle free plans - no payment processing required
