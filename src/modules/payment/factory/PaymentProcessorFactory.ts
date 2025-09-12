@@ -75,8 +75,8 @@ class PaymentProcessorFactory {
         return new PyreProcessing();
       case 'paynetworx':
         return new PaynetworxProcessor();
-      // case 'stripe':
-      //   return new StripeProcessing();
+      case 'stripe':
+        return new PaynetworxProcessor(); //TODO : Add Stripe processor
       default:
         throw new Error(`Invalid processor type: ${processorType}`);
     }
