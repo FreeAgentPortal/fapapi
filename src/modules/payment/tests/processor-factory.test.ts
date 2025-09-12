@@ -3,6 +3,7 @@
 //  * Run this with: npm run test or node -r ts-node/register src/modules/payment/tests/processor-factory.test.ts
 //  */
 
+test('test', () => {});
 // import PaymentProcessorFactory from '../factory/PaymentProcessorFactory';
 
 // describe('PaymentProcessorFactory', () => {
