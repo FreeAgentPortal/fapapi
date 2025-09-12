@@ -20,14 +20,14 @@ export class PaymentService {
       console.log(`Using ${processorName}: ${reason}`);
 
       // Process payment using the selected processor
-      const result = await processor.vaultTransaction({
+      const result = (await processor.vaultTransaction({
         customer_vault_id: customerId,
         security_key: '', // Not needed for Stripe, but required by interface
         amount: amount,
         currency: 'usd',
         initiated_by: 'system',
         stored_credential_indicator: 'recurring',
-      });
+      })) as any;
 
       return {
         success: result?.success ?? false,
