@@ -5,16 +5,16 @@ import CommonCaptureTypes from '../../../types/CommonCaptureTypes';
 import CommonVoidTypes from '../../../types/CommonVoidTypes';
 import CommonRefundTypes from '../../../types/CommonRefundTypes';
 
-// /**
-//  * @description StripeProcessing class, this class extends the PaymentProcessor class
-//  *              and implements the processPayment method to process payments with the Stripe
-//  *              payment gateway.
-//  * @class StripeProcessing
-//  * @extends PaymentProcessor
-//  * @export
-//  * @version 1.0.0
-//  * @since 1.0.0
-//  */
+/**
+ * @description StripeProcessing class, this class extends the PaymentProcessor class
+ *              and implements the processPayment method to process payments with the Stripe
+ *              payment gateway.
+ * @class StripeProcessing
+ * @extends PaymentProcessor
+ * @export
+ * @version 1.0.0
+ * @since 1.0.0
+ */
 class StripeProcessing extends PaymentProcessor {
   private stripe: Stripe;
 

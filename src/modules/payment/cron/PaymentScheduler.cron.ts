@@ -53,7 +53,7 @@ export class PaymentSchedulerCron {
   /**
    * Get status of the cron job
    */
-  public static getStatus(): { isRunning: boolean; nextRun?: Date } {
+  public static getStatus(): { isRunning: boolean; nextRun?: Date, successCount: number; failureCount: number } {
     // Get next scheduled run time (9:00 AM next day)
     const now = new Date();
     const nextRun = new Date(now);
@@ -70,6 +70,8 @@ export class PaymentSchedulerCron {
     return {
       isRunning: PaymentSchedulerCron.isRunning,
       nextRun,
+      successCount: PaymentSchedulerCron.successCount,
+      failureCount: PaymentSchedulerCron.failureCount,
     };
   }
 }
