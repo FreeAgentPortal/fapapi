@@ -203,7 +203,7 @@ export default class PaymentProcessingHandler {
       transactionId: `TXN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       billingAccountId: billingAccount._id,
       userId: billingAccount.payor._id,
-      status: 'success',
+      status: paymentResult.status,
       type: 'payment',
       amount: amount,
       currency: 'USD',
@@ -214,8 +214,8 @@ export default class PaymentProcessingHandler {
         billingCycle: billingAccount.isYearly ? 'yearly' : 'monthly',
       },
       processor: {
-        name: billingAccount.processor || 'paynetworx',
-        transactionId: paymentResult.data.transactionid || paymentResult.data.TransactionID,
+        name: await this.processor?.getProcessorName(),
+        transactionId: paymentResult.transactionId,
         response: paymentResult.data,
       },
       customer: {
@@ -247,8 +247,8 @@ export default class PaymentProcessingHandler {
         billingCycle: billingAccount.isYearly ? 'yearly' : 'monthly',
       },
       processor: {
-        name: billingAccount.processor || 'paynetworx',
-        transactionId: paymentResult.data?.transactionid || paymentResult.data?.TransactionID || 'FAILED',
+        name: await this.processor?.getProcessorName(),
+        transactionId: paymentResult.transactionId || 'N/A',
         response: paymentResult,
       },
       customer: {
@@ -278,7 +278,7 @@ export default class PaymentProcessingHandler {
       amount: 0,
       currency: 'USD',
       processor: {
-        name: billingAccount.processor || 'paynetworx',
+        name: await this.processor?.getProcessorName(),
         transactionId: 'ERROR',
         response: { error: errorMessage },
       },
