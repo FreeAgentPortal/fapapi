@@ -10,11 +10,17 @@ export default class TransactionHandler {
     this.modelMap = ModelMap;
   }
 
-  private getProcessor(): PaymentProcessor {
+  private async getProcessor(): Promise<PaymentProcessor> {
     if (!this.processor) {
-      this.processor = new PaymentProcessorFactory().chooseProcessor('paynetworx');
+      this.processor = await new PaymentProcessorFactory().smartChooseProcessor().then((res) => {
+        if (!res.processor) {
+          throw new Error('No payment processor is configured');
+        }
+        console.log('Using payment processor:', res.processor.getProcessorName());
+        return res.processor as PaymentProcessor;
+      });
     }
-    return this.processor;
+    return this.processor as PaymentProcessor;
   }
 
   public processTransaction = async (profileId: string, data: any): Promise<any> => {
@@ -26,7 +32,7 @@ export default class TransactionHandler {
         throw new Error('Billing profile not found');
       }
 
-      const processor = this.getProcessor();
+      const processor = await this.getProcessor();
 
       // from the processor object on billing get the billing information that relates to that processor
       const processorInfo = billingProfile.paymentProcessorData[processor.getProcessorName() as any] || {};
@@ -45,7 +51,7 @@ export default class TransactionHandler {
       // now we need to create a receipt in the database for the transaction
       const receipt = await this.modelMap['receipt'].create({
         profileId,
-        transactionId: processorResponse.data.TransactionID,
+        transactionId: processorResponse.transactionId,
         billingAccountId: billingProfile._id,
         userId: billingProfile.profileId.userId,
         status: 'success',
@@ -54,14 +60,14 @@ export default class TransactionHandler {
         currency: data.currency,
         processor: {
           name: processor.getProcessorName(),
-          transactionId: processorResponse.data.TransactionID,
-          response: processorResponse.data.ResponseText,
+          transactionId: processorResponse.transactionId,
+          response: processorResponse.message,
         },
         customer: {
           id: billingProfile.customer,
           email: billingProfile.email,
           name: `${billingProfile.firstName} ${billingProfile.lastName}`,
-          phone: billingProfile.phone,
+          phone: billingProfile.phone || 'N/A',
         },
         transactionDate: new Date().toISOString(),
       });
@@ -83,7 +89,7 @@ export default class TransactionHandler {
       if (!receipt) {
         throw new Error('Transaction not found');
       }
-      const processor = this.getProcessor();
+      const processor = await this.getProcessor();
       const billingInfo = await this.modelMap['billing'].findById(receipt.billingAccountId);
       if (!billingInfo) {
         throw new Error('Billing information not found');
@@ -91,29 +97,40 @@ export default class TransactionHandler {
 
       // run the refund through the payment processor
       const results = (await processor.refundTransaction({
-        transactionId,
+        transactionId: receipt.processor.transactionId,
         amount,
-        customerId: billingInfo.customer,
-        ...billingInfo.paymentProcessorData[processor.getProcessorName() as any],
+        ...billingInfo.paymentProcessorData[(await processor).getProcessorName() as any],
       })) as any;
 
       console.log(results);
       if (!results.success) {
-        throw new Error('Refund processing failed');
+        throw new Error(`Refund Transaction failed: ${results.message}`);
       }
-      // update the receipt to reflect the refund
-      const refundReceipt = await this.modelMap['receipt'].findOneAndUpdate(
-        { transactionId },
-        {
-          $set: {
-            status: 'refunded',
-            amount: receipt.amount - amount,
-            updatedAt: new Date(),
-          },
+      // create a new receipt to reflect the refund
+      const refundReceipt = await this.modelMap['receipt'].create({
+        profileId: receipt.profileId,
+        transactionId: results.data.id,
+        billingAccountId: billingInfo._id,
+        userId: billingInfo.profileId.userId,
+        status: results.data.status,
+        type: 'refund',
+        amount: -Math.abs(amount), // refunds are negative amounts
+        currency: receipt.currency,
+        processor: {
+          name: processor.getProcessorName(),
+          transactionId: results.data.id,
+          response: results.message,
+          balanceTransaction: results.data.balance_transaction,
+          charge: results.data.charge,
         },
-        { new: true }
-      );
-
+        customer: {
+          id: billingInfo.customer,
+          email: billingInfo.email,
+          name: `${billingInfo.firstName} ${billingInfo.lastName}`,
+          phone: billingInfo.phone || 'N/A',
+        },
+        transactionDate: new Date().toISOString(),
+      });
       return { success: true, data: refundReceipt };
     } catch (error) {
       console.error('Error processing refund:', error);
@@ -134,11 +151,11 @@ export default class TransactionHandler {
         throw new Error('Billing information not found');
       }
       // run the void through the payment processor
-      const results = (await processor.voidTransaction({
+      const results = (await processor).voidTransaction({
         transactionId,
         customerId: billingInfo.customer,
-        ...billingInfo.paymentProcessorData[processor.getProcessorName() as any],
-      })) as any; 
+        ...billingInfo.paymentProcessorData[(await processor).getProcessorName() as any],
+      }) as any;
       if (!results.success) {
         throw new Error('Void processing failed' + (results.message ? `: ${results.message}` : ''));
       }

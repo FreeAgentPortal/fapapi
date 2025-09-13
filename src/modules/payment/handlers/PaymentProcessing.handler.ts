@@ -2,9 +2,24 @@ import BillingAccount, { BillingAccountType } from '../../auth/model/BillingAcco
 import Receipt, { ReceiptType } from '../models/Receipt';
 import PaymentProcessorFactory from '../factory/PaymentProcessorFactory';
 import PlanSchema from '../../auth/model/PlanSchema';
+import PaymentProcessor from '../classes/PaymentProcess';
+import { eventBus } from '../../../lib/eventBus';
 
 export default class PaymentProcessingHandler {
-  private static processor = new PaymentProcessorFactory().chooseProcessor('paynetworx');
+  private static processor = null as PaymentProcessor | null;
+
+  constructor() {
+    // initialization of instance
+    if (!PaymentProcessingHandler.processor) {
+      PaymentProcessingHandler.processor = new PaymentProcessorFactory().smartChooseProcessor().then((res) => {
+        if (!res.processor) {
+          throw new Error('No payment processor is configured');
+        }
+        console.log('Using payment processor:', res.processor.getProcessorName());
+        return res.processor as PaymentProcessor;
+      }) as unknown as PaymentProcessor;
+    }
+  }
 
   public static async processScheduledPayments(): Promise<{ success: boolean; message: string; results?: any }> {
     try {
@@ -108,12 +123,17 @@ export default class PaymentProcessingHandler {
       }
 
       // Get the processor name and token data
-      const processorName = billingAccount.processor || 'paynetworx';
-      const processorKey = processorName === 'paynetworx' ? 'pnx' : processorName;
-      const processorData = billingAccount.paymentProcessorData[processorKey];
+      const processorName = await this.processor?.getProcessorName(); // we only want the name of the processor we want to use
+      const processorData = billingAccount.paymentProcessorData[processorName as any];
 
-      if (!processorData || !processorData.tokenId) {
-        throw new Error(`No token ID found for processor ${processorName} on profile ${profileId}`);
+      if (!processorData) {
+        // this is a rare case, but it can happen if the user has multiple processors and the one we want to use is not set up.
+        // we need to then inform them to update their payment information.
+        console.warn(`[PaymentProcessingHandler] No Processor Information found for processor ${processorName} on profile ${profileId}`);
+        billingAccount.needsUpdate = true;
+        await billingAccount.save();
+        eventBus.publish('billing.needsUpdate', { profileId, reason: 'Missing processor data for scheduled payment' });
+        throw new Error(`No Processor Information found for processor ${processorName} on profile ${profileId}`);
       }
 
       // Calculate amount based on plan and billing cycle
@@ -125,22 +145,10 @@ export default class PaymentProcessingHandler {
         amount = amount * 12 * (1 - plan.yearlyDiscount / 100);
       }
 
-      // Process payment using token
-      const paymentDetails = {
-        tokenId: processorData.tokenId,
-        amount: amount,
-        currency: 'USD',
-        customerId: billingAccount.customerId,
-        additionalData: {
-          profileId: billingAccount.profileId,
-          planId: plan._id,
-          billingCycle: billingAccount.isYearly ? 'yearly' : 'monthly',
-        },
-      };
-
       console.log(`[PaymentProcessingHandler] Processing payment of $${amount} for profile ${profileId} using token ${processorData.tokenId}`);
 
-      const paymentResult = await this.processor.processPayment(paymentDetails) as any;
+      // processor is expected to handle the information passed into it
+      const paymentResult = await this.processor?.processPayment(processorData) as any;
 
       if (paymentResult.success) {
         // Payment successful - create success receipt
@@ -195,7 +203,7 @@ export default class PaymentProcessingHandler {
       transactionId: `TXN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       billingAccountId: billingAccount._id,
       userId: billingAccount.payor._id,
-      status: 'success',
+      status: paymentResult.status,
       type: 'payment',
       amount: amount,
       currency: 'USD',
@@ -206,8 +214,8 @@ export default class PaymentProcessingHandler {
         billingCycle: billingAccount.isYearly ? 'yearly' : 'monthly',
       },
       processor: {
-        name: billingAccount.processor || 'paynetworx',
-        transactionId: paymentResult.data.transactionid || paymentResult.data.TransactionID,
+        name: await this.processor?.getProcessorName(),
+        transactionId: paymentResult.transactionId,
         response: paymentResult.data,
       },
       customer: {
@@ -239,8 +247,8 @@ export default class PaymentProcessingHandler {
         billingCycle: billingAccount.isYearly ? 'yearly' : 'monthly',
       },
       processor: {
-        name: billingAccount.processor || 'paynetworx',
-        transactionId: paymentResult.data?.transactionid || paymentResult.data?.TransactionID || 'FAILED',
+        name: await this.processor?.getProcessorName(),
+        transactionId: paymentResult.transactionId || 'N/A',
         response: paymentResult,
       },
       customer: {
@@ -270,7 +278,7 @@ export default class PaymentProcessingHandler {
       amount: 0,
       currency: 'USD',
       processor: {
-        name: billingAccount.processor || 'paynetworx',
+        name: await this.processor?.getProcessorName(),
         transactionId: 'ERROR',
         response: { error: errorMessage },
       },
