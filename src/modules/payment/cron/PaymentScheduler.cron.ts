@@ -1,7 +1,11 @@
 import cron from 'node-cron';
+import PaymentProcessingHandler from '../handlers/PaymentProcessing.handler';
 
 export class PaymentSchedulerCron {
   private static isRunning = false;
+  private static successCount = 0;
+  private static failureCount = 0;
+
 
   /**
    * Initialize the payment processing cron job
@@ -23,8 +27,14 @@ export class PaymentSchedulerCron {
         try {
           console.log('[PaymentScheduler] Starting scheduled payment processing...');
           // Call the payment processing handler
-          // const result = await PaymentProcessingHandler.processScheduledPayments();
-          console.log('[PaymentScheduler] Scheduled payment processing completed:', /*result*/);
+          const result = await PaymentProcessingHandler.processScheduledPayments();
+
+          // set results for success/failure logging
+          if (result.success) {
+            PaymentSchedulerCron.successCount += result.results.successCount || 0;
+            PaymentSchedulerCron.failureCount += result.results.failureCount || 0;
+          }
+          console.log('[PaymentScheduler] Scheduled payment processing completed:', result);
         } catch (error) {
           console.error('[PaymentScheduler] Error in scheduled payment processing:', error);
         } finally {
