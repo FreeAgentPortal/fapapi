@@ -1,5 +1,6 @@
 import PaynetworxProcessor from '../classes/paynetworx';
 import PyreProcessing from '../classes/PyreProcessor';
+import StripeProcessing from '../classes/StripeProcessor';
 
 interface ProcessorConfig {
   name: string;
@@ -76,7 +77,7 @@ class PaymentProcessorFactory {
       case 'paynetworx':
         return new PaynetworxProcessor();
       case 'stripe':
-        return new PaynetworxProcessor(); //TODO : Add Stripe processor
+        return new StripeProcessing(); //TODO : Add Stripe processor
       default:
         throw new Error(`Invalid processor type: ${processorType}`);
     }
