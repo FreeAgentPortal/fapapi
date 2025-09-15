@@ -84,6 +84,7 @@ export default class PaymentProcessingHandler {
         status: 'active',
         vaulted: true,
         plan: { $exists: true, $ne: null },
+        needsUpdate: { $ne: true }, // Exclude accounts needing update
       })
         .populate('plan')
         .populate('payor')
@@ -143,6 +144,13 @@ export default class PaymentProcessingHandler {
       // Apply yearly discount if applicable
       if (billingAccount.isYearly && plan.yearlyDiscount) {
         amount = amount * 12 * (1 - plan.yearlyDiscount / 100);
+      }
+
+      // check if the customer needs the one-time setup fee
+      if (!billingAccount.setupFeePaid) {
+        amount += 50; // assuming a flat $50 setup fee
+        billingAccount.setupFeePaid = true; // mark as paid
+        await billingAccount.save();
       }
 
       console.log(`[PaymentProcessingHandler] Processing payment of $${amount} for profile ${profileId} using token ${processorData.tokenId}`);

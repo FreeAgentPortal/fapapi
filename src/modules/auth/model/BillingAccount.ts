@@ -13,6 +13,7 @@ export interface BillingAccountType extends mongoose.Document {
   status: string;
   trialLength: number;
   processor?: string;
+  setupFeePaid?: boolean;
   createdAt: Date;
   updatedAt: Date;
   vaulted: Boolean;
@@ -51,6 +52,10 @@ const Schema = new mongoose.Schema(
       ref: 'AthleteProfile',
     },
     isYearly: {
+      type: Boolean,
+      default: false,
+    },
+    setupFeePaid: {
       type: Boolean,
       default: false,
     },
