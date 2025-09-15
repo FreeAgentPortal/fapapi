@@ -19,26 +19,26 @@ interface ProcessorConfig {
  */
 class PaymentProcessorFactory {
   private static processorConfigs: ProcessorConfig[] = [
-    //   {
-    //     name: 'stripe',
-    //     priority: 1, // Higher priority (preferred)
-    //     enabled: true,
-    //     requiredEnvVars: ['STRIPE_SECRET_KEY'],
-    //     testConnection: async () => {
-    //       try {
-    //         const Stripe = require('stripe');
-    //         const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
-    //           apiVersion: '2025-08-27.basil',
-    //         });
-    //         // Test connection by retrieving account info
-    //         await stripe.accounts.retrieve();
-    //         return true;
-    //       } catch (error: any) {
-    //         console.warn('[PaymentFactory] Stripe connection test failed:', error?.message || 'Unknown error');
-    //         return false;
-    //       }
-    //     },
-    //   },
+      {
+        name: 'stripe',
+        priority: 1, // Higher priority (preferred)
+        enabled: true,
+        requiredEnvVars: ['STRIPE_SECRET_KEY'],
+        testConnection: async () => {
+          try {
+            const Stripe = require('stripe');
+            const stripe = new Stripe(process.env.STRIPE_SECRET_KEY, {
+              apiVersion: '2025-08-27.basil',
+            });
+            // Test connection by retrieving account info
+            await stripe.accounts.retrieve();
+            return true;
+          } catch (error: any) {
+            console.warn('[PaymentFactory] Stripe connection test failed:', error?.message || 'Unknown error');
+            return false;
+          }
+        },
+      },
     {
       name: 'pyre',
       priority: 1, // Lower priority (fallback)
