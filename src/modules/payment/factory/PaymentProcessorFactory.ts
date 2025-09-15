@@ -100,7 +100,7 @@ class PaymentProcessorFactory {
     const {
       preferredProcessors = [], // Empty means use priority order
       testConnections = true,
-      fallbackProcessor = 'pyre',
+      fallbackProcessor = 'stripe',
     } = options;
 
     // Get processors to test, either from preferences or by priority

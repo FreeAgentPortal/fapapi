@@ -11,7 +11,7 @@ export class BillingHandler {
   async updateVault(req: AuthenticatedRequest): Promise<Boolean> {
     const { id } = req.params;
     const { paymentFormValues, selectedPlans, billingCycle, paymentMethod } = req.body;
-    console.log(paymentFormValues);
+    // console.log(paymentFormValues);
 
     // first step find the billing information from the provided profile id
     const billing = await BillingAccount.findOne({ profileId: id }).populate('payor profileId');
