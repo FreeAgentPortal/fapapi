@@ -53,7 +53,7 @@ export class BillingHandler {
         achDetails: paymentFormValues?.achDetails,
       } as any);
       if (!vaultResponse.success) {
-        throw new ErrorUtil(vaultResponse.message, 400);
+        throw new ErrorUtil(`[BillingHandler] - vaulting was not successful: ${vaultResponse.message}`, 400);
       }
       // Update billing account with PayNetWorx token information
       billing.vaulted = true;
