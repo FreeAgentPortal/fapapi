@@ -81,7 +81,8 @@ export default class PaymentProcessingHandler {
 
       const profilesDue = await BillingAccount.find({
         nextBillingDate: { $lte: currentDate },
-        status: 'active',
+        // status is active or trialing
+        status: { $in: ['active', 'trialing'] },
         vaulted: true,
         plan: { $exists: true, $ne: null },
         needsUpdate: { $ne: true }, // Exclude accounts needing update
@@ -156,7 +157,7 @@ export default class PaymentProcessingHandler {
       console.log(`[PaymentProcessingHandler] Processing payment of $${amount} for profile ${profileId} using token ${processorData.tokenId}`);
 
       // processor is expected to handle the information passed into it
-      const paymentResult = await this.processor?.processPayment(processorData) as any;
+      const paymentResult = (await this.processor?.processPayment(processorData)) as any;
 
       if (paymentResult.success) {
         // Payment successful - create success receipt
@@ -324,6 +325,8 @@ export default class PaymentProcessingHandler {
 
     await BillingAccount.findByIdAndUpdate(billingAccount._id, {
       nextBillingDate: nextMonth,
+      status: 'active', // Ensure status is active after successful payment
+      needsUpdate: false, // Clear needsUpdate flag, if its been set after a successful payment
     });
 
     console.log(`[PaymentProcessingHandler] Updated next billing date for ${billingAccount._id} to ${nextMonth.toISOString()}`);
