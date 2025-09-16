@@ -26,15 +26,6 @@ export interface BillingAccountType extends mongoose.Document {
   isYearly?: boolean;
   // Payment processor specific data map
   paymentProcessorData?: {
-    pnx?: {
-      tokenId?: string;
-      tokenName?: string;
-    };
-    pyreprocessing?: {
-      vaultId?: string;
-      customerId?: string;
-      [key: string]: any;
-    };
     [processorName: string]: any;
   };
 }

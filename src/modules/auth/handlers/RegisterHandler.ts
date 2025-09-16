@@ -191,6 +191,7 @@ export class RegisterHandler {
         status,
         trialLength: trialEndsAt,
         vaulted: false,
+        payor: this.user._id,
       });
       console.log(`Billing account created for profile ${profileId} with role ${role}`);
     } catch (error: any) {
