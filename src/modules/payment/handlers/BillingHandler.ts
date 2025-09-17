@@ -5,6 +5,7 @@ import BillingAccount from '../../auth/model/BillingAccount';
 import PaymentProcessorFactory from '../factory/PaymentProcessorFactory';
 import { PaymentHandler } from './PaymentHandler';
 import { getPaymentSafeCountryCode } from '../utils/countryHelpers';
+import { validatePaymentFormData } from '../utils/paymentValidation';
 
 export class BillingHandler {
   constructor(private readonly paymentHandler: PaymentHandler = new PaymentHandler()) {}
@@ -28,6 +29,11 @@ export class BillingHandler {
     const selectedPlan = selectedPlans[0];
     const isFree = selectedPlan.price === 0;
 
+    // Validate payment form data for paid plans based on processor requirements
+    if (!isFree) {
+      validatePaymentFormData(processor.getProcessorName(), paymentFormValues, paymentMethod);
+    }
+
     // Handle paid plans - require payment processing
     if (!isFree) {
       // if we dont have a customerId on billing object we need to create that first
@@ -45,6 +51,7 @@ export class BillingHandler {
         paymentMethod: paymentMethod,
         country: getPaymentSafeCountryCode(paymentFormValues.country),
         phone: billing.payor?.phoneNumber,
+        stripeToken: paymentFormValues?.stripeToken, // For Stripe tokenized payments
         creditCardDetails: {
           ccnumber: paymentFormValues?.ccnumber,
           ccexp: paymentFormValues?.ccexp,
@@ -123,6 +130,14 @@ export class BillingHandler {
         billingDetails = {
           tokenId: pnxData.tokenId,
           tokenName: pnxData.tokenName,
+          vaulted: billing.vaulted,
+        };
+      } else if (billing.processor === 'stripe') {
+        // For Stripe, return the stored customer and payment method information
+        const stripeData = billing.paymentProcessorData?.stripe || {};
+        billingDetails = {
+          customerId: stripeData.customer?.id,
+          paymentMethodId: stripeData.paymentMethod?.id,
           vaulted: billing.vaulted,
         };
       } else {
