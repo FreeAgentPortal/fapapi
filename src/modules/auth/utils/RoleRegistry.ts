@@ -14,14 +14,14 @@ export const RoleRegistry: Record<string, RoleMetadata> = {
     billingScope: 'profile',
     displayName: 'Team',
     trial: true,
-    trialLength: 7,
+    trialLength: 0,
   },
   athlete: {
     isBillable: true,
     billingScope: 'profile',
     displayName: 'Athlete',
     trial: true,
-    trialLength: 7,
+    trialLength: 0,
   },
   admin: {
     isBillable: false,

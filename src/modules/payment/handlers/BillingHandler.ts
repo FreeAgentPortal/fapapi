@@ -100,8 +100,8 @@ export class BillingHandler {
       billing.status = 'active'; // Set status to active for free plans
       billing.needsUpdate = false; // No need for update on free plans
     } else {
-      // sets the nextBillingDate to the end of the trialing period or tommorow
-      billing.nextBillingDate = billing.status === 'trialing' ? moment(billing.trialLength).toDate() : moment(new Date()).add(1, 'day').toDate();
+      // set the nextBillingDate to the first of next month
+      billing.nextBillingDate = moment().add(1, 'month').startOf('month').toDate();
       billing.status = 'active';
       billing.needsUpdate = false; // if it was true set by admin, this will flip it off
     }
