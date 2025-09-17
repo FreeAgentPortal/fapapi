@@ -34,8 +34,7 @@ const Schema = new mongoose.Schema(
   {
     customerId: {
       // id of customer in pyre or payment processor
-      type: String,
-      required: true,
+      type: String, 
     },
     profileId: {
       type: mongoose.Types.ObjectId,

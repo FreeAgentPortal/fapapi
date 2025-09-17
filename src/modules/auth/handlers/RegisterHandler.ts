@@ -174,22 +174,12 @@ export class RegisterHandler {
    */
   private async createBillingAccount(profileId: string, role: string) {
     console.log(`Creating billing account..`);
-    try {
-      const customer = await createCustomer(this.user);
-      if (!customer.success) throw new Error(customer.message);
-      const trialDays = RoleRegistry[role]?.trialLength ?? 14;
-      const trialEndsAt = new Date(Date.now() + trialDays * 86400_000); // 86400 seconds in a day
-      const status = RoleRegistry[role]?.trial ? 'trialing' : 'inactive';
-
-      this.billingAccount = await BillingAccount.create({
-        customerId: customer.payload._id,
+    try {   
+      this.billingAccount = await BillingAccount.create({ 
         profileId,
         profileType: role,
-        email: this.data.email,
-        processor: 'pyre',
-        processorCustomerId: customer.customer_vault_id,
-        status,
-        trialLength: trialEndsAt,
+        email: this.data.email,  
+        status: 'active',
         vaulted: false,
         payor: this.user._id,
       });
