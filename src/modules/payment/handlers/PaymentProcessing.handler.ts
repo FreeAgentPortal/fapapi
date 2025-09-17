@@ -148,11 +148,12 @@ export default class PaymentProcessingHandler {
       }
 
       // check if the customer needs the one-time setup fee
-      if (!billingAccount.setupFeePaid) {
-        amount += 50; // assuming a flat $50 setup fee
-        billingAccount.setupFeePaid = true; // mark as paid
-        await billingAccount.save();
-      }
+      // NOTE: Uncomment and adjust as necessary
+      // if (!billingAccount.setupFeePaid) {
+      //   amount += 50; // assuming a flat $50 setup fee
+      //   billingAccount.setupFeePaid = true; // mark as paid
+      //   await billingAccount.save();
+      // }
 
       console.log(`[PaymentProcessingHandler] Processing payment of $${amount} for profile ${profileId} using token ${processorData.tokenId}`);
 
