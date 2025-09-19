@@ -85,9 +85,16 @@ export class ConversationHandler {
 
   async getConversationsForUser(userId: string, profileId: string, role: 'team' | 'athlete'): Promise<IConversation[]> {
     if (role === 'team') {
-      return ConversationModel.find({ 'participants.team': profileId }).populate('participants.athlete', 'fullName profileImageUrl');
+      return ConversationModel.find({
+        'participants.team': profileId,
+        // Exclude deleted conversations, and hidden conversations
+        $and: [{ status: { $ne: 'deleted' } }, { status: { $ne: 'hidden' } }],
+      }).populate('participants.athlete', 'fullName profileImageUrl');
     } else {
-      return ConversationModel.find({ 'participants.athlete': profileId }).populate('participants.team', 'name logos');
+      return ConversationModel.find({
+        'participants.athlete': profileId,
+        $and: [{ status: { $ne: 'deleted' } }, { status: { $ne: 'hidden' } }],
+      }).populate('participants.team', 'name logos');
     }
   }
 
