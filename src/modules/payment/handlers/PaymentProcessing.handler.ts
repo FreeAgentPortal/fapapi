@@ -104,7 +104,12 @@ export default class PaymentProcessingHandler {
     }
   }
 
-  public static async processPaymentForProfile(profileId: string): Promise<{ success: boolean; message: string; receipt?: ReceiptType }> {
+  public static async processPaymentForProfile(
+    profileId: string,
+    amount?: number,
+    updateBillingDate: boolean = true,
+    description?: string
+  ): Promise<{ success: boolean; message: string; receipt?: ReceiptType }> {
     try {
       console.log(`[PaymentProcessingHandler] Processing payment for profile ${profileId}...`);
 
@@ -138,44 +143,60 @@ export default class PaymentProcessingHandler {
         throw new Error(`No Processor Information found for processor ${processorName} on profile ${profileId}`);
       }
 
-      // Calculate amount based on plan and billing cycle
+      // Get plan data for receipt creation
       const plan = billingAccount.plan as any;
-      let amount = parseFloat(plan.price);
+      let calculatedAmount: number;
 
-      // Apply yearly discount if applicable
-      if (billingAccount.isYearly && plan.yearlyDiscount) {
-        amount = amount * 12 * (1 - plan.yearlyDiscount / 100);
+      // if amount is not provided, calculate based on plan and billing cycle
+      if (amount === undefined) {
+        if (!billingAccount.plan) {
+          throw new Error(`No plan associated with billing account for profile ${profileId}`);
+        }
+        // Calculate amount based on plan and billing cycle
+        calculatedAmount = parseFloat(plan.price);
+        // Apply yearly discount if applicable
+        if (billingAccount.isYearly && plan.yearlyDiscount) {
+          calculatedAmount = calculatedAmount * 12 * (1 - plan.yearlyDiscount / 100);
+        }
+      } else {
+        // amount is passed in, use it directly
+        calculatedAmount = amount;
       }
 
-      // check if the customer needs the one-time setup fee
-      // NOTE: Uncomment and adjust as necessary
-      // if (!billingAccount.setupFeePaid) {
-      //   amount += 50; // assuming a flat $50 setup fee
-      //   billingAccount.setupFeePaid = true; // mark as paid
-      //   await billingAccount.save();
-      // }
+      // add the amount to processorData
+      processorData.amount = calculatedAmount;
 
-      console.log(`[PaymentProcessingHandler] Processing payment of $${amount} for profile ${profileId} using token ${processorData.tokenId}`);
+      console.log(`[PaymentProcessingHandler] Processing payment of $${calculatedAmount} for profile ${profileId} using token ${processorData.tokenId}`);
 
       // processor is expected to handle the information passed into it
       const paymentResult = (await this.processor?.processPayment(processorData)) as any;
 
       if (paymentResult.success) {
         // Payment successful - create success receipt
-        const receipt = await this.createSuccessReceipt(billingAccount, paymentResult, amount, plan);
+        const receiptDescription = description || (amount !== undefined && !updateBillingDate ? 'One-time payment processed successfully' : undefined); // Use default subscription description
+        const receipt = await this.createSuccessReceipt(billingAccount, paymentResult, calculatedAmount, plan, receiptDescription);
 
-        // Update next billing date
-        await this.updateNextBillingDate(billingAccount);
+        // Update next billing date only for subscription payments
+        if (updateBillingDate) {
+          await this.updateNextBillingDate(billingAccount);
+        } else {
+          // For immediate payments, just update status but not billing date
+          await BillingAccount.findByIdAndUpdate(billingAccount._id, {
+            status: 'active',
+            needsUpdate: false,
+          });
+        }
 
         console.log(`[PaymentProcessingHandler] Payment processed successfully for profile ${profileId}`);
         return {
           success: true,
-          message: `Payment of $${amount.toFixed(2)} processed successfully`,
+          message: `Payment of $${calculatedAmount.toFixed(2)} processed successfully`,
           receipt,
         };
       } else {
         // Payment failed - create failure receipt
-        const receipt = await this.createFailureReceipt(billingAccount, paymentResult, amount, plan);
+        const receiptDescription = description || (amount !== undefined && !updateBillingDate ? 'One-time payment failed' : undefined); // Use default subscription description
+        const receipt = await this.createFailureReceipt(billingAccount, paymentResult, calculatedAmount, plan, receiptDescription);
 
         // Mark account as needing update
         await BillingAccount.findByIdAndUpdate(profileId, {
@@ -197,7 +218,8 @@ export default class PaymentProcessingHandler {
       try {
         const billingAccount = await BillingAccount.findById(profileId).populate('plan').populate('payor');
         if (billingAccount) {
-          await this.createErrorReceipt(billingAccount, error.message);
+          const receiptDescription = description || (amount !== undefined && !updateBillingDate ? 'One-time payment processing error' : 'Subscription payment processing error');
+          await this.createErrorReceipt(billingAccount, error.message, receiptDescription);
           await BillingAccount.findByIdAndUpdate(profileId, { needsUpdate: true });
         }
       } catch (receiptError) {
@@ -208,7 +230,7 @@ export default class PaymentProcessingHandler {
     }
   }
 
-  private static async createSuccessReceipt(billingAccount: BillingAccountType, paymentResult: any, amount: number, plan: any): Promise<ReceiptType> {
+  private static async createSuccessReceipt(billingAccount: BillingAccountType, paymentResult: any, amount: number, plan: any, description?: string): Promise<ReceiptType> {
     const receipt = new Receipt({
       transactionId: `TXN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       billingAccountId: billingAccount._id,
@@ -217,12 +239,15 @@ export default class PaymentProcessingHandler {
       type: 'payment',
       amount: amount,
       currency: 'USD',
-      planInfo: {
-        planId: plan._id,
-        planName: plan.name,
-        planPrice: parseFloat(plan.price),
-        billingCycle: billingAccount.isYearly ? 'yearly' : 'monthly',
-      },
+      description: description || (plan ? `${billingAccount.isYearly ? 'Annual' : 'Monthly'} subscription payment for ${plan.name}` : 'Payment processed successfully'),
+      planInfo: plan
+        ? {
+            planId: plan._id,
+            planName: plan.name,
+            planPrice: parseFloat(plan.price),
+            billingCycle: billingAccount.isYearly ? 'yearly' : 'monthly',
+          }
+        : undefined,
       processor: {
         name: await this.processor?.getProcessorName(),
         transactionId: paymentResult.transactionId,
@@ -241,7 +266,7 @@ export default class PaymentProcessingHandler {
     return receipt;
   }
 
-  private static async createFailureReceipt(billingAccount: BillingAccountType, paymentResult: any, amount: number, plan: any): Promise<ReceiptType> {
+  private static async createFailureReceipt(billingAccount: BillingAccountType, paymentResult: any, amount: number, plan: any, description?: string): Promise<ReceiptType> {
     const receipt = new Receipt({
       transactionId: `TXN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       billingAccountId: billingAccount._id,
@@ -250,12 +275,15 @@ export default class PaymentProcessingHandler {
       type: 'payment',
       amount: amount,
       currency: 'USD',
-      planInfo: {
-        planId: plan._id,
-        planName: plan.name,
-        planPrice: parseFloat(plan.price),
-        billingCycle: billingAccount.isYearly ? 'yearly' : 'monthly',
-      },
+      description: description || (plan ? `Failed ${billingAccount.isYearly ? 'annual' : 'monthly'} subscription payment for ${plan.name}` : 'Payment processing failed'),
+      planInfo: plan
+        ? {
+            planId: plan._id,
+            planName: plan.name,
+            planPrice: parseFloat(plan.price),
+            billingCycle: billingAccount.isYearly ? 'yearly' : 'monthly',
+          }
+        : undefined,
       processor: {
         name: await this.processor?.getProcessorName(),
         transactionId: paymentResult.transactionId || 'N/A',
@@ -278,7 +306,7 @@ export default class PaymentProcessingHandler {
     return receipt;
   }
 
-  private static async createErrorReceipt(billingAccount: BillingAccountType, errorMessage: string): Promise<ReceiptType> {
+  private static async createErrorReceipt(billingAccount: BillingAccountType, errorMessage: string, description?: string): Promise<ReceiptType> {
     const receipt = new Receipt({
       transactionId: `TXN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       billingAccountId: billingAccount._id,
@@ -287,6 +315,7 @@ export default class PaymentProcessingHandler {
       type: 'payment',
       amount: 0,
       currency: 'USD',
+      description: description || 'Payment processing error occurred',
       processor: {
         name: await this.processor?.getProcessorName(),
         transactionId: 'ERROR',

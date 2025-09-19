@@ -17,8 +17,9 @@ export interface ReceiptType extends mongoose.Document {
   type: 'payment' | 'refund' | 'void';
   amount: number;
   currency: string;
+  description?: string; // Optional description of what the payment was for
 
-  // Plan information snapshot
+  // Plan information snapshot (optional - not all transactions are plan-related)
   planInfo?: {
     planId: ObjectId;
     planName: string;
@@ -94,8 +95,12 @@ const ReceiptSchema = new mongoose.Schema(
       required: true,
       default: 'USD',
     },
+    description: {
+      type: String,
+      required: false,
+    },
 
-    // Plan snapshot
+    // Plan snapshot (optional)
     planInfo: {
       planId: { type: Types.ObjectId, ref: 'Plan' },
       planName: { type: String },
@@ -162,6 +167,7 @@ ReceiptSchema.index({ transactionDate: -1 });
 ReceiptSchema.index({ billingAccountId: 1 });
 ReceiptSchema.index({ processorTransactionId: 1 });
 ReceiptSchema.index({ status: 1 });
+ReceiptSchema.index({ description: 'text' }); // Text index for searching descriptions
 
 const Receipt = mongoose.model<ReceiptType>('Receipt', ReceiptSchema);
 
