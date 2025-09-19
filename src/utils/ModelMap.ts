@@ -11,8 +11,9 @@ import Token from '../modules/auth/model/TokenSchema';
 import { ResumeProfile } from '../modules/profiles/resume/models/ResumeProfile';
 import BillingAccount from '../modules/auth/model/BillingAccount';
 import Receipt from '../modules/payment/models/Receipt';
+import PlanSchema from '../modules/auth/model/PlanSchema';
 
-export type ModelKey = 'team' | 'athlete' | 'admin' | 'scout_report' | 'scout_profile' | 'conversation' | 'message' | 'user' | 'token' | 'resume' | 'billing' | 'receipt';
+export type ModelKey = 'team' | 'athlete' | 'admin' | 'scout_report' | 'scout_profile' | 'conversation' | 'message' | 'user' | 'token' | 'resume' | 'billing' | 'receipt' | 'plan';
 
 export const ModelMap: Record<ModelKey, any> = {
   team: TeamModel,
@@ -27,4 +28,5 @@ export const ModelMap: Record<ModelKey, any> = {
   resume: ResumeProfile,
   billing: BillingAccount,
   receipt: Receipt,
+  plan: PlanSchema,
 };

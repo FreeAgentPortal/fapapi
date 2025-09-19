@@ -59,10 +59,37 @@ class DevTool {
       const adminCount = await this.modelMap['admin'].countDocuments();
       const scoutReportCount = await this.modelMap['scout_report'].countDocuments();
 
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      // 1. Count conversations started by teams in the last 30 days
+      const conversationsStarted = await this.modelMap['conversation'].countDocuments({
+        createdAt: { $gte: thirtyDaysAgo },
+      });
+      console.log(`- Conversations started by teams in last 30 days: ${conversationsStarted}`);
+      const messagesSent = await this.modelMap['message'].countDocuments({
+        createdAt: { $gte: thirtyDaysAgo },
+      });
+      console.log(`- Messages sent in last 30 days: ${messagesSent}`);
+      // 2. Count recent athlete profiles created in the last 30 days
+      const recentAthleteProfiles = await this.modelMap['athlete'].countDocuments({
+        createdAt: { $gte: thirtyDaysAgo },
+      });
+      console.log(`- Recent athlete profiles created in last 30 days: ${recentAthleteProfiles}`);
+
+      // 3. Total projected revenue from active subscriptions
+      const activeSubscriptions = await this.modelMap['billing']
+        .find({
+          status: 'active',
+          plan: { $ne: null },
+        })
+        .populate('plan');
+      const totalProjectedRevenue = activeSubscriptions.reduce((acc, sub) => {
+        return acc + sub.plan.price;
+      }, 0);
+      console.log(`- Total projected revenue from active subscriptions: $${totalProjectedRevenue}`);
       console.log(`Athletes: ${athleteCount}`);
       console.log(`Admins: ${adminCount}`);
       console.log(`Scout Reports: ${scoutReportCount}`);
-
       // Add more stats as needed
       console.log('------------------------\n');
     } catch (error) {
@@ -76,14 +103,10 @@ class DevTool {
    * ===================================
    */
   async customTask(): Promise<void> {
-    console.log('🛠️  Running custom task...'); 
+    console.log('🛠️  Running custom task...');
     try {
-      const teams = await this.modelMap['team'].find({});
-      console.log(`Found ${teams.length} teams.`);
-      for(const team of teams){
-        team.league = 'NFL';
-        await team.save();
-      }
+      // Insert your custom database operations here
+      // Example: Clean up old records, update fields, etc.
     } catch (error) {
       console.log('❌ Error in custom task:', error);
     }

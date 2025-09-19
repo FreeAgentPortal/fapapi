@@ -50,6 +50,7 @@ export class ConversationHandler {
     await newMessage.save();
 
     conversation.messages.push(newMessage._id as Types.ObjectId);
+    conversation.lastMessage = newMessage._id as any;
     await conversation.save();
 
     return { conversation, newMessage };
@@ -76,6 +77,7 @@ export class ConversationHandler {
 
     await message.save();
     conversation.messages.push(message._id as Types.ObjectId);
+    conversation.lastMessage = message._id as any;
     await conversation.save();
 
     return message;

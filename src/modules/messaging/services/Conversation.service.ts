@@ -14,6 +14,7 @@ export class ConversationService extends CRUDService {
       startConversation: true,
       sendMessage: true,
       getConversations: true,
+      removeMessage: true,
     };
     this.queryKeys = ['participants.team', 'participants.athlete'];
   }
@@ -99,6 +100,17 @@ export class ConversationService extends CRUDService {
         return res.status(401).json({ message: 'Unauthorized' });
       }
       return res.status(200).json({ success: true, payload: response });
+    } catch (err) {
+      console.log(err);
+      return error(err, req, res);
+    }
+  });
+
+  public removeMessage = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+    try {
+      const { id } = req.params;
+      await this.handler.archiveMessage(id, req.query.messageId as string);
+      return res.status(200).json({ success: true, message: 'Message archived successfully' });
     } catch (err) {
       console.log(err);
       return error(err, req, res);
