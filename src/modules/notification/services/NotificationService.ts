@@ -1,5 +1,6 @@
 // modules/notification/NotificationService.ts
 import { EmailService } from '../email/EmailService';
+import { SMSService } from '../sms/SMSService';
 import NAthleteEventsService from './NAthleteEvents.service';
 import NAuthService from './NAuthService';
 import NClaimService from './NClaimService';
@@ -22,6 +23,7 @@ export default class NotificationService {
   ) {}
   public init() {
     EmailService.init('sendgrid');
+    SMSService.init('twilio');
     this.nauthService.init();
     this.nclaimService.init();
     this.nticketService.init();
