@@ -10,5 +10,6 @@ export default class NAthleteEvents {
   constructor(private readonly handler: AthleteEventHandler = new AthleteEventHandler()) {}
   public init() {
     eventBus.subscribe('athlete.profile.completion.alert', this.handler.profileIncomplete);
+    eventBus.subscribe('athlete.profile.viewed', this.handler.athleteViewRecorded);
   }
 }
