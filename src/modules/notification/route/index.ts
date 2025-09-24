@@ -2,6 +2,7 @@
 import express from 'express';
 import { NCRUDService } from '../services/NCRUDService';
 import { AuthMiddleware } from '../../../middleware/AuthMiddleware';
+import smsRoutes from './sms';
 
 const router = express.Router();
 
@@ -11,6 +12,7 @@ const service = new NCRUDService();
 router.get('/health', (req, res) => {
   res.json({ status: 'notification module online' });
 });
+router.use('/sms', smsRoutes)
 
 router.use(AuthMiddleware.protect);
 router.route('/').get(service.getResources).post(service.create);
