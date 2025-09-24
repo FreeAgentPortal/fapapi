@@ -2,12 +2,15 @@ import express from 'express';
 import AthleteService from '../service/AthleteService';
 import { AuthMiddleware } from '../../../../middleware/AuthMiddleware';
 import profileRoutes from './profileRoutes';
+import viewRoutes from './view';
 
 const router = express.Router();
 
 const service = new AthleteService();
 
 router.use('/profile', profileRoutes);
+router.use('/views', viewRoutes);
+
 router.route('/health').get((req, res) => {
   res.status(200).json({
     message: 'Athlete service is up and running',
@@ -19,9 +22,10 @@ router.route('/').get(service.getResources);
 router.route('/:id').get(service.getResource);
 
 router.use(AuthMiddleware.protect);
+
+// Standard CRUD routes
 router.route('/').post(service.create);
 router.route('/:id').put(service.updateResource).delete(service.removeResource);
-
 
 // authenticated routes
 export default router;
