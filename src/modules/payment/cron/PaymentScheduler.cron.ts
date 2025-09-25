@@ -31,8 +31,8 @@ export class PaymentSchedulerCron {
 
           // set results for success/failure logging
           if (result.success) {
-            PaymentSchedulerCron.successCount += result.results.successCount || 0;
-            PaymentSchedulerCron.failureCount += result.results.failureCount || 0;
+            PaymentSchedulerCron.successCount += result.results.successful || 0;
+            PaymentSchedulerCron.failureCount += result.results.failed || 0;
           }
           console.log('[PaymentScheduler] Scheduled payment processing completed:', result);
         } catch (error) {
