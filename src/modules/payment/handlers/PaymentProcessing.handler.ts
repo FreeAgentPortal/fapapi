@@ -158,9 +158,54 @@ export default class PaymentProcessingHandler {
         if (billingAccount.isYearly && plan.yearlyDiscount) {
           calculatedAmount = calculatedAmount * 12 * (1 - plan.yearlyDiscount / 100);
         }
+        // finally, subtract any credits
+        if (billingAccount.credits && billingAccount.credits > 0) {
+          const originalAmount = calculatedAmount;
+          calculatedAmount = Math.max(0, calculatedAmount - billingAccount.credits);
+          // Deduct used credits from account
+          const creditsUsed = originalAmount - calculatedAmount;
+          billingAccount.credits = Math.max(0, billingAccount.credits - creditsUsed);
+          await billingAccount.save();
+        }
       } else {
         // amount is passed in, use it directly
         calculatedAmount = amount;
+      }
+
+      // Check if amount is 0 - skip payment processing and create success receipt
+      if (calculatedAmount === 0) {
+        console.log(`[PaymentProcessingHandler] Amount is $0 for profile ${profileId} - skipping payment processing and creating success receipt`);
+
+        // Create a mock successful payment result for receipt creation
+        const mockPaymentResult = {
+          success: true,
+          status: 'completed',
+          transactionId: `CREDIT_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          message: 'Payment covered by account credits',
+          data: { covered_by_credits: true },
+        };
+
+        // Create success receipt for zero-amount payment
+        const receiptDescription = description || (amount !== undefined && !updateBillingDate ? 'One-time payment covered by credits' : undefined);
+        const receipt = await this.createSuccessReceipt(billingAccount, mockPaymentResult, calculatedAmount, plan, receiptDescription);
+
+        // Update next billing date only for subscription payments
+        if (updateBillingDate) {
+          await this.updateNextBillingDate(billingAccount);
+        } else {
+          // For immediate payments, just update status but not billing date
+          await BillingAccount.findByIdAndUpdate(billingAccount._id, {
+            status: 'active',
+            needsUpdate: false,
+          });
+        }
+
+        console.log(`[PaymentProcessingHandler] Zero-amount payment processed successfully for profile ${profileId} using account credits`);
+        return {
+          success: true,
+          message: `Payment of $${calculatedAmount.toFixed(2)} covered by account credits`,
+          receipt,
+        };
       }
 
       // add the amount to processorData
