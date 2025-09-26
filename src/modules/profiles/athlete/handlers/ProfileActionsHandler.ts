@@ -22,7 +22,7 @@ export class ProfileActionsHandler {
 
     // Use the comprehensive billing validator
     const billingValidation = BillingValidator.validateBillingAccount(billing);
-    console.log('Billing validation result:', billingValidation);
+    // console.log('Billing validation result:', billingValidation);
 
     return { 
       ...profile,
