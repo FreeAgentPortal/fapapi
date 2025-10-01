@@ -106,14 +106,16 @@ export class BillingHandler {
       billing.status = 'active';
       billing.needsUpdate = false; // if it was true set by admin, this will flip it off
 
-      // next we need to create an initial charge for them the "setup fee" they wont be charged their subscription
-      // until their next billing date, but the setup fee is charged immediately.
-      // const paymentResults = await PaymentProcessingHandler.processPaymentForProfile(id as string, 50, false, 'Account setup fee');
-      // if(paymentResults.success === false){
-      //   console.log(`[BillingHandler] - Initial setup fee payment failed: ${paymentResults.message}`);
-      // }
-      // update the billing for the setup fee to being paid
-      billing.setupFeePaid = true; // for now signup's dont have a setup fee
+      if (!billing.setupFeePaid) {
+        // next we need to create an initial charge for them the "setup fee" they wont be charged their subscription
+        // until their next billing date, but the setup fee is charged immediately.
+        const paymentResults = await PaymentProcessingHandler.processPaymentForProfile(id as string, 50, false, 'Account setup fee');
+        if (paymentResults.success === false) {
+          console.log(`[BillingHandler] - Initial setup fee payment failed: ${paymentResults.message}`);
+        }
+        // update the billing for the setup fee to being paid
+        billing.setupFeePaid = true; // for now signup's dont have a setup fee
+      }
     }
 
     // finally set the processor correctly
