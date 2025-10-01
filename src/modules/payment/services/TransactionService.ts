@@ -40,9 +40,9 @@ export default class TransactionService {
   public triggerScheduledPayments = asyncHandler(async (req: Request & AuthenticatedRequest, res: Response): Promise<Response> => {
     try {
       console.log(`[TransactionService] Manual payment processing trigger initiated by user ${req.user?.id}`);
-      
+
       const result = await PaymentProcessingHandler.processScheduledPayments();
-      
+
       if (result.success) {
         return res.status(200).json({
           message: 'Scheduled payments processing completed',
@@ -51,14 +51,14 @@ export default class TransactionService {
             total: result.results?.total || 0,
             successful: result.results?.successful || 0,
             failed: result.results?.failed || 0,
-            errors: result.results?.errors || []
-          }
+            errors: result.results?.errors || [],
+          },
         });
       } else {
         return res.status(500).json({
           message: 'Scheduled payments processing failed',
           success: false,
-          error: result.message
+          error: result.message,
         });
       }
     } catch (err: any) {
