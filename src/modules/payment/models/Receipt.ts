@@ -13,7 +13,7 @@ export interface ReceiptType extends mongoose.Document {
   userId: ObjectId;
 
   // Transaction details
-  status: 'pending' | 'success' | 'failed' | 'refunded' | 'voided';
+  status: 'pending' | 'success' | 'failed' | 'refunded' | 'voided' | 'succeeded';
   type: 'payment' | 'refund' | 'void';
   amount: number;
   currency: string;
@@ -76,7 +76,7 @@ const ReceiptSchema = new mongoose.Schema(
     // Transaction details
     status: {
       type: String,
-      enum: ['pending', 'success', 'failed', 'refunded', 'voided'],
+      enum: ['pending', 'success', 'failed', 'refunded', 'voided', 'succeeded'],
       required: true,
       default: 'pending',
     },

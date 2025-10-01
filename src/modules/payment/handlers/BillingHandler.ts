@@ -102,7 +102,15 @@ export class BillingHandler {
       billing.needsUpdate = false; // No need for update on free plans
     } else {
       // set the nextBillingDate to the first of next month
-      billing.nextBillingDate = moment().add(1, 'month').startOf('month').toDate();
+      // if the account needed update, we can assume they are switching plans or updating payment
+      // so we will not change the nextBillingDate if its already set in the future
+
+      // if nextBillingDate is not set or is in the past, set it to the first of next month
+      // only if, we are not needing an update
+      if (billing.nextBillingDate && !billing.needsUpdate && !moment(billing.nextBillingDate).isAfter(moment())) {
+        const nextMonth = moment().add(1, 'month').startOf('month');
+        billing.nextBillingDate = nextMonth.toDate();
+      }
       billing.status = 'active';
       billing.needsUpdate = false; // if it was true set by admin, this will flip it off
 

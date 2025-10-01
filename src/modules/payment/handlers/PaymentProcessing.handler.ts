@@ -24,7 +24,14 @@ export default class PaymentProcessingHandler {
   public static async processScheduledPayments(): Promise<{ success: boolean; message: string; results?: any }> {
     try {
       console.log('[PaymentProcessingHandler] Starting scheduled payment processing...');
-
+      if (!this.processor) {
+        this.processor = await new PaymentProcessorFactory().smartChooseProcessor().then((res) => {
+          if (!res.processor) {
+            throw new Error('No payment processor is configured');
+          }
+          return res.processor as PaymentProcessor;
+        });
+      }
       // Get all profiles due for payment
       const profilesDue = await this.getProfilesDueForPayment();
 
@@ -41,7 +48,10 @@ export default class PaymentProcessingHandler {
         failed: 0,
         errors: [] as string[],
       };
-
+      // if we still dont have a processor here, we have a big problem
+      if (!this.processor) {
+        throw new Error('No payment processor is configured');
+      } 
       // Process each profile
       for (const profile of profilesDue) {
         try {
