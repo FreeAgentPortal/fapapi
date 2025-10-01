@@ -105,11 +105,14 @@ export class BillingHandler {
       // if the account needed update, we can assume they are switching plans or updating payment
       // so we will not change the nextBillingDate if its already set in the future
 
-      // if nextBillingDate is not set or is in the past, set it to the first of next month
-      // only if, we are not needing an update
-      if (billing.nextBillingDate && !billing.needsUpdate && !moment(billing.nextBillingDate).isAfter(moment())) {
-        const nextMonth = moment().add(1, 'month').startOf('month');
-        billing.nextBillingDate = nextMonth.toDate();
+      // Only update nextBillingDate if needsUpdate is false (account is in good standing)
+      // This prevents giving users a free month when they're updating due to failed payments
+      if (!billing.needsUpdate) {
+        // if nextBillingDate is not set or is in the past, set it to the first of next month
+        if (!billing.nextBillingDate || !moment(billing.nextBillingDate).isAfter(moment())) {
+          const nextMonth = moment().add(1, 'month').startOf('month');
+          billing.nextBillingDate = nextMonth.toDate();
+        }
       }
       billing.status = 'active';
       billing.needsUpdate = false; // if it was true set by admin, this will flip it off
@@ -117,7 +120,7 @@ export class BillingHandler {
       if (!billing.setupFeePaid) {
         // next we need to create an initial charge for them the "setup fee" they wont be charged their subscription
         // until their next billing date, but the setup fee is charged immediately.
-        const paymentResults = await PaymentProcessingHandler.processPaymentForProfile(id as string, 50, false, 'Account setup fee');
+        const paymentResults = await PaymentProcessingHandler.processPaymentForProfile(billing._id as any, 50, false, 'Account setup fee');
         if (paymentResults.success === false) {
           console.log(`[BillingHandler] - Initial setup fee payment failed: ${paymentResults.message}`);
         }
