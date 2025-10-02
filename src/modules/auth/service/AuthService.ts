@@ -24,6 +24,7 @@ export default class AuthService {
       result.user = null;
       return res.status(201).json(result);
     } catch (err: any) {
+      console.error(err);
       return error(err, req, res);
     }
   };
@@ -33,6 +34,7 @@ export default class AuthService {
       const result = await this.authHandler.login(req);
       return res.status(200).json(result);
     } catch (err: any) {
+      console.error(err);
       return error(err, req, res);
     }
   };
@@ -42,7 +44,7 @@ export default class AuthService {
       const result = await this.authHandler.getMe(req as AuthenticatedRequest);
       return res.status(200).json({ success: true, ...result });
     } catch (err: any) {
-      console.log(err);
+      console.error(err);
       return error(err, req, res);
     }
   };
@@ -61,6 +63,7 @@ export default class AuthService {
 
       return res.status(200).json({ message: 'Recovery email sent' });
     } catch (err: any) {
+      console.error(err);
       return error(err, req, res);
     }
   };
@@ -75,6 +78,7 @@ export default class AuthService {
       });
       return res.status(200).json({ message: 'Password reset successful' });
     } catch (err: any) {
+      console.error(err);
       return error(err, req, res);
     }
   };
@@ -90,6 +94,7 @@ export default class AuthService {
 
       return res.status(200).json(result);
     } catch (err: any) {
+      console.error(err);
       return error(err, req, res);
     }
   };
@@ -109,6 +114,7 @@ export default class AuthService {
 
       return res.status(200).json({ success: true, message: 'Verification email sent', token: result.token });
     } catch (err: any) {
+      console.error(err);
       return error(err, req, res);
     }
   };
@@ -118,6 +124,7 @@ export default class AuthService {
       const result = await this.authHandler.recaptchaVerify(req);
       return res.status(200).json(result);
     } catch (err: any) {
+      console.error(err);
       return error(err, req, res);
     }
   };
@@ -134,6 +141,7 @@ export default class AuthService {
         // exists
       });
     } catch (err: any) {
+      console.error(err);
       return error(err, req, res);
     }
   };

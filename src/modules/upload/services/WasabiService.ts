@@ -29,7 +29,7 @@ export class WasabiService {
       }
       res.status(201).json({ payload: urls });
     } catch (err) {
-      console.log(err);
+      console.error(err);
       error(err, req, res);
     }
   });

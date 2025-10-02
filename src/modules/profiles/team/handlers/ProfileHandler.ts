@@ -53,7 +53,7 @@ export default class TeamProfileHandler extends CRUDHandler<ITeamProfile> {
     });
 
     if (existingLink) {
-      console.log(`User ${userId} is already linked to team ${teamId}`);
+      console.info(`[ProfileHandler]: User ${userId} is already linked to team ${teamId}`);
 
       await this.modelMap['user'].findByIdAndUpdate(userId, {
         $set: { 'profileRefs.team': teamId },

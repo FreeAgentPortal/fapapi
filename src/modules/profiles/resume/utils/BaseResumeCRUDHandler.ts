@@ -20,14 +20,13 @@ export abstract class BaseResumeCRUDHandler extends CRUDHandler<IResumeProfile> 
    * This enforces the (owner.kind, owner.ref) uniqueness.
    */
   async getOrCreateResume(ownerKind: OwnerKind, ownerRef: string): Promise<IResumeProfile> {
-    // Try fast path
-    console.log(ownerRef);
+    // Try fast path 
     const existing = await this.modelMap['resume'].findOne({
       'owner.kind': ownerKind,
       'owner.ref': ownerRef,
     });
     if (existing) {
-      console.log(`[BaseResumeCRUDHandler] Found existing resume for ${ownerKind}/${ownerRef}`);
+      console.info(`[BaseResumeCRUDHandler] Found existing resume for ${ownerKind}/${ownerRef}`);
       return existing;
     }
 
@@ -55,8 +54,7 @@ export abstract class BaseResumeCRUDHandler extends CRUDHandler<IResumeProfile> 
    * Add a new item to the resume section (atomic).
    * If `data._id` is absent, we generate one so the client can address it later.
    */
-  async addItem(ownerKind: OwnerKind, ownerRef: string, data: any): Promise<IResumeProfile> {
-    console.log(ownerKind, ownerRef, data);
+  async addItem(ownerKind: OwnerKind, ownerRef: string, data: any): Promise<IResumeProfile> { 
     const resume = await this.getOrCreateResume(ownerKind, ownerRef);
     const itemId = data._id ? new Types.ObjectId(data._id) : new Types.ObjectId();
 

@@ -20,7 +20,7 @@ export default class ClaimEventHandlers {
     if (!claimDetails) {
       throw new ErrorUtil('Claim details are required for claim creation event handling', 400);
     }
-    console.log(`[Notification] Claim created with ID: ${claimDetails._id}`);
+    console.info(`[Notification] Claim created with ID: ${claimDetails._id}`);
 
     const user = await User.findById(claimDetails.user);
     const profile = await this.modelMap[claimDetails.claimType].findById(claimDetails.profile);

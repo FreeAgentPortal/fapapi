@@ -17,7 +17,7 @@ export default class ReceiptService extends CRUDService {
       const results = await (this.handler as ReceiptHandler).paymentStatistics(billingAccountId);
       return res.status(200).json({ message: 'payment statistics retrieved', success: true, payload: results });
     } catch (err: any) {
-      console.log(err);
+      console.error(err);
       return error(err, req, res);
     } 
   });

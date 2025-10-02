@@ -13,7 +13,7 @@ export default class ProfileService {
       const results = await this.handler.getProfile({ id: req.params.id });
       return res.status(201).json({ success: true, payload: results });
     } catch (err) {
-      console.log(err);
+      console.error(err);
       return error(err, req, res);
     }
   });
@@ -24,7 +24,7 @@ export default class ProfileService {
       eventBus.publish('athlete.profilePopulated', { playerid: req.params.playerid, profileDetails: results });
       return res.status(201).json({ success: true, payload: results });
     } catch (err) {
-      console.log(err);
+      console.error(err);
       return error(err, req, res);
     }
   });

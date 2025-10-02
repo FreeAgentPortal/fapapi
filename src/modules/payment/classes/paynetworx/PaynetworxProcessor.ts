@@ -365,7 +365,7 @@ class PaynetworxProcessor extends PaymentProcessor {
    */
   async processPaymentWithToken(tokenId: string, amount: number, currency: string = 'USD', orderDetails?: any) {
     const paynetworxDetails = this.buildTokenPayload(tokenId, amount, currency, orderDetails);
-    console.log(paynetworxDetails);
+
     try {
       const response = await this.makeApiRequest('transaction/authcapture', paynetworxDetails);
       return {

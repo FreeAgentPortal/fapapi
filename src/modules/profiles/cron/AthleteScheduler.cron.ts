@@ -9,24 +9,24 @@ export class AthleteSchedulerCron {
    * Runs daily at 9:00 AM
    */
   public static init(): void {
-    console.log('[AthleteScheduler] Initializing athlete profile completion reminder cron job...');
+    console.info('[AthleteScheduler] Initializing athlete profile completion reminder cron job...');
 
     // Schedule to run daily at 9:00 AM
     cron.schedule(
       '0 9 * * *', // At 09:00 every day
       async () => {
         if (AthleteSchedulerCron.isRunning) {
-          console.log('[AthleteScheduler] Previous job still running, skipping...');
+          console.info('[AthleteScheduler] Previous job still running, skipping...');
           return;
         }
 
         AthleteSchedulerCron.isRunning = true;
         try {
-          console.log('[AthleteScheduler] Starting scheduled athlete profile completion alerts...');
+          console.info('[AthleteScheduler] Starting scheduled athlete profile completion alerts...');
 
           const result = await AthleteProfileAnalysisHandler.processCompletionAlerts();
 
-          console.log('[AthleteScheduler] Scheduled completion alerts completed:', result);
+          console.info('[AthleteScheduler] Scheduled completion alerts completed:', result);
         } catch (error) {
           console.error('[AthleteScheduler] Error in athlete profile completion alerts:', error);
         } finally {
@@ -39,25 +39,25 @@ export class AthleteSchedulerCron {
       }
     );
 
-    console.log('[AthleteScheduler] Athlete profile completion reminder cron job initialized');
+    console.info('[AthleteScheduler] Athlete profile completion reminder cron job initialized');
   }
 
   /**
    * Manual trigger for testing purposes
    */
   public static async triggerManualCompletionAlerts(athleteId?: string): Promise<void> {
-    console.log('[AthleteScheduler] Manual completion alerts triggered');
+    console.info('[AthleteScheduler] Manual completion alerts triggered');
 
     try {
       if (athleteId) {
         // Send alert for specific athlete
         await AthleteProfileAnalysisHandler.processSpecificAthleteAlert(athleteId);
-        console.log(`[AthleteScheduler] Manual completion alert sent for athlete: ${athleteId}`);
+        console.info(`[AthleteScheduler] Manual completion alert sent for athlete: ${athleteId}`);
       } else {
         // Send alerts for all incomplete profiles
-        console.log('[AthleteScheduler] Processing manual alerts for all incomplete profiles...');
+        console.info('[AthleteScheduler] Processing manual alerts for all incomplete profiles...');
         const result = await AthleteProfileAnalysisHandler.processCompletionAlerts();
-        console.log('[AthleteScheduler] Manual completion alerts completed:', result);
+        console.info('[AthleteScheduler] Manual completion alerts completed:', result);
       }
     } catch (error) {
       console.error('[AthleteScheduler] Error in manual completion alerts:', error);

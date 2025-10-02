@@ -2,9 +2,9 @@ const nodemailer = require('nodemailer');
 
 async function createEtherealAccount() {
   const testAccount = await nodemailer.createTestAccount();
-  console.log('Copy these into your .env:');
-  console.log(`ETHEREAL_USER=${testAccount.user}`);
-  console.log(`ETHEREAL_PASS=${testAccount.pass}`);
+  console.info('Copy these into your .env:');
+  console.info(`ETHEREAL_USER=${testAccount.user}`);
+  console.info(`ETHEREAL_PASS=${testAccount.pass}`);
 }
 
 createEtherealAccount();

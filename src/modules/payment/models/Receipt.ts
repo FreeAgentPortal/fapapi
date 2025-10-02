@@ -13,7 +13,7 @@ export interface ReceiptType extends mongoose.Document {
   userId: ObjectId;
 
   // Transaction details
-  status: 'pending' | 'success' | 'failed' | 'refunded' | 'voided' | 'succeeded';
+  status: 'pending' | 'success' | 'failed' | 'refunded' | 'voided' | 'succeeded' | 'completed';
   type: 'payment' | 'refund' | 'void';
   amount: number;
   currency: string;

@@ -29,8 +29,8 @@ class DevTool {
 
       await mongoose.connect(process.env.MONGO_URI);
       this.isConnected = true;
-      console.log('🔗 Connected to MongoDB');
-      console.log(`📊 Database: ${mongoose.connection.name}`);
+      console.info('🔗 Connected to MongoDB');
+      console.info(`📊 Database: ${mongoose.connection.name}`);
     } catch (error) {
       console.error('❌ Failed to connect to MongoDB:', error);
       throw error;
@@ -43,7 +43,7 @@ class DevTool {
   async disconnect(): Promise<void> {
     if (this.isConnected) {
       await mongoose.disconnect();
-      console.log('🔌 Disconnected from MongoDB');
+      console.info('🔌 Disconnected from MongoDB');
     }
   }
 
@@ -51,8 +51,8 @@ class DevTool {
    * Get database statistics
    */
   async getStats(): Promise<void> {
-    console.log('\n📈 Database Statistics:');
-    console.log('------------------------');
+    console.info('\n📈 Database Statistics:');
+    console.info('------------------------');
 
     try {
       const athleteCount = await this.modelMap['athlete'].countDocuments();
@@ -65,16 +65,16 @@ class DevTool {
       const conversationsStarted = await this.modelMap['conversation'].countDocuments({
         createdAt: { $gte: thirtyDaysAgo },
       });
-      console.log(`- Conversations started by teams in last 30 days: ${conversationsStarted}`);
+      console.info(`- Conversations started by teams in last 30 days: ${conversationsStarted}`);
       const messagesSent = await this.modelMap['message'].countDocuments({
         createdAt: { $gte: thirtyDaysAgo },
       });
-      console.log(`- Messages sent in last 30 days: ${messagesSent}`);
+      console.info(`- Messages sent in last 30 days: ${messagesSent}`);
       // 2. Count recent athlete profiles created in the last 30 days
       const recentAthleteProfiles = await this.modelMap['athlete'].countDocuments({
         createdAt: { $gte: thirtyDaysAgo },
       });
-      console.log(`- Recent athlete profiles created in last 30 days: ${recentAthleteProfiles}`);
+      console.info(`- Recent athlete profiles created in last 30 days: ${recentAthleteProfiles}`);
 
       // 3. Total projected revenue from active subscriptions
       const activeSubscriptions = await this.modelMap['billing']
@@ -86,12 +86,12 @@ class DevTool {
       const totalProjectedRevenue = activeSubscriptions.reduce((acc, sub) => {
         return acc + sub.plan.price;
       }, 0);
-      console.log(`- Total projected revenue from active subscriptions: $${totalProjectedRevenue}`);
-      console.log(`Athletes: ${athleteCount}`);
-      console.log(`Admins: ${adminCount}`);
-      console.log(`Scout Reports: ${scoutReportCount}`);
+      console.info(`- Total projected revenue from active subscriptions: $${totalProjectedRevenue}`);
+      console.info(`Athletes: ${athleteCount}`);
+      console.info(`Admins: ${adminCount}`);
+      console.info(`Scout Reports: ${scoutReportCount}`);
       // Add more stats as needed
-      console.log('------------------------\n');
+      console.info('------------------------\n');
     } catch (error) {
       console.error('❌ Error getting stats:', error);
     }
@@ -103,7 +103,7 @@ class DevTool {
    * ===================================
    */
   async customTask(): Promise<void> {
-    console.log('🛠️  Running custom task...');
+    console.info('🛠️  Running custom task...');
     try {
       const billingIds = [
         '68c95faa524f90e9db9ac148',
@@ -140,14 +140,14 @@ class DevTool {
         if (billing) {
           billing.needsUpdate = false;
           await billing.save();
-          console.log(`- Updated billing ${id}`);
+          console.info(`- Updated billing ${id}`);
         }
       }
     } catch (error) {
-      console.log('❌ Error in custom task:', error);
+      console.info('❌ Error in custom task:', error);
     }
 
-    console.log('\n✅ Custom task completed');
+    console.info('\n✅ Custom task completed');
   }
 
   /**
@@ -155,7 +155,7 @@ class DevTool {
    * Customize this to run whatever tasks you need
    */
   async main(): Promise<void> {
-    console.log('🚀 DevTool Starting...\n');
+    console.info('🚀 DevTool Starting...\n');
 
     try {
       // Connect to database
@@ -171,7 +171,7 @@ class DevTool {
       process.exit(1);
     } finally {
       await this.disconnect();
-      console.log('🏁 DevTool completed');
+      console.info('🏁 DevTool completed');
     }
   }
 }
@@ -181,13 +181,13 @@ const devTool = new DevTool();
 
 // Handle graceful shutdown
 process.on('SIGINT', async () => {
-  console.log('\n⚠️  Received SIGINT, shutting down gracefully...');
+  console.info('\n⚠️  Received SIGINT, shutting down gracefully...');
   await devTool.disconnect();
   process.exit(0);
 });
 
 process.on('SIGTERM', async () => {
-  console.log('\n⚠️  Received SIGTERM, shutting down gracefully...');
+  console.info('\n⚠️  Received SIGTERM, shutting down gracefully...');
   await devTool.disconnect();
   process.exit(0);
 });

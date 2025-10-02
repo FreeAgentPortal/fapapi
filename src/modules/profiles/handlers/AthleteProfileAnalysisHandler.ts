@@ -105,18 +105,18 @@ export class AthleteProfileAnalysisHandler {
     skippedCount: number;
     totalProcessed: number;
   }> {
-    console.log('[AthleteProfileAnalysis] Starting profile completion alert process...');
+    console.info('[AthleteProfileAnalysis] Starting profile completion alert process...');
 
     try {
       // Get all athlete profiles that are incomplete
       const incompleteProfiles = await AthleteProfileAnalysisHandler.getIncompleteAthleteProfiles();
 
       if (incompleteProfiles.length === 0) {
-        console.log('[AthleteProfileAnalysis] No incomplete athlete profiles found');
+        console.info('[AthleteProfileAnalysis] No incomplete athlete profiles found');
         return { successCount: 0, errorCount: 0, skippedCount: 0, totalProcessed: 0 };
       } 
 
-      console.log(`[AthleteProfileAnalysis] Found ${incompleteProfiles.length} incomplete athlete profiles\n`);
+      console.info(`[AthleteProfileAnalysis] Found ${incompleteProfiles.length} incomplete athlete profiles\n`);
 
       // Process each incomplete profile
       let successCount = 0;
@@ -128,7 +128,7 @@ export class AthleteProfileAnalysisHandler {
           // Check if we should send alert (to avoid spamming)
           const shouldSend = await AthleteProfileCompletionHandler.shouldSendAlert(profile);
           if (!shouldSend) {
-            console.log(`[AthleteProfileAnalysis] Skipping alert for ${profile.fullName} - recent alert already sent`);
+            console.info(`[AthleteProfileAnalysis] Skipping alert for ${profile.fullName} - recent alert already sent`);
             skippedCount++;
             continue;
           }
@@ -148,7 +148,7 @@ export class AthleteProfileAnalysisHandler {
         totalProcessed: incompleteProfiles.length,
       };
 
-      console.log(`[AthleteProfileAnalysis] Profile completion alerts completed. Success: ${successCount}, Errors: ${errorCount}, Skipped: ${skippedCount}`);
+      console.info(`[AthleteProfileAnalysis] Profile completion alerts completed. Success: ${successCount}, Errors: ${errorCount}, Skipped: ${skippedCount}`);
 
       return result;
     } catch (error) {
@@ -161,7 +161,7 @@ export class AthleteProfileAnalysisHandler {
    * Process completion alert for a specific athlete
    */
   public static async processSpecificAthleteAlert(athleteId: string): Promise<void> {
-    console.log(`[AthleteProfileAnalysis] Processing completion alert for specific athlete: ${athleteId}`);
+    console.info(`[AthleteProfileAnalysis] Processing completion alert for specific athlete: ${athleteId}`);
 
     try {
       // Find the athlete
@@ -172,7 +172,7 @@ export class AthleteProfileAnalysisHandler {
 
       // Send the completion alert
       await AthleteProfileCompletionHandler.sendCompletionAlert(athlete);
-      console.log(`[AthleteProfileAnalysis] Completion alert sent successfully for athlete: ${athleteId}`);
+      console.info(`[AthleteProfileAnalysis] Completion alert sent successfully for athlete: ${athleteId}`);
     } catch (error) {
       console.error(`[AthleteProfileAnalysis] Error processing specific athlete alert for ${athleteId}:`, error);
       throw error;

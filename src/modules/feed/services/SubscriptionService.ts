@@ -21,12 +21,11 @@ export default class SubscriptionService extends CRUDService {
   }
 
   public subscribe = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
-    try {
-      console.log(req.body);
+    try { 
       await this.handler.toggle(req.body.subscriber, req.body.target);
       return res.status(201).json({ success: true });
     } catch (err) {
-      console.log(err);
+      console.error(err);
       return error(err, req, res);
     }
   });

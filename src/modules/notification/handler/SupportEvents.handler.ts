@@ -5,7 +5,7 @@ import Notification from '../model/Notification';
 
 export default class SupportEventHandler {
   onTicketUpdated = async (event: any) => {
-    console.log(`[Notification] Ticket: ${event.ticket._id} updated`);
+    console.info(`[Notification] Ticket: ${event.ticket._id} updated`);
     // notify the user if the agent is sending the message
     if (!event.isUser) {
       await Notification.insertNotification(
@@ -36,6 +36,6 @@ export default class SupportEventHandler {
     }
   };
   onTicketCreated = async (event: any) => {
-    console.log(`[Notification] Ticket: ${event.ticket._id} created`);
+    console.info(`[Notification] Ticket: ${event.ticket._id} created`);
   };
 }

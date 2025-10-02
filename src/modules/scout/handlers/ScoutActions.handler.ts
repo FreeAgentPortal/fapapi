@@ -13,7 +13,7 @@ export class ScoutActionsHandler {
    * processes the action and updates the scout report, as well as updating the athlete's diamond rating
    */
   async handleScoutReportSubmission(data: { action: 'approve' | 'deny'; message?: string }, reportid: string): Promise<{ success: boolean; message: string; data?: any }> {
-    console.log('[Scout] Handling Scout Report Submission:', reportid);
+    console.info('[Scout] Handling Scout Report Submission:', reportid);
 
     // attempt to locate the report by Id
     const report = await this.modelMap['scout_report'].findById(reportid);
@@ -46,7 +46,7 @@ export class ScoutActionsHandler {
       report.status = 'denied';
       report.denialMessage = data.message || 'Report denied by admin';
       await report.save();
-      console.log(`[Scout] Report ${reportid} denied successfully.`);
+      console.info(`[Scout] Report ${reportid} denied successfully.`);
       return {
         success: true,
         message: 'Scout report denied successfully',
@@ -82,9 +82,9 @@ export class ScoutActionsHandler {
       athlete.diamondRating = newDiamondRating;
       await athlete.save();
 
-      console.log(`[Scout] Report ${reportid} processed successfully.`);
-      console.log(`[Scout] Calculated diamond rating: ${calculatedDiamondRating}`);
-      console.log(`[Scout] Athlete ${athlete._id} diamond rating updated from ${athlete.diamondRating} to ${newDiamondRating}`);
+      console.info(`[Scout] Report ${reportid} processed successfully.`);
+      console.info(`[Scout] Calculated diamond rating: ${calculatedDiamondRating}`);
+      console.info(`[Scout] Athlete ${athlete._id} diamond rating updated from ${athlete.diamondRating} to ${newDiamondRating}`);
 
       return {
         success: true,
@@ -116,18 +116,17 @@ export class ScoutActionsHandler {
 
     const validScores: number[] = [];
     const scoreBreakdown: { [key: string]: number } = {};
-    const categoriesProcessed: string[] = [];
-    console.log(ratingBreakdown);
+    const categoriesProcessed: string[] = []; 
     // Dynamically process all properties in the ratingBreakdown object
     for (const [category, categoryData] of ratingBreakdown.entries()) {
       // const categoryData = ratingBreakdown[category];
       // Check if this category has valid score data
       if (categoryData && typeof categoryData === 'object' && typeof categoryData.score === 'number' && categoryData.score >= 1 && categoryData.score <= 5) {
-        console.log(`[Scout] Processing category: ${category} with score: ${categoryData.score}`);
+        console.info(`[Scout] Processing category: ${category} with score: ${categoryData.score}`);
         validScores.push(categoryData.score);
         scoreBreakdown[category] = categoryData.score;
         categoriesProcessed.push(category);
-        console.log(`[Scout] Valid score found for category "${category}": ${categoryData.score}`);
+        console.info(`[Scout] Valid score found for category "${category}": ${categoryData.score}`);
       }
     }
 
@@ -146,9 +145,9 @@ export class ScoutActionsHandler {
     const roundedAverage = Math.round(average * 100) / 100;
     const finalRating = Math.max(1, Math.min(5, roundedAverage));
 
-    console.log(`[Scout] Rating calculation breakdown:`, scoreBreakdown);
-    console.log(`[Scout] Categories evaluated: [${categoriesProcessed.join(', ')}]`);
-    console.log(`[Scout] Average of ${validScores.length} categories: ${average} → Final rating: ${finalRating}`);
+    console.info(`[Scout] Rating calculation breakdown:`, scoreBreakdown);
+    console.info(`[Scout] Categories evaluated: [${categoriesProcessed.join(', ')}]`);
+    console.info(`[Scout] Average of ${validScores.length} categories: ${average} → Final rating: ${finalRating}`);
 
     return finalRating;
   }

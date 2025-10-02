@@ -28,7 +28,7 @@ export default class TeamService extends CRUDService {
         exists,
       });
     } catch (err: any) {
-      console.log(err);
+      console.error(err);
       return res.status(500).json({ error: err.message });
     }
   };
@@ -95,9 +95,7 @@ export default class TeamService extends CRUDService {
       const team = await this.handler.fetch(req.params.id);
       if (!team) {
         return res.status(404).json({ message: 'Team not found' });
-      }
-
-      console.log(team);
+      } 
 
       // create a token hash in the database
       const { token } = await this.modelMap['token'].issue({

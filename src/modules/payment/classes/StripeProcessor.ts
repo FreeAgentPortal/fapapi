@@ -68,15 +68,15 @@ class StripeProcessing extends PaymentProcessor {
 
   async refundTransaction(details: CommonRefundTypes): Promise<{ success: boolean; message: string; data?: any }> {
     try {
-      console.log(`[StripeProcessor] Processing refund for transaction ${details.transactionId} amount ${details.amount}`);
-      console.log(`[StripeProcessor] Creating refund intent`);
+      console.info(`[StripeProcessor] Processing refund for transaction ${details.transactionId} amount ${details.amount}`);
+      console.info(`[StripeProcessor] Creating refund intent`);
       const refund = await this.stripe.refunds.create({
         payment_intent: details.transactionId,
         amount: details.amount ? Math.round(details.amount * 100) : undefined, // Convert to cents
         reason: 'requested_by_customer',
       });
 
-      console.log(`[StripeProcessor] Refund intent created: ${refund.id}`);
+      console.info(`[StripeProcessor] Refund intent created: ${refund.id}`);
       return {
         success: true,
         message: 'Refund processed successfully',
@@ -96,7 +96,7 @@ class StripeProcessing extends PaymentProcessor {
    * This is Stripe's equivalent to PyreProcessing's createVault method
    */
   async createVault(
-    customerId: string,
+    billingInfo: any,
     details: {
       first_name: string;
       last_name?: string;
@@ -128,6 +128,7 @@ class StripeProcessing extends PaymentProcessor {
     try {
       // Check if customer already exists in Stripe
       let stripeCustomer;
+      const customerId = billingInfo.paymentProcessorData['stripe']?.customer?.id;
       try {
         stripeCustomer = await this.stripe.customers.retrieve(customerId);
         if (stripeCustomer.deleted) {
@@ -148,7 +149,7 @@ class StripeProcessing extends PaymentProcessor {
             country: details.country,
           },
           metadata: {
-            external_id: customerId, // Store our custom ID in metadata
+            external_id: billingInfo._id, // Store our custom ID in metadata
           },
         });
       }
@@ -272,14 +273,14 @@ class StripeProcessing extends PaymentProcessor {
     payment_method_id?: string; // Optional specific payment method ID
   }) {
     try {
-      console.log(`[StripeProcessor] Processing vault transaction for customer ${details.customer_vault_id} amount ${details.amount}`);
+      console.info(`[StripeProcessor] Processing vault transaction for customer ${details.customer_vault_id} amount ${details.amount}`);
       // Stripe expects amount in the smallest currency unit (e.g., cents for USD)
       const amountInCents = Math.round(details.amount * 100);
 
       // Get customer's default payment method if not specified
       let paymentMethodId = details.payment_method_id;
       if (!paymentMethodId) {
-        console.log(`[StripeProcessor] Retrieving default payment method for customer ${details.customer_vault_id}`);
+        console.info(`[StripeProcessor] Retrieving default payment method for customer ${details.customer_vault_id}`);
         const customer = await this.stripe.customers.retrieve(details.customer_vault_id);
         if ('invoice_settings' in customer && customer.invoice_settings?.default_payment_method) {
           paymentMethodId = customer.invoice_settings.default_payment_method as string;
@@ -296,8 +297,8 @@ class StripeProcessing extends PaymentProcessor {
         }
       }
 
-      console.log(`[StripeProcessor] Using payment method ${paymentMethodId} for customer ${details.customer_vault_id}`);
-      console.log(`[StripeProcessor] Creating payment intent for amount ${amountInCents} cents`);
+      console.info(`[StripeProcessor] Using payment method ${paymentMethodId} for customer ${details.customer_vault_id}`);
+      console.info(`[StripeProcessor] Creating payment intent for amount ${amountInCents} cents`);
       // Create and confirm payment intent
       const paymentIntent = await this.stripe.paymentIntents.create({
         amount: amountInCents,
@@ -312,7 +313,7 @@ class StripeProcessing extends PaymentProcessor {
         },
       });
 
-      console.log(`[StripeProcessor] Payment intent created: ${paymentIntent.id}`);
+      console.info(`[StripeProcessor] Payment intent created: ${paymentIntent.id}`);
 
       return {
         success: true,

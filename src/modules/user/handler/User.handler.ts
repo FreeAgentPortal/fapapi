@@ -45,7 +45,7 @@ export class UserHandler extends CRUDHandler<UserType> {
     if (!doc) return;
 
     for (const [role, profileId] of Object.entries(doc.profileRefs)) {
-      console.log(`Cleaning up profile for role: ${role}, profileId: ${profileId}`);
+      console.info(`[UserHandler]: Cleaning up profile for role: ${role}, profileId: ${profileId}`);
       const profile = await this.modelMap[role].findById(profileId);
       if (!profile) continue;
       

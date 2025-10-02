@@ -14,7 +14,7 @@ export default class ProfileEventHandler {
     if (!profileDetails) {
       throw new ErrorUtil('Profile details are required for profile populated event handling', 400);
     }
-    console.log(`[Notification] Profile populated with ID: ${profileDetails._id}`);
+    console.info(`[Notification] Profile populated with ID: ${profileDetails._id}`);
 
     const user = await User.findById(profileDetails.user);
     if (!user) {

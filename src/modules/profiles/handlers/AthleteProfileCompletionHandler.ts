@@ -17,13 +17,13 @@ export class AthleteProfileCompletionHandler {
    */
   public static async sendCompletionAlert(athlete: IAthlete): Promise<void> {
     try {
-      console.log(`[AthleteProfileCompletion] Sending completion alert for athlete: ${athlete.fullName} (ID: ${athlete._id})`);
+      console.info(`[AthleteProfileCompletion] Sending completion alert for athlete: ${athlete.fullName} (ID: ${athlete._id})`);
 
       // Check profile completion status
       const completionStatus = await AthleteProfileCompletionHandler.checkProfileCompletion(athlete);
 
       if (completionStatus.isComplete) {
-        console.log(`[AthleteProfileCompletion] Profile is complete for athlete: ${athlete.fullName}, skipping alert`);
+        console.info(`[AthleteProfileCompletion] Profile is complete for athlete: ${athlete.fullName}, skipping alert`);
         return;
       }
 
@@ -33,7 +33,7 @@ export class AthleteProfileCompletionHandler {
       // Emit event for potential email notification
       await AthleteProfileCompletionHandler.emitCompletionAlertEvent(athlete, completionStatus);
 
-      console.log(`[AthleteProfileCompletion] Completion alert sent successfully for athlete: ${athlete.fullName}`);
+      console.info(`[AthleteProfileCompletion] Completion alert sent successfully for athlete: ${athlete.fullName}`);
     } catch (error) {
       console.error(`[AthleteProfileCompletion] Error sending completion alert for athlete ${athlete._id}:`, error);
       throw error;
@@ -114,7 +114,7 @@ export class AthleteProfileCompletionHandler {
 
       await Notification.insertNotification(athlete.userId as any, undefined as any, 'Complete Your Profile', message, 'profile.completion', athlete._id as any);
 
-      console.log(`[AthleteProfileCompletion] Notification created for athlete: ${athlete.fullName}`);
+      console.info(`[AthleteProfileCompletion] Notification created for athlete: ${athlete.fullName}`);
     } catch (error) {
       console.error(`[AthleteProfileCompletion] Error creating notification for athlete ${athlete._id}:`, error);
       // Don't throw here - we don't want to break the whole process
@@ -139,7 +139,7 @@ export class AthleteProfileCompletionHandler {
         profileId: athlete._id,
       });
 
-      console.log(`[AthleteProfileCompletion] Event emitted for athlete: ${athlete.fullName}`);
+      console.info(`[AthleteProfileCompletion] Event emitted for athlete: ${athlete.fullName}`);
     } catch (error) {
       console.error(`[AthleteProfileCompletion] Error emitting event for athlete ${athlete._id}:`, error);
       // Don't throw here - notification creation should succeed even if event emission fails

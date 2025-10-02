@@ -20,7 +20,7 @@ export default class SearchReportEventHandler {
    */
   public onSearchReportGenerated = async (event: SearchReportEvent): Promise<void> => {
     try {
-      console.log(`[SearchReportEventHandler] Processing report generated event for user: ${event.userId}`);
+      console.info(`[SearchReportEventHandler] Processing report generated event for user: ${event.userId}`);
 
       // find the model we want to use with the modelMap
       const Model = ModelMap[event.ownerType as keyof typeof ModelMap];
@@ -43,7 +43,7 @@ export default class SearchReportEventHandler {
         event._id as any
       );
 
-      console.log(`[SearchReportEventHandler] Notification created for user ${event.userId} regarding report ${event.reportId}`);
+      console.info(`[SearchReportEventHandler] Notification created for user ${event.userId} regarding report ${event.reportId}`);
 
       // TODO: Add email notification if user has email notifications enabled
       // await this.sendEmailNotification(user, event);
@@ -74,6 +74,6 @@ export default class SearchReportEventHandler {
     });
     */
 
-    console.log(`[SearchReportEventHandler] Email notification would be sent to ${user.email} for report ${event.reportId}`);
+    console.info(`[SearchReportEventHandler] Email notification would be sent to ${user.email} for report ${event.reportId}`);
   }
 }

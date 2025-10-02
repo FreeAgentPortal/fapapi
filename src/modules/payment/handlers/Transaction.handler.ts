@@ -16,7 +16,7 @@ export default class TransactionHandler {
         if (!res.processor) {
           throw new Error('No payment processor is configured');
         }
-        console.log('Using payment processor:', res.processor.getProcessorName());
+        console.info('Using payment processor:', res.processor.getProcessorName());
         return res.processor as PaymentProcessor;
       });
     }
@@ -101,8 +101,7 @@ export default class TransactionHandler {
         amount,
         ...billingInfo.paymentProcessorData[(await processor).getProcessorName() as any],
       })) as any;
-
-      console.log(results);
+ 
       if (!results.success) {
         throw new Error(`Refund Transaction failed: ${results.message}`);
       }

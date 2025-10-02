@@ -11,7 +11,7 @@ export default class ScoutEventsHandler {
     if (!reportId || !athleteId) {
       throw new ErrorUtil('Report ID and Athlete ID are required for scout report submitted event handling', 400);
     }
-    console.log(`[Notification] Scout report submitted with ID: ${reportId}, Athlete ID: ${athleteId}, Approved: ${isApproved}`);
+    console.info(`[Notification] Scout report submitted with ID: ${reportId}, Athlete ID: ${athleteId}, Approved: ${isApproved}`);
 
     // notify the athlete about the report submission, You've been scouted!
     await Notification.insertNotification(

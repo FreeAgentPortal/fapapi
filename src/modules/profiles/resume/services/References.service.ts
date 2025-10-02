@@ -32,7 +32,7 @@ export default class ReferencesService extends CRUDService {
       const result = await this.handler.updateReference(ownerKind, ownerRef, id, patch);
       return res.status(200).json(result);
     } catch (err) {
-      console.log(err);
+      console.error(err);
       return error(err, req, res);
     }
   };

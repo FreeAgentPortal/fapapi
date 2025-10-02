@@ -32,7 +32,7 @@ export class AthleteSchedulerService {
    */
   public static async triggerAllCompletionAlerts(req: Request, res: Response): Promise<Response> {
     try {
-      console.log('[AthleteSchedulerService] Manual trigger for all completion alerts requested');
+      console.info('[AthleteSchedulerService] Manual trigger for all completion alerts requested');
 
       // Trigger the completion alert process
       await AthleteSchedulerCron.triggerManualCompletionAlerts();
@@ -61,7 +61,7 @@ export class AthleteSchedulerService {
         });
       }
 
-      console.log(`[AthleteSchedulerService] Manual trigger for specific completion alert requested: ${athleteId}`);
+      console.info(`[AthleteSchedulerService] Manual trigger for specific completion alert requested: ${athleteId}`);
 
       // Verify the athlete exists
       const athlete = await AthleteModel.findById(athleteId).populate('userId', 'email firstName lastName fullName');

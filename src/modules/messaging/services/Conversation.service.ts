@@ -31,7 +31,7 @@ export class ConversationService extends CRUDService {
 
       return res.status(201).json({ success: true, payload: conversation });
     } catch (err) {
-      console.log(err);
+      console.error(err);
       return error(err, req, res);
     }
   });
@@ -54,7 +54,7 @@ export class ConversationService extends CRUDService {
 
       return res.status(201).json({ success: true, payload: sentMessage });
     } catch (err) {
-      console.log(err);
+      console.error(err);
       return error(err, req, res);
     }
   });
@@ -72,7 +72,7 @@ export class ConversationService extends CRUDService {
       const conversations = await this.conversationHandler.getConversationsForUser(userId, profileId, role);
       return res.status(200).json({ success: true, payload: conversations });
     } catch (err) {
-      console.log(err);
+      console.error(err);
       return error(err, req, res);
     }
   });
@@ -101,7 +101,7 @@ export class ConversationService extends CRUDService {
       }
       return res.status(200).json({ success: true, payload: response });
     } catch (err) {
-      console.log(err);
+      console.error(err);
       return error(err, req, res);
     }
   });
@@ -112,7 +112,7 @@ export class ConversationService extends CRUDService {
       await this.handler.archiveMessage(id, req.query.messageId as string);
       return res.status(200).json({ success: true, message: 'Message archived successfully' });
     } catch (err) {
-      console.log(err);
+      console.error(err);
       return error(err, req, res);
     }
   });

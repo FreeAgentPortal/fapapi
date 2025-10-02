@@ -9,7 +9,7 @@ import { AthleteModel } from '../../profiles/athlete/models/AthleteModel';
 
 export default class ConversationEventHandler {
   async messageSent(event: { message: IMessage }) {
-    console.log(`[Notification] Message: ${event.message.id} sent`);
+    console.info(`[Notification] Message: ${event.message.id} sent`);
     const { message } = event;
     if (!message) {
       throw new ErrorUtil('message data is required for conversation event handling', 400);
@@ -34,7 +34,7 @@ export default class ConversationEventHandler {
   }
 
   async conversationStarted(event: { conversation: IConversation }) {
-    console.log(`[Notification] Conversation: ${event.conversation.id} started`);
+    console.info(`[Notification] Conversation: ${event.conversation.id} started`);
     const { conversation } = event;
     if (!conversation) {
       throw new ErrorUtil('conversation data is required for conversation event handling', 400);
@@ -63,7 +63,7 @@ export default class ConversationEventHandler {
         },
       });
     } catch (error) {
-      console.log('Error sending email', error);
+      console.error('Error sending email', error);
     }
   }
 }

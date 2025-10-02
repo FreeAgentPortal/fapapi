@@ -12,9 +12,7 @@ export class BillingHandler {
   constructor(private readonly paymentHandler: PaymentHandler = new PaymentHandler()) {}
   async updateVault(req: AuthenticatedRequest): Promise<Boolean> {
     const { id } = req.params;
-    const { paymentFormValues, selectedPlans, billingCycle, paymentMethod } = req.body;
-    // console.log(paymentFormValues);
-
+    const { paymentFormValues, selectedPlans, billingCycle, paymentMethod } = req.body; 
     // first step find the billing information from the provided profile id
     const billing = await BillingAccount.findOne({ profileId: id }).populate('payor profileId');
     if (!billing) {
@@ -37,16 +35,10 @@ export class BillingHandler {
 
     // Handle paid plans - require payment processing
     if (!isFree) {
-      // if we dont have a customerId on billing object we need to create that first
-      if (!billing.customerId) {
-        const customer = await this.paymentHandler.createCustomer(req.user);
-        // update the billing object with the customerId
-        billing.customerId = customer.payload._id;
-        billing.payor = req.user;
-      }
 
+      billing.payor = req.user;
       // we need to update our vaulting
-      const vaultResponse = await processor.createVault(billing.customerId, {
+      const vaultResponse = await processor.createVault(billing, {
         ...paymentFormValues,
         email: billing.email,
         paymentMethod: paymentMethod,
@@ -60,13 +52,14 @@ export class BillingHandler {
         cvv: paymentFormValues?.cvv,
         achDetails: paymentFormValues?.achDetails,
       } as any);
+
       if (!vaultResponse.success) {
-        console.log(`[BillingHandler] - vaulting was not successful: ${vaultResponse.message}`);
-        console.log(vaultResponse);
+        console.info(`[BillingHandler] - vaulting was not successful: ${vaultResponse.message}`);
+        console.info(vaultResponse);
         throw new ErrorUtil(`${vaultResponse.message}`, 400);
       }
-      // Update billing account with PayNetWorx token information
-      billing.vaulted = true;
+      
+      billing.vaulted = true; 
 
       // Initialize paymentProcessorData if it doesn't exist
       if (!billing.paymentProcessorData) {
@@ -122,7 +115,7 @@ export class BillingHandler {
         // until their next billing date, but the setup fee is charged immediately.
         const paymentResults = await PaymentProcessingHandler.processPaymentForProfile(billing._id as any, 50, false, 'Account setup fee');
         if (paymentResults.success === false) {
-          console.log(`[BillingHandler] - Initial setup fee payment failed: ${paymentResults.message}`);
+          console.info(`[BillingHandler] - Initial setup fee payment failed: ${paymentResults.message}`);
         }
         // update the billing for the setup fee to being paid
         billing.setupFeePaid = true; // for now signup's dont have a setup fee
@@ -174,7 +167,7 @@ export class BillingHandler {
         billingDetails,
       };
     } catch (err) {
-      console.log(err);
+      console.error(err);
       throw new ErrorUtil('Something went wrong', 400);
     }
   }

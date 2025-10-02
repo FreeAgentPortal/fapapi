@@ -15,7 +15,7 @@ export default class PaymentProcessingHandler {
         if (!res.processor) {
           throw new Error('No payment processor is configured');
         }
-        console.log('Using payment processor:', res.processor.getProcessorName());
+        console.info('Using payment processor:', res.processor.getProcessorName());
         return res.processor as PaymentProcessor;
       }) as unknown as PaymentProcessor;
     }
@@ -23,7 +23,7 @@ export default class PaymentProcessingHandler {
 
   public static async processScheduledPayments(): Promise<{ success: boolean; message: string; results?: any }> {
     try {
-      console.log('[PaymentProcessingHandler] Starting scheduled payment processing...');
+      console.info('[PaymentProcessingHandler] Starting scheduled payment processing...');
       if (!this.processor) {
         this.processor = await new PaymentProcessorFactory().smartChooseProcessor().then((res) => {
           if (!res.processor) {
@@ -36,12 +36,11 @@ export default class PaymentProcessingHandler {
       const profilesDue = await this.getProfilesDueForPayment();
 
       if (profilesDue.length === 0) {
-        console.log('[PaymentProcessingHandler] No profiles due for payment.');
+        console.info('[PaymentProcessingHandler] No profiles due for payment.');
         return { success: true, message: 'No profiles due for payment.' };
       }
 
-      console.log(`[PaymentProcessingHandler] Found ${profilesDue.length} profiles due for payment.`);
-
+      console.info(`[PaymentProcessingHandler] Found ${profilesDue.length} profiles due for payment.`);
       const results = {
         total: profilesDue.length,
         successful: 0,
@@ -69,7 +68,7 @@ export default class PaymentProcessingHandler {
         }
       }
 
-      console.log('[PaymentProcessingHandler] Scheduled payments processing completed.', results);
+      console.info('[PaymentProcessingHandler] Scheduled payments processing completed.', results);
 
       return {
         success: true,
@@ -84,7 +83,7 @@ export default class PaymentProcessingHandler {
 
   public static async getProfilesDueForPayment(): Promise<BillingAccountType[]> {
     try {
-      console.log('[PaymentProcessingHandler] Fetching profiles due for payment...');
+      console.info('[PaymentProcessingHandler] Fetching profiles due for payment...');
 
       const currentDate = new Date();
       currentDate.setHours(23, 59, 59, 999); // End of today
@@ -106,7 +105,7 @@ export default class PaymentProcessingHandler {
         return profile.plan && profile.plan.price > 0;
       });
 
-      console.log(`[PaymentProcessingHandler] Found ${paidProfilesDue.length} profiles due for payment.`);
+      console.info(`[PaymentProcessingHandler] Found ${paidProfilesDue.length} profiles due for payment.`);
       return paidProfilesDue as BillingAccountType[];
     } catch (error: any) {
       console.error('[PaymentProcessingHandler] Error fetching profiles due for payment:', error);
@@ -121,7 +120,7 @@ export default class PaymentProcessingHandler {
     description?: string
   ): Promise<{ success: boolean; message: string; receipt?: ReceiptType }> {
     try {
-      console.log(`[PaymentProcessingHandler] Processing payment for profile ${profileId}...`);
+      console.info(`[PaymentProcessingHandler] Processing payment for profile ${profileId}...`);
 
       // Get billing account with populated data
       const billingAccount = await BillingAccount.findById(profileId).populate('plan').populate('payor');
@@ -184,7 +183,7 @@ export default class PaymentProcessingHandler {
 
       // Check if amount is 0 - skip payment processing and create success receipt
       if (calculatedAmount === 0) {
-        console.log(`[PaymentProcessingHandler] Amount is $0 for profile ${profileId} - skipping payment processing and creating success receipt`);
+        console.info(`[PaymentProcessingHandler] Amount is $0 for profile ${profileId} - skipping payment processing and creating success receipt`);
 
         // Create a mock successful payment result for receipt creation
         const mockPaymentResult = {
@@ -210,7 +209,7 @@ export default class PaymentProcessingHandler {
           });
         }
 
-        console.log(`[PaymentProcessingHandler] Zero-amount payment processed successfully for profile ${profileId} using account credits`);
+        console.info(`[PaymentProcessingHandler] Zero-amount payment processed successfully for profile ${profileId} using account credits`);
         return {
           success: true,
           message: `Payment of $${calculatedAmount.toFixed(2)} covered by account credits`,
@@ -221,7 +220,7 @@ export default class PaymentProcessingHandler {
       // add the amount to processorData
       processorData.amount = calculatedAmount;
 
-      console.log(`[PaymentProcessingHandler] Processing payment of $${calculatedAmount} for profile ${profileId} using token ${processorData.tokenId}`);
+      console.info(`[PaymentProcessingHandler] Processing payment of $${calculatedAmount} for profile ${profileId} using token ${processorData.tokenId}`);
 
       // processor is expected to handle the information passed into it
       const paymentResult = (await this.processor?.processPayment(processorData)) as any;
@@ -242,7 +241,7 @@ export default class PaymentProcessingHandler {
           });
         }
 
-        console.log(`[PaymentProcessingHandler] Payment processed successfully for profile ${profileId}`);
+        console.info(`[PaymentProcessingHandler] Payment processed successfully for profile ${profileId}`);
         return {
           success: true,
           message: `Payment of $${calculatedAmount.toFixed(2)} processed successfully`,
@@ -259,7 +258,7 @@ export default class PaymentProcessingHandler {
           status: 'suspended', // Optional: suspend account on payment failure
         });
 
-        console.log(`[PaymentProcessingHandler] Payment failed for profile ${profileId}: ${paymentResult.message}`);
+        console.info(`[PaymentProcessingHandler] Payment failed for profile ${profileId}: ${paymentResult.message}`);
         return {
           success: false,
           message: `Payment failed: ${paymentResult.message}`,
@@ -317,7 +316,7 @@ export default class PaymentProcessingHandler {
     });
 
     await receipt.save();
-    console.log(`[PaymentProcessingHandler] Success receipt created: ${receipt.transactionId}`);
+    console.info(`[PaymentProcessingHandler] Success receipt created: ${receipt.transactionId}`);
     return receipt;
   }
 
@@ -357,7 +356,7 @@ export default class PaymentProcessingHandler {
     });
 
     await receipt.save();
-    console.log(`[PaymentProcessingHandler] Failure receipt created: ${receipt.transactionId}`);
+    console.info(`[PaymentProcessingHandler] Failure receipt created: ${receipt.transactionId}`);
     return receipt;
   }
 
@@ -389,7 +388,7 @@ export default class PaymentProcessingHandler {
     });
 
     await receipt.save();
-    console.log(`[PaymentProcessingHandler] Error receipt created: ${receipt.transactionId}`);
+    console.info(`[PaymentProcessingHandler] Error receipt created: ${receipt.transactionId}`);
     return receipt;
   }
 
@@ -414,6 +413,6 @@ export default class PaymentProcessingHandler {
       needsUpdate: false, // Clear needsUpdate flag, if its been set after a successful payment
     });
 
-    console.log(`[PaymentProcessingHandler] Updated next billing date for ${billingAccount._id} to ${nextMonth.toISOString()}`);
+    console.info(`[PaymentProcessingHandler] Updated next billing date for ${billingAccount._id} to ${nextMonth.toISOString()}`);
   }
 }

@@ -13,7 +13,7 @@ export default class PaymentService {
       const results = await this.billingHandler.updateVault(req as any);
       return res.status(201).json({ message: 'billing updated', success: true });
     } catch (err: any) {
-      console.log(err);
+      console.error(err);
       return error(err, req, res);
     }
   });
@@ -22,7 +22,7 @@ export default class PaymentService {
       const results = await this.billingHandler.getVault(req.params.id);
       return res.status(201).json({ message: 'success', payload: results });
     } catch (err) {
-      console.log(err);
+      console.error(err);
       return error(err, req, res);
     }
   });

@@ -6,6 +6,6 @@ export default function executeGitPull() {
       console.error(`Error executing Git pull: ${err}`);
       return;
     }
-    console.log(`Git pull successful: ${stdout}`);
+    console.info(`[Server]: Git pull successful: ${stdout}`);
   });
 }

@@ -9,8 +9,8 @@ export default class AthleteEventHandler {
   private modelMap: Record<ModelKey, Model<any>> = ModelMap;
 
   profileIncomplete = async (event: any) => {
-    console.log(`[Notification]: Sending profile incomplete alert to ${event.email}`);
-    console.log(event);
+    console.info(`[Notification]: Sending profile incomplete alert to ${event.email}`);
+ 
     // use the email service to send an email
     try {
       await EmailService.sendEmail({
@@ -27,11 +27,11 @@ export default class AthleteEventHandler {
     } catch (error) {
       console.error(`[Notification]: Error sending profile incomplete alert to ${event.email}:`, error);
     }
-    console.log(`[Notification]: Profile incomplete alert sent to ${event.email}`);
+    console.info(`[Notification]: Profile incomplete alert sent to ${event.email}`);
   };
 
   athleteViewRecorded = async (event: any) => {
-    console.log(`[Notification]: Recording athlete view notification for athlete ${event.athleteId}`);
+    console.info(`[Notification]: Recording athlete view notification for athlete ${event.athleteId}`);
     try {
       // we need to locate the profile, then locate the billing information
       const athleteProfile = await this.modelMap['athlete'].findById(event.athleteId).populate('user');

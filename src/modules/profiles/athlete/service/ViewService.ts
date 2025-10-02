@@ -19,7 +19,7 @@ export default class ViewService {
       }
       return res.status(201).json({ success: true, payload: results });
     } catch (err) {
-      console.log(err);
+      console.error(err);
       return error(err, req, res);
     }
   });
@@ -32,7 +32,7 @@ export default class ViewService {
       });
       return res.status(200).json({ success: true, payload: results });
     } catch (err) {
-      console.log(err);
+      console.error(err);
       return error(err, req, res);
     }
   });

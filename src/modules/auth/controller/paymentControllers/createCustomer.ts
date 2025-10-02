@@ -26,7 +26,7 @@ export default async (user: UserType) => {
       ...data,
     };
   } catch (err: any) {
-    console.log(err.response?.data);
+    console.error(err.response?.data);
     return {
       success: false,
       message: 'Error Creating Customer',

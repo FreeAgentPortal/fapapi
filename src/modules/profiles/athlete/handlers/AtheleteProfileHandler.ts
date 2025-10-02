@@ -51,8 +51,7 @@ export class AthleteProfileHandler extends CRUDHandler<IAthlete> {
     if (!billing) {
       throw new ErrorUtil('billing information not found', 400);
     }
-    console.log(`[AthleteProfileHandler] - Fetching Details for profile ${profile._id}`);
-    console.log(billing);
+    console.info(`[AthleteProfileHandler] - Fetching Details for profile ${profile._id}`);
     return {
       ...profile,
       needsBillingSetup: !billing.vaulted,

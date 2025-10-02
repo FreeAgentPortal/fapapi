@@ -18,5 +18,5 @@ export const cronJobs = async () => {
   // Initialize the payment processing cron job
   PaymentSchedulerCron.init();
 
-  console.log('[CronJobs] All cron jobs initialized successfully');
+  console.info('[CronJobs] All cron jobs initialized successfully');
 };

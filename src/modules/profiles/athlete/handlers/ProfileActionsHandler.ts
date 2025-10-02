@@ -21,8 +21,7 @@ export class ProfileActionsHandler {
     }
 
     // Use the comprehensive billing validator
-    const billingValidation = BillingValidator.validateBillingAccount(billing);
-    // console.log('Billing validation result:', billingValidation);
+    const billingValidation = BillingValidator.validateBillingAccount(billing); 
 
     return { 
       ...profile,

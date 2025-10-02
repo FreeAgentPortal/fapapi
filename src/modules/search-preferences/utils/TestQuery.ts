@@ -8,17 +8,17 @@ import { MONGO_URI } from '../../../config/mongouri';
 dotenv.config();
 
 async function main() {
-  console.log('🚀 Starting Search Preferences Scheduler Tests...\n');
+  console.info('🚀 Starting Search Preferences Scheduler Tests...\n');
 
   try {
     // Connect to MongoDB
-    console.log('📦 Connecting to MongoDB...');
+    console.info('📦 Connecting to MongoDB...');
     const mongoUri = MONGO_URI;
     await mongoose.connect(mongoUri);
-    console.log('✅ Connected to MongoDB\n');
+    console.info('✅ Connected to MongoDB\n');
 
     // we want to query the AthleteModel for a specific search query and see what data we get back
-    console.log('🔍 Running test query on AthleteModel...');
+    console.info('🔍 Running test query on AthleteModel...');
     const results = await AthleteModel.aggregate([
       {
         $match: {
@@ -79,19 +79,19 @@ async function main() {
       },
     ]);
 
-    console.log(`✅ Found ${results.length} athletes matching search criteria:\n`);
+    console.info(`✅ Found ${results.length} athletes matching search criteria:\n`);
     results.forEach((athlete: any) => {
-      console.log(`- ${athlete.fullName} (ID: ${athlete._id})`);
+      console.info(`- ${athlete.fullName} (ID: ${athlete._id})`);
     });
 
-    console.log('🎉 All tests completed successfully!');
+    console.info('🎉 All tests completed successfully!');
   } catch (error) {
     console.error('❌ Test failed:', error);
     process.exit(1);
   } finally {
     // Close MongoDB connection
     await mongoose.connection.close();
-    console.log('📦 MongoDB connection closed');
+    console.info('📦 MongoDB connection closed');
     process.exit(0);
   }
 }

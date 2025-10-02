@@ -76,9 +76,9 @@ NotificationSchema.statics.insertNotification = async function (
     message,
     notificationType,
     entityId,
-  }).catch((err: any) => console.log(err));
+  }).catch((err: any) => console.error(err));
 
-  return await notification.save().catch((err: any) => console.log(err));
+  return await notification.save().catch((err: any) => console.error(err));
 };
 
 // Add indexes for performance

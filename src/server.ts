@@ -67,12 +67,12 @@ app.use(express.static(path.join(__dirname, '../public')));
 
 app.use('/api/v1', apiV1Routes);
 app.post('/webhook', (req, res) => {
-  console.log(`Webhook received!`);
+  console.info(`[Server]: Webhook received!`);
   // Process the webhook payload and execute Git pull
   executeGitPull();
   // Restart the server
   restartServer(() => {
-    console.log('Server restarted successfully!');
+    console.info('[Server]: restarted successfully!');
     // Respond with a success status
     return res.sendStatus(200);
   });
@@ -96,7 +96,7 @@ const numCPUs = os.cpus().length;
 const maxWorkers = Math.min(numCPUs, Number(process.env.CORE_CAP));
 
 if (cluster.isPrimary) {
-  console.log(`Primary process ${process.pid} is running`.green);
+  console.info(`[Server]: Primary process ${process.pid} is running`.green);
 
   //fork workers
   for (let i = 0; i < maxWorkers; i++) {
@@ -104,7 +104,7 @@ if (cluster.isPrimary) {
   }
 
   cluster.on('exit', (worker, code, signal) => {
-    console.log(`Worker ${worker.process.pid} died. Restarting...`.red);
+    console.info(`[Server]: Worker ${worker.process.pid} died. Restarting...`.red);
     cluster.fork();
   });
 } else {
@@ -117,11 +117,11 @@ if (cluster.isPrimary) {
   });
 
   app.listen(5001, () => {
-    console.log(`Worker ${process.pid} started`);
+    console.info(`[Server]: Worker ${process.pid} started`);
   });
   //worker process runs the server
   const server = app.listen(PORT, () => {
-    console.log(`Server running; Worker ${process.pid} running in ${process.env.NODE_ENV} mode on port ${PORT}`.yellow.bold);
+    console.info(`[Server]: Server running; Worker ${process.pid} running in ${process.env.NODE_ENV} mode on port ${PORT}`.yellow.bold);
     cronJobs();
   });
 

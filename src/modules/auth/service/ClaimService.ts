@@ -24,7 +24,7 @@ export default class ClaimService extends CRUDService {
         profile: response.profile,
       });
     } catch (err) {
-      console.log(err);
+      console.error(err);
       return error(err, req, res);
     }
   });
@@ -42,7 +42,7 @@ export default class ClaimService extends CRUDService {
         success: true,
       });
     } catch (err) {
-      console.log(err);
+      console.error(err);
       return error(err, req, res);
     }
   });

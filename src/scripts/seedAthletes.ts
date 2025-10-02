@@ -65,9 +65,9 @@ const mapAthleteData = (data: any) => ({
 const seedAthletes = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI as string);
-    console.log('🔗 Connected to MongoDB');
+    console.info('🔗 Connected to MongoDB');
     const list = await fetchAthleteList('https://sports.core.api.espn.com/v2/sports/football/leagues/nfl/athletes?limit=100&active=true&page=2');
-    console.log(`Fetched ${list.length} athletes from ESPN API`);
+    console.info(`Fetched ${list.length} athletes from ESPN API`);
 
     const athletes = await Promise.all(
       list.map(async (athlete: any) => {
@@ -76,7 +76,7 @@ const seedAthletes = async () => {
       })
     );
 
-    console.log(`Mapped ${athletes.length} athletes`);
+    console.info(`Mapped ${athletes.length} athletes`);
 
     // Upsert based on espnid, if espnid exists, update the document, otherwise insert a new one
     await AthleteModel.bulkWrite(
@@ -88,7 +88,7 @@ const seedAthletes = async () => {
         },
       }))
     );
-    console.log(`✅ Successfully upserted athletes`);
+    console.info(`✅ Successfully upserted athletes`);
   } catch (error) {
     console.error('Error seeding athletes:', error);
   } finally {

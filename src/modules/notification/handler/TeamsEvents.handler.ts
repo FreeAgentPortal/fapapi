@@ -5,7 +5,7 @@ import Notification from '../model/Notification';
 export default class TeamEventsHandler {
   async onTeamInvited(event: { profile: any; invitationData: any; additionalData: any }) {
     const { profile, invitationData, additionalData } = event;
-    console.log(`[Notification] - Team Invited: ${profile.name}`);
+    console.info(`[Notification] - Team Invited: ${profile.name}`);
     // Send invitation email
     await EmailService.sendEmail({
       to: invitationData.inviteeEmail,
@@ -29,7 +29,7 @@ export default class TeamEventsHandler {
 
   async onTeamInvitedToken(event: { userId: string; teamId: string }) {
     const { userId, teamId } = event;
-    console.log(`[Notification] - User used token to claim profile - User ID: ${userId}, Team ID: ${teamId}`);
+    console.info(`[Notification] - User used token to claim profile - User ID: ${userId}, Team ID: ${teamId}`);
     // Send notification to the user
     await Notification.insertNotification(userId as any, null as any, 'You have successfully joined the team.', null as any, 'system', teamId as any);
   }

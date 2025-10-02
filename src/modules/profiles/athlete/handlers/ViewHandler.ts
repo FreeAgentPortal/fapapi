@@ -37,17 +37,16 @@ export class ViewHandler {
   async recordAthleteView(req: AuthenticatedRequest): Promise<{ success: boolean; isNewView: boolean; view?: IAthleteView }> {
     try {
       const athleteId = req.params.id;
-      const { viewer: viewerProfileId, viewerType } = req.body;
-      console.log(req.body);
+      const { viewer: viewerProfileId, viewerType } = req.body; 
       const viewerId = req.user._id.toString();
 
       // Validate input
       if (!viewerProfileId || !viewerType) {
-        throw new ErrorUtil('viewer and viewerType are required', 400);
+        throw new ErrorUtil('[ViewHandler]: viewer and viewerType are required', 400);
       }
 
       if (!['team', 'athlete', 'admin', 'scout', 'resume'].includes(viewerType)) {
-        throw new ErrorUtil('Invalid viewerType', 400);
+        throw new ErrorUtil('[ViewHandler]: Invalid viewerType', 400);
       }
 
       // Don't track if viewer profile is viewing the same athlete profile
@@ -67,19 +66,19 @@ export class ViewHandler {
 
       if (existingView) {
         // Don't create new view if one exists within 24 hours
-        console.log(`[ViewHandler] View already exists within 24 hours: Athlete ${athleteId} viewed by ${viewerType} ${viewerProfileId}`);
+        console.info(`[ViewHandler] View already exists within 24 hours: Athlete ${athleteId} viewed by ${viewerType} ${viewerProfileId}`);
         return { success: true, isNewView: false, view: existingView };
       }
 
       // Get the viewer profile using ModelMap
       const ProfileModel = ModelMap[viewerType as ModelKey];
       if (!ProfileModel) {
-        throw new ErrorUtil(`Invalid profile model for type: ${viewerType}`, 400);
+        throw new ErrorUtil(`[ViewHandler]: Invalid profile model for type: ${viewerType}`, 400);
       }
 
       const viewerProfile = await ProfileModel.findById(viewerProfileId).lean();
       if (!viewerProfile) {
-        throw new ErrorUtil('Viewer profile not found', 404);
+        throw new ErrorUtil('[ViewHandler]: Viewer profile not found', 404);
       }
 
       // Create new view record
@@ -95,7 +94,7 @@ export class ViewHandler {
       });
 
       const savedView = await viewRecord.save();
-      console.log(`[ViewHandler] New view recorded: Athlete ${athleteId} viewed by ${viewerType} ${viewerProfileId}`);
+      console.info(`[ViewHandler] New view recorded: Athlete ${athleteId} viewed by ${viewerType} ${viewerProfileId}`);
 
       return { success: true, isNewView: true, view: savedView };
     } catch (error: any) {

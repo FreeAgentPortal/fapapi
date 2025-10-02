@@ -14,7 +14,7 @@ export default class TransactionService {
       const results = await this.transactionHandler.processTransaction(req.params.id as any, req.body);
       return res.status(201).json({ message: 'transaction processed', success: true });
     } catch (err: any) {
-      console.log(err);
+      console.error(err);
       return error(err, req, res);
     }
   });
@@ -23,7 +23,7 @@ export default class TransactionService {
       const results = await this.transactionHandler.refundTransaction(req.params.id as any, req.body.amount);
       return res.status(201).json({ message: 'transaction refunded', success: true, data: results.data });
     } catch (err: any) {
-      console.log(err);
+      console.error(err);
       return error(err, req, res);
     }
   });
@@ -32,14 +32,14 @@ export default class TransactionService {
       const results = await this.transactionHandler.voidTransaction(req.params.id as any);
       return res.status(201).json({ message: 'transaction voided', success: true, data: results.data });
     } catch (err: any) {
-      console.log(err);
+      console.error(err);
       return error(err, req, res);
     }
   });
 
   public triggerScheduledPayments = asyncHandler(async (req: Request & AuthenticatedRequest, res: Response): Promise<Response> => {
     try {
-      console.log(`[TransactionService] Manual payment processing trigger initiated by user ${req.user?.id}`);
+      console.info(`[TransactionService] Manual payment processing trigger initiated by user ${req.user?.id}`);
 
       const result = await PaymentProcessingHandler.processScheduledPayments();
 

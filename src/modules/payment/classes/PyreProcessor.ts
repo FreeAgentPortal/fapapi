@@ -76,7 +76,7 @@ class PyreProcessing extends PaymentProcessor {
         ...data,
       };
     } catch (err: any) {
-      console.log(err?.response?.data);
+      console.error(err?.response?.data);
       return {
         success: false,
         message: `Error Creating Vault Customer - ${err?.response?.data?.message}`,
@@ -99,7 +99,7 @@ class PyreProcessing extends PaymentProcessor {
         ...data,
       };
     } catch (err: any) {
-      console.log(err);
+      console.error(err);
       return {
         success: false,
         message: 'Error Creating Customer',
@@ -128,7 +128,7 @@ class PyreProcessing extends PaymentProcessor {
         ...data,
       };
     } catch (err: any) {
-      console.log(err?.response?.data);
+      console.error(err?.response?.data);
       return {
         success: false,
         message: `Error Fetching Customer - ${err?.response?.data?.message}`,
@@ -150,7 +150,7 @@ class PyreProcessing extends PaymentProcessor {
         ...data,
       };
     } catch (err: any) {
-      console.log(err?.response?.data);
+      console.error(err?.response?.data);
       return {
         success: false,
         message: `Error Fetching Transactions - ${err?.response?.data?.message}`,

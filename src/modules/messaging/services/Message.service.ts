@@ -23,13 +23,13 @@ export class MessageService extends CRUDService {
   public updateResource = async (req: Request, res: Response): Promise<Response> => {
     try {
       this.ensureAuthenticated(req as AuthenticatedRequest, 'updateResource');
-      console.log(req.body);
+ 
       await this.beforeUpdate(req.params.id, req.body);
       const result = await this.handler.update(req.params.id, req.body);
       await this.afterUpdate(result);
       return res.status(201).json({ success: true });
     } catch (err) {
-      console.log(err);
+      console.error(err);
       return error(err, req, res);
     }
   };

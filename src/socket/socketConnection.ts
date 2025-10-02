@@ -17,22 +17,13 @@ export default (io: any) => {
       socket.on('setup', (userData: object) => {
         setupSocket(socket, userData);
       });
-      socket.on('disconnect', () => {
-        // console.log('Socket disconnected');
-      });
+      socket.on('disconnect', () => {});
       socket.on('join', async (room: { roomId: string; user: any }) => {
         if (!room.roomId) return;
-        // console.log(
-        //   colors.green(`${room.user.fullName} has joined the room`) +
-        //     colors.blue(` ${room.roomId}`)
-        // );
         socket.join(room.roomId);
       });
       socket.on('leave', async (room: { roomId: string; user: string }) => {
-        console.log(
-          colors.yellow(`${room.user} has left the room`) +
-            colors.blue(` ${room.roomId}`)
-        );
+        console.info(colors.yellow(`${room.user} has left the room`) + colors.blue(` ${room.roomId}`));
         socket.leave(room.roomId);
       });
       socket.on('sendNewMessage', (room: any) => {
@@ -41,7 +32,7 @@ export default (io: any) => {
       });
     });
   } catch (error) {
-    console.log(error);
+    console.error(error);
     throw error;
   }
 };

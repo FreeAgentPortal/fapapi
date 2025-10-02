@@ -94,14 +94,7 @@ export class UpdatedBillingHandler {
    */
   async updateVaultExample(req: any): Promise<Boolean> {
     const { id } = req.params;
-    const { paymentFormValues, selectedPlans, billingCycle, paymentMethod } = req.body;
-
-    // Your existing billing lookup logic
-    // const billing = await BillingAccount.findOne({ profileId: id }).populate('payor');
-    // if (!billing) throw new ErrorUtil('Could not find billing information', 404);
-
-    // OLD WAY:
-    // const processor = new PaymentProcessorFactory().chooseProcessor('pyre');
+    const { paymentFormValues, selectedPlans, billingCycle, paymentMethod } = req.body; 
 
     // NEW WAY - Smart Selection:
     const { processor, processorName, reason } = await SmartPaymentProcessor.getProcessor({
@@ -109,7 +102,7 @@ export class UpdatedBillingHandler {
       testConnections: true,
     });
 
-    console.log(`[Billing] Using ${processorName}: ${reason}`);
+    console.info(`[Billing] Using ${processorName}: ${reason}`);
 
     // Example vault creation (adjust based on your billing object structure)
     const vaultResponse = await processor.createVault('customer_id_here', {
@@ -130,14 +123,8 @@ export class UpdatedBillingHandler {
 
     if (!vaultResponse.success) {
       throw new Error(`Payment processing failed: ${vaultResponse.message}`);
-    }
-
-    // Store the processor name and customer ID for future use
-    // billing.processor = processorName;
-    // billing.customerId = vaultResponse.customerId || billing.customerId;
-    // await billing.save();
-
-    console.log(`Vault created successfully with ${processorName}:`, vaultResponse.customerId);
+    } 
+    console.info(`Vault created successfully with ${processorName}:`, vaultResponse.customerId);
     return true;
   }
 
@@ -159,7 +146,7 @@ export class UpdatedBillingHandler {
       processorName = result.processorName;
     }
 
-    console.log(`[Recurring Payment] Using ${processorName} for customer ${customerId}`);
+    console.info(`[Recurring Payment] Using ${processorName} for customer ${customerId}`);
 
     return await processor.vaultTransaction({
       customer_vault_id: customerId,

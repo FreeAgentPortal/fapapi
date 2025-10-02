@@ -40,7 +40,7 @@ export class SchedulerService {
    */
   public static async triggerAllReports(req: Request, res: Response): Promise<Response> {
     try {
-      console.log('[SchedulerService] Manual trigger for all due reports requested');
+      console.info('[SchedulerService] Manual trigger for all due reports requested');
 
       // Trigger the report generation process
       await ReportSchedulerCron.triggerManualReportGeneration();
@@ -69,7 +69,7 @@ export class SchedulerService {
         });
       }
 
-      console.log(`[SchedulerService] Manual trigger for specific report requested: ${preferenceId}`);
+      console.info(`[SchedulerService] Manual trigger for specific report requested: ${preferenceId}`);
 
       // Verify the search preference exists
       const searchPreference = await SearchPreferences.findById(preferenceId);
@@ -82,7 +82,7 @@ export class SchedulerService {
 
       // Generate the report
       const reportData = await SchedulerHandler.generateReport(searchPreference);
-      console.log('[SchedulerService] Report generated successfully', reportData);
+      console.info('[SchedulerService] Report generated successfully', reportData);
 
       // Update the dateLastRan
       await SearchPreferences.findByIdAndUpdate(preferenceId, { dateLastRan: new Date() }, { new: true });

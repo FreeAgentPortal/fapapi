@@ -117,7 +117,7 @@ export abstract class CRUDService {
       await this.afterCreate(result);
       return res.status(201).json({ success: true });
     } catch (err) {
-      console.log(err);
+      console.error(err);
       return error(err, req, res);
     }
   });
@@ -137,7 +137,7 @@ export abstract class CRUDService {
         },
       });
     } catch (err) {
-      console.log(err);
+      console.error(err);
       return error(err, req, res);
     }
   };
@@ -185,7 +185,7 @@ export abstract class CRUDService {
         },
       });
     } catch (err) {
-      console.log(err);
+      console.error(err);
       return error(err, req, res);
     }
   };
@@ -197,7 +197,7 @@ export abstract class CRUDService {
       await this.afterUpdate(result);
       return res.status(201).json({ success: true });
     } catch (err) {
-      console.log(err);
+      console.error(err);
       return error(err, req, res);
     }
   };
@@ -209,7 +209,7 @@ export abstract class CRUDService {
       await this.afterDelete(result);
       return res.status(201).json({ success: true });
     } catch (err) {
-      console.log(err);
+      console.error(err);
       return error(err, req, res);
     }
   };

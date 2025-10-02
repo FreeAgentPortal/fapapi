@@ -12,29 +12,29 @@ export class PaymentSchedulerCron {
    * Runs daily at 9:00 AM
    */
   public static init(): void {
-    console.log('[PaymentScheduler] Initializing payment processing cron job...');
+    console.info('[PaymentScheduler] Initializing payment processing cron job...');
 
     // Schedule to run daily at 9:00 AM
     cron.schedule(
       '0 9 * * *', // At 09:00 every day
       async () => {
         if (PaymentSchedulerCron.isRunning) {
-          console.log('[PaymentScheduler] Previous job still running, skipping...');
+          console.info('[PaymentScheduler] Previous job still running, skipping...');
           return;
         }
 
         PaymentSchedulerCron.isRunning = true;
         try {
-          console.log('[PaymentScheduler] Starting scheduled payment processing...');
+          console.info('[PaymentScheduler] Starting scheduled payment processing...');
           // Call the payment processing handler
           const result = await PaymentProcessingHandler.processScheduledPayments();
 
-          // set results for success/failure logging
+          // set results for success/failure infoging
           if (result.success) {
             PaymentSchedulerCron.successCount += result?.results?.successful || 0;
             PaymentSchedulerCron.failureCount += result?.results?.failed || 0;
           }
-          console.log('[PaymentScheduler] Scheduled payment processing completed:', result);
+          console.info('[PaymentScheduler] Scheduled payment processing completed:', result);
         } catch (error) {
           console.error('[PaymentScheduler] Error in scheduled payment processing:', error);
         } finally {
@@ -47,7 +47,7 @@ export class PaymentSchedulerCron {
       }
     );
 
-    console.log('[PaymentScheduler] Payment processing cron job initialized');
+    console.info('[PaymentScheduler] Payment processing cron job initialized');
   }
 
   /**
