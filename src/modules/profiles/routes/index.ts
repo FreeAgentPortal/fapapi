@@ -5,12 +5,13 @@ import athleteRoutes from '../athlete/route/index';
 import teamRoutes from '../team/route/index';
 import scoutRoutes from '../scout/routes/index';
 import resumeRoutes from '../resume/routes/index';
-import athleteSchedulerRoutes from './athleteSchedulerRoutes'
+import athleteSchedulerRoutes from './athleteSchedulerRoutes';
+import athleteActivationRoutes from './athleteActivationRoutes';
 
 const router = express.Router();
 
 router.use('/admin', adminRoutes);
-router.use('/athlete', athleteRoutes, athleteSchedulerRoutes);
+router.use('/athlete', athleteRoutes, athleteSchedulerRoutes, athleteActivationRoutes);
 router.use('/team', teamRoutes);
 router.use('/scout', scoutRoutes);
 router.use('/resume', resumeRoutes);

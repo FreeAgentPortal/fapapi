@@ -1,7 +1,9 @@
+import { ModelKey, ModelMap } from '../../../utils/ModelMap';
 import { AthleteModel, IAthlete } from '../athlete/models/AthleteModel';
 import { AthleteProfileCompletionHandler } from './AthleteProfileCompletionHandler';
 
 export class AthleteProfileAnalysisHandler {
+  private modelMap: Record<ModelKey, any> = ModelMap;
   /**
    * Get athlete profiles that are incomplete
    * Based on missing: profileImageUrl, metrics, measurements, and resume
@@ -10,14 +12,6 @@ export class AthleteProfileAnalysisHandler {
     try {
       // Use aggregation to check for missing fields including resume
       const incompleteProfiles = await AthleteModel.aggregate([
-        {
-          $match: {
-            // Must be active
-            isActive: true,
-            // Must have been created more than 24 hours ago (give users time to complete)
-            createdAt: { $lt: new Date(Date.now() - 24 * 60 * 60 * 1000) },
-          },
-        },
         {
           $lookup: {
             from: 'resumeprofiles', // MongoDB collection name (plural, lowercase)
@@ -38,7 +32,37 @@ export class AthleteProfileAnalysisHandler {
           },
         },
         {
+          $lookup: {
+            from: 'users', // Populate userId
+            localField: 'userId',
+            foreignField: '_id',
+            as: 'userId',
+            pipeline: [
+              {
+                $project: {
+                  email: 1,
+                  firstName: 1,
+                  lastName: 1,
+                  isEmailVerified: 1,
+                  fullName: 1,
+                },
+              },
+            ],
+          },
+        },
+        {
+          $unwind: {
+            path: '$userId',
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
           $match: {
+            isActive: true,
+            createdAt: { $lt: new Date(Date.now() - 24 * 60 * 60 * 1000) }, // exclude accounts created within the last 24 hours
+            // exclude accounts that have not verified their email
+            'userId.isEmailVerified': true,
+
             // Must be missing at least one key field
             $or: [
               // Missing profile image
@@ -56,35 +80,6 @@ export class AthleteProfileAnalysisHandler {
               // Missing resume (empty array)
               { $expr: { $eq: [{ $size: '$resumeData' }, 0] } },
             ],
-          },
-        },
-        {
-          $lookup: {
-            from: 'users', // Populate userId
-            localField: 'userId',
-            foreignField: '_id',
-            as: 'userId',
-            pipeline: [
-              {
-                $project: {
-                  email: 1,
-                  firstName: 1,
-                  lastName: 1,
-                  fullName: 1,
-                },
-              },
-            ],
-          },
-        },
-        {
-          $unwind: {
-            path: '$userId',
-            preserveNullAndEmptyArrays: true,
-          },
-        },
-        {
-          $project: {
-            resumeData: 0, // Remove the resume data from results to keep it clean
           },
         },
       ]);
@@ -114,7 +109,7 @@ export class AthleteProfileAnalysisHandler {
       if (incompleteProfiles.length === 0) {
         console.info('[AthleteProfileAnalysis] No incomplete athlete profiles found');
         return { successCount: 0, errorCount: 0, skippedCount: 0, totalProcessed: 0 };
-      } 
+      }
 
       console.info(`[AthleteProfileAnalysis] Found ${incompleteProfiles.length} incomplete athlete profiles\n`);
 
@@ -197,59 +192,16 @@ export class AthleteProfileAnalysisHandler {
       const totalAthletes = await AthleteModel.countDocuments({ isActive: true });
       const incompleteProfiles = await AthleteProfileAnalysisHandler.getIncompleteAthleteProfiles();
 
-      // Count missing fields
-      const missingProfileImage = await AthleteModel.countDocuments({
-        isActive: true,
-        $or: [{ profileImageUrl: { $exists: false } }, { profileImageUrl: null }, { profileImageUrl: '' }],
-      });
+      // Count missing fields from the already retrieved data
+      const missingProfileImage = incompleteProfiles.filter((a) => !a.profileImageUrl || a.profileImageUrl === '').length;
 
-      const missingMetrics = await AthleteModel.countDocuments({
-        isActive: true,
-        $or: [{ metrics: { $exists: false } }, { metrics: null }, { $expr: { $eq: [{ $size: { $objectToArray: '$metrics' } }, 0] } }],
-      });
+      const missingMetrics = incompleteProfiles.filter((a) => !a.metrics || Object.keys(a.metrics).length === 0).length;
 
-      const missingMeasurements = await AthleteModel.countDocuments({
-        isActive: true,
-        $or: [{ measurements: { $exists: false } }, { measurements: null }, { $expr: { $eq: [{ $size: { $objectToArray: '$measurements' } }, 0] } }],
-      });
+      const missingMeasurements = incompleteProfiles.filter((a) => !a.measurements || Object.keys(a.measurements).length === 0).length;
 
-      const missingResume = await AthleteModel.aggregate([
-        {
-          $match: {
-            // Find all active athletes
-            isActive: true,
-          },
-        },
-        {
-          $lookup: {
-            from: 'resumeprofiles', // MongoDB collection name (plural, lowercase)
-            let: { athleteId: '$_id' }, // Pass athlete ID as variable
-            pipeline: [
-              {
-                $match: {
-                  $expr: {
-                    $and: [
-                      { $eq: ['$owner.kind', 'AthleteProfile'] }, // Must be AthleteProfile type
-                      { $eq: ['$owner.ref', '$$athleteId'] }, // Must match the athlete ID
-                    ],
-                  },
-                },
-              },
-            ],
-            as: 'resumeData',
-          },
-        },
-        {
-          $match: {
-            // Only count athletes who have NO resume (empty array)
-            resumeData: { $size: 0 },
-          },
-        },
-        {
-          $count: 'missingResumeCount', // Count the results
-        },
-      ]);
-      const missingResumeCount = missingResume[0]?.missingResumeCount || 0;
+      // Count missing resume from the already retrieved data (resumeData is included in the aggregation)
+      // Note: getIncompleteAthleteProfiles() already includes resumeData lookup, so we can check it directly
+      const missingResumeCount = incompleteProfiles.filter((a: any) => !a.resumeData || a.resumeData.length === 0).length;
 
       const completionRate = totalAthletes > 0 ? ((totalAthletes - incompleteProfiles.length) / totalAthletes) * 100 : 100;
 
