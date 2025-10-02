@@ -59,7 +59,7 @@ export class AuthMiddleware {
 
       next();
     } catch (err) {
-      console.error(err);
+      // console.error(err);
       return res.status(401).json({ message: 'JWT validation failed. ' + err });
     }
   }
