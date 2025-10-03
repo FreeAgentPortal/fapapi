@@ -14,10 +14,12 @@ router.get('/health', (req, res) => {
 
 router.use(AuthMiddleware.protect);
 router.route('/').get(service.getResources).post(service.create);
-router.route('/:id').put(service.updateResource)
+router.route('/:id').put(service.updateResource);
+router.route('/update/all').post(service.updateAll);
 router.use(AuthMiddleware.authorizeRoles(['admin', 'developer']) as any);
 router.route('/').post(service.create);
 router.route('/:id').delete(service.removeResource);
+router.route('/alert').post(service.sendAlert); 
 
 
 export default router;
