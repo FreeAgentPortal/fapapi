@@ -322,7 +322,7 @@ export class TicketHandler extends CRUDHandler<SupportType> {
     const returnObject = {
       ticket,
       message: newMessage,
-      user: user ? user._id : null,
+      user: user ? user : null,
       assignee: ticket.assignee ? ticket.assignee : null,
       isUser,
     };

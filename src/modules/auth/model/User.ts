@@ -26,6 +26,7 @@ export interface UserType extends mongoose.Document {
   isActive: boolean;
   resetPasswordToken: string | undefined | null;
   resetPasswordExpire: Date | undefined | null;
+  notificationSettings: Record<string, boolean>;
   accessKey: string;
   createdAt: Date;
   updatedAt: Date;
@@ -115,6 +116,10 @@ const UserSchema = new mongoose.Schema(
     accessKey: {
       type: String,
       select: false, // do not return this field by default
+    },
+    notificationSettings: {
+      type: Object,
+      default: {},
     },
   },
   {
