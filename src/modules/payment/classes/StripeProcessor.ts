@@ -149,7 +149,7 @@ class StripeProcessing extends PaymentProcessor {
             country: details.country,
           },
           metadata: {
-            external_id: billingInfo._id, // Store our custom ID in metadata
+            external_id: `${billingInfo._id}`, // Store our custom ID in metadata
           },
         });
       }
