@@ -40,28 +40,6 @@ class PaymentProcessorFactory {
           }
         },
       },
-    {
-      name: 'pyre',
-      priority: 1, // Lower priority (fallback)
-      enabled: true,
-      requiredEnvVars: ['PYRE_API_URL', 'PYRE_API_KEY'],
-      testConnection: async () => {
-        try {
-          const axios = require('axios');
-          // Simple health check to Pyre API
-          const response = await axios.get(`${process.env.PYRE_API_URL}/health`, {
-            headers: {
-              'x-api-key': process.env.PYRE_API_KEY,
-            },
-            timeout: 5000,
-          });
-          return response.status === 200;
-        } catch (error: any) {
-          console.warn('[PaymentFactory] Pyre connection test failed:', error?.message || 'Unknown error');
-          return false;
-        }
-      },
-    },
   ];
 
   /**
@@ -77,7 +55,7 @@ class PaymentProcessorFactory {
       case 'paynetworx':
         return new PaynetworxProcessor();
       case 'stripe':
-        return new StripeProcessing(); //TODO : Add Stripe processor
+        return new StripeProcessing();
       default:
         throw new Error(`Invalid processor type: ${processorType}`);
     }
