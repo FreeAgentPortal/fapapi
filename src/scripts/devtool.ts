@@ -105,44 +105,6 @@ class DevTool {
   async customTask(): Promise<void> {
     console.info('🛠️  Running custom task...');
     try {
-      const billingIds = [
-        '68c95faa524f90e9db9ac148',
-        '68c97238524f90e9db9ac2f2',
-        '68c98891524f90e9db9ac72e',
-        '68c98a74524f90e9db9ac796',
-        '68c99562524f90e9db9ac8ee',
-        '68c99564524f90e9db9ac8f9',
-        '68c99726524f90e9db9ac983',
-        '68c9aba0c4f0c9e9de3d6242',
-        '68c9abf7c4f0c9e9de3d6278',
-        '68c9b722c4f0c9e9de3d6702',
-        '68c9c347c4f0c9e9de3d6b75',
-        '68caf2e8e06cea57c8d12f1e',
-        '68caf397e06cea57c8d12f53',
-        '68cbfc77caf06215964089c1',
-        '68cc4ff0caf06215964145a2',
-        '68cde5efef18254423ae08f1',
-        '68ceb5d8ef18254423ae13d6',
-        '68d13642ef18254423ae326f',
-        '68d1ca79ef18254423aea5fd',
-        '68d20856ef18254423aec0e8',
-        '68d221f6ef18254423aec5fa',
-        '68d468ccd8fe6b66edbcdaa2',
-        '68d49002a2de6f99ba3efc37',
-        '68d53fa0a2de6f99ba3f063a',
-        '68d61ac9d8ea2cd28452344b',
-        '68d6ae3679b64bae368b284e',
-        '68d9bd8479b64bae368b4eb7',
-        '68dab1cb79b64bae368b58ce',
-      ];
-      for (const id of billingIds) {
-        const billing = await this.modelMap['billing'].findById(id);
-        if (billing) {
-          billing.needsUpdate = false;
-          await billing.save();
-          console.info(`- Updated billing ${id}`);
-        }
-      }
     } catch (error) {
       console.info('❌ Error in custom task:', error);
     }
