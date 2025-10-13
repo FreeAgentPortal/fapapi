@@ -129,10 +129,6 @@ export default class PaymentProcessingHandler {
         throw new Error(`Billing account not found for profile ${profileId}`);
       }
 
-      if (!billingAccount.plan || !billingAccount.payor) {
-        throw new Error(`Missing plan or payor data for profile ${profileId}`);
-      }
-
       // Check if we have payment processor data
       if (!billingAccount.paymentProcessorData) {
         throw new Error(`No payment processor data found for profile ${profileId}`);
