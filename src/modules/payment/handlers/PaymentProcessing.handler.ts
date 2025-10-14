@@ -54,7 +54,7 @@ export default class PaymentProcessingHandler {
       // Process each profile
       for (const profile of profilesDue) {
         try {
-          const result = await this.processPaymentForProfile(profile._id.toString());
+          const result = await this.processPaymentForProfile(profile._id.toString(), undefined, true, "Scheduled subscription payment");
           if (result.success) {
             results.successful++;
           } else {
