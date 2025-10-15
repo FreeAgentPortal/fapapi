@@ -4,5 +4,5 @@ import { EventDocument, EventModel } from "../model/Event.model";
 export class EventHandler extends CRUDHandler<EventDocument>{
   constructor() {
     super(EventModel);
-  }
+  } 
 }  

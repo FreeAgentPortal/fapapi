@@ -3,12 +3,14 @@ import { AuthMiddleware } from '../../../middleware/AuthMiddleware';
 import SubscriptionService from '../services/SubscriptionService';
 import FeedService from '../services/FeedService';
 import subscriptionRouter from './subscription';
+import eventRoutes from './event';
 
 const router = express.Router();
 
 const service = new FeedService();
 
 router.use('/subscription', subscriptionRouter)
+router.use('/event', eventRoutes);
 router.route('/health').get((req, res) => {
   res.status(200).json({
     message: 'Feed service is up and running',
