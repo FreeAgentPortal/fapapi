@@ -37,6 +37,20 @@ export class ConversationCrudHandler extends CRUDHandler<IConversation> {
                 preserveNullAndEmptyArrays: true,
               },
             },
+            {
+              $lookup: {
+                from: 'athleteprofiles',
+                localField: 'participants.athlete',
+                foreignField: '_id',
+                as: 'participants.athlete',
+              },
+            },
+            {
+              $unwind: {
+                path: '$participants.athlete',
+                preserveNullAndEmptyArrays: true,
+              },
+            },
           ],
         },
       },
