@@ -14,5 +14,5 @@ router.route('/:id').get(service.getResource);
 router.use(AuthMiddleware.protect);
 router.route('/').post(service.create);
 router.route('/:id').put(service.updateResource).delete(service.removeResource);
-
+router.route('/:teamId/stats').get(service.getEventsStatsByTeam);
 export default router;

@@ -174,7 +174,7 @@ export interface EventDocument extends mongoose.Document {
   audience: Audience;
   visibility: Visibility;
 
-  status: 'scheduled' | 'completed' | 'canceled' | 'postponed';
+  status: 'scheduled' | 'active' | 'completed' | 'canceled' | 'postponed';
 
   timezone: string; // IANA TZ, e.g., "America/New_York"
   startsAt: Date;
@@ -268,7 +268,7 @@ const EventSchema = new Schema<EventDocument>(
 
     status: {
       type: String,
-      enum: ['scheduled', 'completed', 'canceled', 'postponed'],
+      enum: ['scheduled', 'active', 'completed', 'canceled', 'postponed'],
       default: 'scheduled',
       index: true,
     },

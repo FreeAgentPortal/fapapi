@@ -12,8 +12,23 @@ import { ResumeProfile } from '../modules/profiles/resume/models/ResumeProfile';
 import BillingAccount from '../modules/auth/model/BillingAccount';
 import Receipt from '../modules/payment/models/Receipt';
 import PlanSchema from '../modules/auth/model/PlanSchema';
+import { EventModel } from '../modules/feed/model/Event.model';
 
-export type ModelKey = 'team' | 'athlete' | 'admin' | 'scout_report' | 'scout_profile' | 'conversation' | 'message' | 'user' | 'token' | 'resume' | 'billing' | 'receipt' | 'plan';
+export type ModelKey =
+  | 'team'
+  | 'athlete'
+  | 'admin'
+  | 'scout_report'
+  | 'scout_profile'
+  | 'conversation'
+  | 'message'
+  | 'user'
+  | 'token'
+  | 'resume'
+  | 'billing'
+  | 'receipt'
+  | 'plan'
+  | 'event';
 
 export const ModelMap: Record<ModelKey, any> = {
   team: TeamModel,
@@ -29,4 +44,5 @@ export const ModelMap: Record<ModelKey, any> = {
   billing: BillingAccount,
   receipt: Receipt,
   plan: PlanSchema,
+  event: EventModel,
 };
