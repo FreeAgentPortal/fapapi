@@ -19,6 +19,43 @@ export class EventHandler extends CRUDHandler<EventDocument> {
         },
       },
       {
+        $lookup: {
+          from: 'eventregistrations',
+          localField: '_id',
+          foreignField: 'eventId',
+          as: 'registrations',
+        },
+      },
+      {
+        $addFields: {
+          registrationCount: { $size: '$registrations' },
+          confirmedRegistrations: {
+            $size: {
+              $filter: {
+                input: '$registrations',
+                cond: { $eq: ['$$this.status', 'confirmed'] },
+              },
+            },
+          },
+          interestedRegistrations: {
+            $size: {
+              $filter: {
+                input: '$registrations',
+                cond: { $eq: ['$$this.status', 'interested'] },
+              },
+            },
+          },
+          appliedRegistrations: {
+            $size: {
+              $filter: {
+                input: '$registrations',
+                cond: { $eq: ['$$this.status', 'applied'] },
+              },
+            },
+          },
+        },
+      },
+      {
         $group: {
           _id: '$type',
           typeCount: { $sum: 1 },
@@ -27,7 +64,11 @@ export class EventHandler extends CRUDHandler<EventDocument> {
           upcomingEvents: { $sum: { $cond: [{ $eq: ['$status', 'scheduled'] }, 1, 0] } },
           canceledEvents: { $sum: { $cond: [{ $eq: ['$status', 'canceled'] }, 1, 0] } },
           postponedEvents: { $sum: { $cond: [{ $eq: ['$status', 'postponed'] }, 1, 0] } },
-          totalRegistrations: { $sum: { $ifNull: ['$registration.capacity', 0] } },
+          totalRegistrations: { $sum: '$registrationCount' },
+          totalConfirmedRegistrations: { $sum: '$confirmedRegistrations' },
+          totalInterestedRegistrations: { $sum: '$interestedRegistrations' },
+          totalAppliedRegistrations: { $sum: '$appliedRegistrations' },
+          totalCapacity: { $sum: { $ifNull: ['$registration.capacity', 0] } },
         },
       },
       {
@@ -40,6 +81,10 @@ export class EventHandler extends CRUDHandler<EventDocument> {
           canceledEvents: { $sum: '$canceledEvents' },
           postponedEvents: { $sum: '$postponedEvents' },
           totalRegistrations: { $sum: '$totalRegistrations' },
+          totalConfirmedRegistrations: { $sum: '$totalConfirmedRegistrations' },
+          totalInterestedRegistrations: { $sum: '$totalInterestedRegistrations' },
+          totalAppliedRegistrations: { $sum: '$totalAppliedRegistrations' },
+          totalCapacity: { $sum: '$totalCapacity' },
           eventTypeBreakdown: {
             $push: {
               type: '$_id',
@@ -49,6 +94,11 @@ export class EventHandler extends CRUDHandler<EventDocument> {
               upcoming: '$upcomingEvents',
               canceled: '$canceledEvents',
               postponed: '$postponedEvents',
+              registrations: '$totalRegistrations',
+              confirmedRegistrations: '$totalConfirmedRegistrations',
+              interestedRegistrations: '$totalInterestedRegistrations',
+              appliedRegistrations: '$totalAppliedRegistrations',
+              capacity: '$totalCapacity',
             },
           },
           mostPopularEventType: {
@@ -84,6 +134,10 @@ export class EventHandler extends CRUDHandler<EventDocument> {
           canceledEvents: 0,
           postponedEvents: 0,
           totalRegistrations: 0,
+          totalConfirmedRegistrations: 0,
+          totalInterestedRegistrations: 0,
+          totalAppliedRegistrations: 0,
+          totalCapacity: 0,
           eventTypeBreakdown: [],
           mostPopularEventType: null,
         };
