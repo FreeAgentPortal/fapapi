@@ -51,6 +51,20 @@ export class ConversationCrudHandler extends CRUDHandler<IConversation> {
                 preserveNullAndEmptyArrays: true,
               },
             },
+            {
+              $lookup: {
+                from: 'messages',
+                localField: 'lastMessage',
+                foreignField: '_id',
+                as: 'lastMessage',
+              },
+            },
+            {
+              $unwind: {
+                path: '$lastMessage',
+                preserveNullAndEmptyArrays: true,
+              },
+            }
           ],
         },
       },
