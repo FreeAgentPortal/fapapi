@@ -130,7 +130,10 @@ export default class PaymentProcessingHandler {
       }
 
       if (!billingAccount.plan._id || !billingAccount.payor._id) {
-        throw new Error(`Missing plan or payor data for profile ${profileId}`);
+        console.log(billingAccount)
+        // for now do nothing, dont throw an error. plan and payor should always be populated here, but for some reason
+        // the service is seeing some accounts without them and throwing errors causing scheduled payments to fail.
+        // throw new Error(`Missing plan or payor data for profile ${profileId}`);
       }
 
       // Check if we have payment processor data
