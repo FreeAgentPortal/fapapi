@@ -50,11 +50,11 @@ export default class PaymentProcessingHandler {
       // if we still dont have a processor here, we have a big problem
       if (!this.processor) {
         throw new Error('No payment processor is configured');
-      } 
+      }
       // Process each profile
       for (const profile of profilesDue) {
         try {
-          const result = await this.processPaymentForProfile(profile._id.toString(), undefined, true, "Scheduled subscription payment");
+          const result = await this.processPaymentForProfile(profile._id as any, undefined, true, 'Scheduled subscription payment');
           if (result.success) {
             results.successful++;
           } else {
@@ -126,11 +126,12 @@ export default class PaymentProcessingHandler {
       const billingAccount = await BillingAccount.findById(profileId).populate('plan').populate('payor');
 
       if (!billingAccount) {
+        console.log(`[PaymentProcessingHandler] Billing account was not found for id: ${profileId}`);
         throw new Error(`Billing account not found for profile ${profileId}`);
       }
 
       if (!billingAccount.plan._id || !billingAccount.payor._id) {
-        console.log(billingAccount)
+        console.log(billingAccount);
         // for now do nothing, dont throw an error. plan and payor should always be populated here, but for some reason
         // the service is seeing some accounts without them and throwing errors causing scheduled payments to fail.
         // throw new Error(`Missing plan or payor data for profile ${profileId}`);
