@@ -58,7 +58,7 @@ export class EventSchedulerHandler {
 
       const totalProcessed = eventsToProcess.eventsToStart.length + eventsToProcess.eventsToComplete.length;
 
-      console.info(`[EventSchedulerHandler] Processing completed. Success: ${successCount}, Errors: ${errorCount}, Skipped: ${skippedCount}, Total: ${totalProcessed}`);
+      // console.info(`[EventSchedulerHandler] Processing completed. Success: ${successCount}, Errors: ${errorCount}, Skipped: ${skippedCount}, Total: ${totalProcessed}`);
 
       return {
         successCount,
