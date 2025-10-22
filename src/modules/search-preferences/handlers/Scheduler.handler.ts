@@ -11,12 +11,12 @@ export class SchedulerHandler {
    */
   public static async generateReport(searchPreference: ISearchPreferences): Promise<ISearchReport> {
     try {
-      console.info(`[Scheduler] Generating report for search preference: ${searchPreference.name} (ID: ${searchPreference._id})`);
+      // console.info(`[Scheduler] Generating report for search preference: ${searchPreference.name} (ID: ${searchPreference._id})`);
 
       // Mock report data for now - replace with actual search logic
       const athletes = await this.performSearch(searchPreference);
       if (!athletes || athletes.length === 0) {
-        console.warn(`[Scheduler] No athletes found for search preference: ${searchPreference.name}`);
+        // console.warn(`[Scheduler] No athletes found for search preference: ${searchPreference.name}`);
       }
       const reportData = {
         searchPreference: searchPreference._id as any,
@@ -40,7 +40,7 @@ export class SchedulerHandler {
       // Emit event to notify user of new report
       await this.notifyUserOfNewReport(searchPreference, report!);
 
-      console.info(`[Scheduler] Report generated successfully for preference: ${searchPreference.name}`);
+      // console.info(`[Scheduler] Report generated successfully for preference: ${searchPreference.name}`);
       return reportData;
     } catch (error: Error | any) {
       console.error(`[Scheduler] Error generating report for preference ${searchPreference._id}:`, error);
@@ -138,8 +138,6 @@ export class SchedulerHandler {
       }
     }
 
-    console.info(`[Scheduler] Built match conditions`);
-
     // Build the aggregation pipeline
     const pipeline: any[] = [];
 
@@ -162,13 +160,9 @@ export class SchedulerHandler {
     // Sort by creation date (newest first) to get consistent results
     pipeline.push({ $sort: { createdAt: -1 } });
 
-    console.info(`[Scheduler] Executing aggregation in pipeline`);
 
     try {
       const results = await AthleteModel.aggregate(pipeline);
-
-      console.info(`[Scheduler] Found ${results.length} athletes matching search criteria`);
-
       return results;
     } catch (error) {
       console.error(`[Scheduler] Error executing search query:`, error);
@@ -191,8 +185,6 @@ export class SchedulerHandler {
         resultCount: reportData.results.length,
         generatedAt: reportData.generatedAt,
       });
-
-      console.info(`[Scheduler] Notification sent for new report: ${reportData.reportId}\n`);
     } catch (error) {
       console.error(`[Scheduler] Error sending notification for report ${reportData.reportId}:`, error);
       // Don't throw here - report generation should succeed even if notification fails

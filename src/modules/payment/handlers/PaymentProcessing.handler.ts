@@ -130,7 +130,7 @@ export default class PaymentProcessingHandler {
         throw new Error(`Billing account not found for profile ${profileId}`);
       }
 
-      if (!billingAccount.plan._id || !billingAccount.payor._id) {
+      if (!billingAccount?.plan?._id || !billingAccount?.payor?._id) {
         console.log(billingAccount);
         // for now do nothing, dont throw an error. plan and payor should always be populated here, but for some reason
         // the service is seeing some accounts without them and throwing errors causing scheduled payments to fail.
