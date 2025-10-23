@@ -12,7 +12,7 @@ export class BillingHandler {
   constructor(private readonly paymentHandler: PaymentHandler = new PaymentHandler()) {}
   async updateVault(req: AuthenticatedRequest): Promise<Boolean> {
     const { id } = req.params;
-    const { paymentFormValues, selectedPlans, billingCycle, paymentMethod } = req.body; 
+    const { paymentFormValues, selectedPlans, billingCycle, paymentMethod } = req.body;
     // first step find the billing information from the provided profile id
     const billing = await BillingAccount.findOne({ profileId: id }).populate('payor profileId');
     if (!billing) {
@@ -35,7 +35,6 @@ export class BillingHandler {
 
     // Handle paid plans - require payment processing
     if (!isFree) {
-
       billing.payor = req.user;
       // we need to update our vaulting
       const vaultResponse = await processor.createVault(billing, {
@@ -58,8 +57,8 @@ export class BillingHandler {
         console.info(vaultResponse);
         throw new ErrorUtil(`${vaultResponse.message}`, 400);
       }
-      
-      billing.vaulted = true; 
+
+      billing.vaulted = true;
 
       // Initialize paymentProcessorData if it doesn't exist
       if (!billing.paymentProcessorData) {
@@ -109,6 +108,8 @@ export class BillingHandler {
       }
       billing.status = 'active';
       billing.needsUpdate = false; // if it was true set by admin, this will flip it off
+      
+      await billing.save();
 
       if (!billing.setupFeePaid) {
         // next we need to create an initial charge for them the "setup fee" they wont be charged their subscription
