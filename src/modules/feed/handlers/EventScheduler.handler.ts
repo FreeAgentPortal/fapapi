@@ -1,5 +1,7 @@
 import { ModelKey, ModelMap } from '../../../utils/ModelMap';
 import { EventModel } from '../model/Event.model';
+import { ActivityClient } from '../util/ActivityClient';
+import { mapEventCreated } from '../util/activityMapper';
 
 interface EventsToProcess {
   eventsToStart: any[];
@@ -128,6 +130,22 @@ export class EventSchedulerHandler {
    * @param event Event to mark as active
    */
   private static async markEventActive(event: any): Promise<void> {
-    await ModelMap['event'].findByIdAndUpdate(event._id, { status: 'active' }, { new: true });
+    const result = await ModelMap['event'].findByIdAndUpdate(event._id, { status: 'active' }, { new: true });
+    // publish an activity for the event starting only if the event is active
+    // if the event visibility is not private
+    if (result.visibility !== 'private') {
+      await ActivityClient.publish(
+        mapEventCreated({
+          eventId: result._id.toString(),
+          teamId: result.teamProfileId as unknown as string,
+          sport: result.sport,
+          title: result.title,
+          kind: result.type,
+          visibility: result.visibility,
+          startsAt: result.startsAt,
+          thumbUrl: result.media?.find((m: { kind: string; url: string }) => m.kind === 'image')?.url,
+        })
+      );
+    }
   }
 }
