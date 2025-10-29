@@ -25,7 +25,7 @@ const ActivityRefSchema = new Schema<ActivityRef>(
     collection: { type: String, required: true, trim: true },
     id: { type: String, required: true, trim: true },
   },
-  { _id: false }
+  { _id: false, suppressReservedKeysWarning: true }
 );
 
 const ActivitySchema = new Schema(
@@ -49,6 +49,7 @@ const ActivitySchema = new Schema(
       enum: ['public', 'private', 'friends-only', 'athletes-only', 'team-only'],
       default: 'public',
     },
+    idempotencyKey: { type: String, index: true, unique: true, sparse: true, default: undefined },
   },
   {
     timestamps: { createdAt: true, updatedAt: false },

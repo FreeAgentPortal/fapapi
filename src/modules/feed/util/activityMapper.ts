@@ -54,14 +54,3 @@ export const mapEventCreated = (params: {
     idempotencyKey: `event.created:events:${params.eventId}`,
   };
 };
-
-export const mapPostCreated = (params: { postId: string; userId: string; sport?: string; caption?: string; mediaThumbUrl?: string; tags?: string[] }): PublishActivityInput => ({
-  verb: 'post.created',
-  actorId: `user:${params.userId}`,
-  object: { collection: 'posts', id: params.postId },
-  sport: params.sport,
-  tags: [params.sport, ...(params.tags ?? [])].filter(Boolean) as string[],
-  summary: params.caption,
-  thumbUrl: params.mediaThumbUrl,
-  // idempotencyKey: `post.created:posts:${params.postId}`,
-});

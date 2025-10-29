@@ -4,6 +4,8 @@ import SubscriptionService from '../services/SubscriptionService';
 import FeedService from '../services/FeedService';
 import subscriptionRouter from './subscription';
 import eventRoutes from './event';
+import activityRoutes from './activity';
+import postRoutes from './post';
 
 const router = express.Router();
 
@@ -11,6 +13,9 @@ const service = new FeedService();
 
 router.use('/subscription', subscriptionRouter)
 router.use('/event', eventRoutes);
+router.use('/activity', activityRoutes);
+router.use('/post', postRoutes);
+
 router.route('/health').get((req, res) => {
   res.status(200).json({
     message: 'Feed service is up and running',
