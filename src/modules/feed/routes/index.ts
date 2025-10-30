@@ -6,6 +6,7 @@ import subscriptionRouter from './subscription';
 import eventRoutes from './event';
 import activityRoutes from './activity';
 import postRoutes from './post';
+import interactionRoutes from './interaction';
 
 const router = express.Router();
 
@@ -14,7 +15,7 @@ const service = new FeedService();
 router.use('/subscription', subscriptionRouter)
 router.use('/event', eventRoutes);
 router.use('/activity', activityRoutes);
-router.use('/post', postRoutes);
+router.use('/post', postRoutes, interactionRoutes);
 
 router.route('/health').get((req, res) => {
   res.status(200).json({
