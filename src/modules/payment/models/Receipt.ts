@@ -76,7 +76,7 @@ const ReceiptSchema = new mongoose.Schema(
     // Transaction details
     status: {
       type: String,
-      enum: ['pending', 'success', 'failed', 'refunded', 'voided', 'succeeded'],
+      enum: ['pending', 'success', 'failed', 'refunded', 'voided', 'succeeded', 'completed'],
       required: true,
       default: 'pending',
     },
