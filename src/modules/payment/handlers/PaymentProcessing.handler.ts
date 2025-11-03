@@ -192,7 +192,7 @@ export default class PaymentProcessingHandler {
         // Create a mock successful payment result for receipt creation
         const mockPaymentResult = {
           success: true,
-          status: 'completed',
+          status: 'succeeded',
           transactionId: `CREDIT_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
           message: 'Payment covered by account credits',
           data: { covered_by_credits: true },
