@@ -122,6 +122,21 @@ export default class PaymentProcessingHandler {
     try {
       console.info(`[PaymentProcessingHandler] Processing payment for profile ${profileId}...`);
 
+      // Ensure processor is initialized
+      if (!this.processor) {
+        console.warn(`[PaymentProcessingHandler] Processor not initialized. Initializing now...`);
+        const result = await new PaymentProcessorFactory().smartChooseProcessor();
+        if (!result.processor) {
+          throw new Error('No payment processor is configured');
+        }
+        this.processor = result.processor as PaymentProcessor;
+      }
+
+      const processorName = await this.processor.getProcessorName();
+      if (!processorName) {
+        throw new Error('Failed to get processor name');
+      }
+
       // Get billing account with populated data
       const billingAccount = await BillingAccount.findById(profileId).populate('plan').populate('payor');
 
@@ -140,26 +155,6 @@ export default class PaymentProcessingHandler {
       // Check if we have payment processor data
       if (!billingAccount.paymentProcessorData) {
         throw new Error(`No payment processor data found for profile ${profileId}`);
-      }
-
-      // Get the processor name and token data
-      let processorName = await this.processor?.getProcessorName(); // we only want the name of the processor we want to use
-      // if processorName is undefined here, we have a big problem
-      // try to re-initialize the processor
-      if (!processorName) {
-        console.warn(`[PaymentProcessingHandler] Processor name is undefined for profile ${profileId}. Re-initializing processor.`);
-        this.processor = await new PaymentProcessorFactory().smartChooseProcessor().then((res) => {
-          if (!res.processor) {
-            throw new Error('No payment processor is configured');
-          }
-          return res.processor as PaymentProcessor;
-        });
-        processorName = await this.processor?.getProcessorName();
-      }
-
-      // if we still dont have a processorName here, we have a big problem
-      if (!processorName) {
-        throw new Error('No payment processor is configured');
       }
 
       const processorData = billingAccount.paymentProcessorData[processorName as any];
