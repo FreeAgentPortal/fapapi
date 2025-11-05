@@ -143,7 +143,25 @@ export default class PaymentProcessingHandler {
       }
 
       // Get the processor name and token data
-      const processorName = await this.processor?.getProcessorName(); // we only want the name of the processor we want to use
+      let processorName = await this.processor?.getProcessorName(); // we only want the name of the processor we want to use
+      // if processorName is undefined here, we have a big problem
+      // try to re-initialize the processor
+      if (!processorName) {
+        console.warn(`[PaymentProcessingHandler] Processor name is undefined for profile ${profileId}. Re-initializing processor.`);
+        this.processor = await new PaymentProcessorFactory().smartChooseProcessor().then((res) => {
+          if (!res.processor) {
+            throw new Error('No payment processor is configured');
+          }
+          return res.processor as PaymentProcessor;
+        });
+        processorName = await this.processor?.getProcessorName();
+      }
+
+      // if we still dont have a processorName here, we have a big problem
+      if (!processorName) {
+        throw new Error('No payment processor is configured');
+      }
+
       const processorData = billingAccount.paymentProcessorData[processorName as any];
 
       if (!processorData) {
