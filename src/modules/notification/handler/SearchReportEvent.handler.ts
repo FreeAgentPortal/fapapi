@@ -20,7 +20,7 @@ export default class SearchReportEventHandler {
    */
   public onSearchReportGenerated = async (event: SearchReportEvent): Promise<void> => {
     try {
-      console.info(`[SearchReportEventHandler] Processing report generated event for user: ${event.userId}`);
+      // console.info(`[SearchReportEventHandler] Processing report generated event for user: ${event.userId}`);
 
       // find the model we want to use with the modelMap
       const Model = ModelMap[event.ownerType as keyof typeof ModelMap];
@@ -30,7 +30,11 @@ export default class SearchReportEventHandler {
       // Verify user exists
       const user = await Model.findById(event.userId);
       if (!user) {
-        throw new ErrorUtil(`Owner not found: ${event.userId}`, 404);
+        // if user is not found remove the report
+        await ModelMap['report'].findByIdAndDelete(event._id);
+        // also we dont want to break the flow so just log and return
+        console.warn(`[SearchReportEventHandler] Owner not found: ${event.userId}. Report ${event.reportId} deleted.`);
+        return;
       }
 
       // Create notification for the user

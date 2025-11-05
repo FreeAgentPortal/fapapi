@@ -13,6 +13,7 @@ import BillingAccount from '../modules/auth/model/BillingAccount';
 import Receipt from '../modules/payment/models/Receipt';
 import PlanSchema from '../modules/auth/model/PlanSchema';
 import { EventModel } from '../modules/feed/model/Event.model';
+import SearchReport from '../modules/search-preferences/models/SearchReport';
 
 export type ModelKey =
   | 'team'
@@ -28,7 +29,7 @@ export type ModelKey =
   | 'billing'
   | 'receipt'
   | 'plan'
-  | 'event';
+  | 'event' | 'report';
 
 export const ModelMap: Record<ModelKey, any> = {
   team: TeamModel,
@@ -45,4 +46,5 @@ export const ModelMap: Record<ModelKey, any> = {
   receipt: Receipt,
   plan: PlanSchema,
   event: EventModel,
+  report: SearchReport,
 };
