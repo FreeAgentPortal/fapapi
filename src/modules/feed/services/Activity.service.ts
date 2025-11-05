@@ -61,5 +61,23 @@ export class ActivityService extends CRUDService {
       console.error(err);
       return error(err, req, res);
     }
-  };
+  }
+  public getResource = async (req: Request, res: Response): Promise<Response> => {
+    try {
+      this.ensureAuthenticated(req as AuthenticatedRequest, 'getResource');
+      const { id } = req.params;
+      // Extract userId if authenticated
+      const userId = (req as AuthenticatedRequest).user?._id?.toString();
+
+      const activity = await this.handler.fetch(id, userId);
+
+      return res.status(200).json({
+        success: true,
+        payload: activity,
+      });
+    } catch (err) {
+      console.error(err);
+      return error(err, req, res);
+    }
+  }
 }

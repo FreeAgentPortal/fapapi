@@ -79,3 +79,61 @@ PostShareSchema.index({ userId: 1, createdAt: -1 }); // user's share history
 
 export type PostShareDoc = InferSchemaType<typeof PostShareSchema>;
 export const PostShareModel = mongoose.models.PostShare || mongoose.model('PostShare', PostShareSchema);
+
+/**
+ * PostComment - Tracks comments on posts
+ * Keeps Post.counts.comments as a denormalized counter
+ * Stores snapshot data (avatarUrl, name) to prevent broken references if profile is deleted
+ */
+const PostCommentSchema = new Schema(
+  {
+    postId: { type: Schema.Types.ObjectId, required: true, index: true, ref: 'Post' },
+    userId: { type: Schema.Types.ObjectId, required: true, index: true, ref: 'User' },
+    profile: {
+      type: {
+        type: String,
+        enum: ['AthleteProfile', 'TeamProfile'],
+        required: true,
+      },
+      id: { type: Schema.Types.ObjectId, required: true, refPath: 'profile.type' },
+    },
+
+    // Content
+    content: { type: String, required: true, trim: true, maxlength: 5000 },
+
+    // Snapshot data - preserved even if profile is deleted
+    authorName: { type: String, required: true },
+    authorAvatarUrl: { type: String, default: '' },
+
+    // Moderation
+    moderation: {
+      status: {
+        type: String,
+        enum: ['pending', 'approved', 'flagged', 'removed'],
+        default: 'approved',
+        index: true,
+      },
+      flaggedBy: [{ type: Schema.Types.ObjectId, ref: 'User' }],
+      flagReason: { type: String },
+      moderatedBy: { type: Schema.Types.ObjectId, ref: 'User' },
+      moderatedAt: { type: Date },
+    },
+
+    // Soft delete
+    isDeleted: { type: Boolean, default: false, index: true },
+    deletedAt: { type: Date },
+  },
+  {
+    timestamps: true,
+    versionKey: false,
+  }
+);
+
+// Indexes for querying
+PostCommentSchema.index({ postId: 1, createdAt: -1 }); // get comments for a post, newest first
+PostCommentSchema.index({ userId: 1, createdAt: -1 }); // user's comment history
+PostCommentSchema.index({ profileId: 1, createdAt: -1 }); // profile's comment history
+PostCommentSchema.index({ 'moderation.status': 1, createdAt: -1 }); // moderation queue
+
+export type PostCommentDoc = InferSchemaType<typeof PostCommentSchema>;
+export const PostCommentModel = mongoose.models.PostComment || mongoose.model('PostComment', PostCommentSchema);

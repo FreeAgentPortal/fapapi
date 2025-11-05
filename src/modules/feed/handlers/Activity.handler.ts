@@ -45,4 +45,23 @@ export class ActivityHandler extends CRUDHandler<IActivity> {
 
     return results;
   }
+
+  async fetch(id: string, currentUserId?: string): Promise<any | null> {
+    const activity = await this.Schema.findById(id).populate('').lean();
+
+    if (!activity) {
+      return null;
+    }
+
+    // Inflate objects for the activity
+    await this.inflationHandler.inflateActivityObjects([activity]);
+
+    // Enrich activity with interaction data if user is authenticated
+    if (currentUserId) {
+      console.log(`[ActivityHandler]: Enriching activity with interaction data`);
+      await this.enrichmentHandler.enrichWithInteractions([activity], currentUserId);
+    }
+
+    return activity;
+  }
 }

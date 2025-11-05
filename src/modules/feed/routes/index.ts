@@ -12,10 +12,11 @@ const router = express.Router();
 
 const service = new FeedService();
 
-router.use('/subscription', subscriptionRouter)
+router.use('/subscription', subscriptionRouter);
 router.use('/event', eventRoutes);
 router.use('/activity', activityRoutes);
-router.use('/post', postRoutes, interactionRoutes);
+router.use('/post', interactionRoutes); 
+router.use('/post', postRoutes);
 
 router.route('/health').get((req, res) => {
   res.status(200).json({
@@ -24,7 +25,7 @@ router.route('/health').get((req, res) => {
   });
 });
 
-router.route("/articles").get(service.fetchArticles);
+router.route('/articles').get(service.fetchArticles);
 
 // router.route('/').get(service.getResources);
 // router.route('/:id').get(service.getResource);

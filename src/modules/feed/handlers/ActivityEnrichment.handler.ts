@@ -1,6 +1,6 @@
 import mongoose from 'mongoose';
 import { IActivity } from '../model/Activity.model';
-import { PostReactionModel, PostViewModel, PostShareModel } from '../model/PostInteraction.model';
+import { PostReactionModel, PostViewModel, PostShareModel, PostCommentModel } from '../model/PostInteraction.model';
 
 /**
  * Handler for enriching activities with interaction data
@@ -22,10 +22,11 @@ export class ActivityEnrichmentHandler {
       .map((id: any) => new mongoose.Types.ObjectId(id.toString()));
 
     // Run all aggregations in parallel for performance
-    const [reactionCounts, viewCounts, shareCounts, userReactions] = await Promise.all([
+    const [reactionCounts, viewCounts, shareCounts, commentCounts, userReactions] = await Promise.all([
       this.getReactionCounts(activityIds),
       this.getViewCounts(activityIds),
       this.getShareCounts(activityIds),
+      this.getCommentCounts(activityIds),
       this.getUserReactions(activityIds, userId),
     ]);
 
@@ -34,6 +35,7 @@ export class ActivityEnrichmentHandler {
     const reactionBreakdownMap = new Map(reactionCounts.map((r: any) => [r._id.toString(), r.reactions]));
     const viewCountMap = new Map(viewCounts.map((v: any) => [v._id.toString(), v.totalViews]));
     const shareCountMap = new Map(shareCounts.map((s: any) => [s._id.toString(), s.totalShares]));
+    const commentCountMap = new Map(commentCounts.map((c: any) => [c._id.toString(), c.totalComments]));
     const userReactionMap = new Map(userReactions.map((r: any) => [r.postId.toString(), r.reactionType]));
 
     // Enrich each activity with both total counts and user state
@@ -43,6 +45,7 @@ export class ActivityEnrichmentHandler {
       const reactions = reactionBreakdownMap.get(activityId) || [];
       const totalViews = viewCountMap.get(activityId) || 0;
       const totalShares = shareCountMap.get(activityId) || 0;
+      const totalComments = commentCountMap.get(activityId) || 0;
       const userReactionType = userReactionMap.get(activityId);
 
       // Add interaction data to activity
@@ -50,7 +53,7 @@ export class ActivityEnrichmentHandler {
         // Total counts (visible to everyone)
         counts: {
           reactions: totalReactions,
-          comments: 0, // TODO: Implement comment counting
+          comments: totalComments,
           shares: totalShares,
           views: totalViews,
         },
@@ -109,6 +112,27 @@ export class ActivityEnrichmentHandler {
         $group: {
           _id: '$postId',
           totalShares: { $sum: 1 },
+        },
+      },
+    ]);
+  }
+
+  /**
+   * Get total comment counts for all activities
+   */
+  private async getCommentCounts(activityIds: mongoose.Types.ObjectId[]): Promise<any[]> {
+    return await PostCommentModel.aggregate([
+      {
+        $match: {
+          postId: { $in: activityIds },
+          isDeleted: false,
+          'moderation.status': { $in: ['approved', 'pending'] },
+        },
+      },
+      {
+        $group: {
+          _id: '$postId',
+          totalComments: { $sum: 1 },
         },
       },
     ]);
