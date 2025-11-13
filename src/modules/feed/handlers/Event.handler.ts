@@ -1,6 +1,8 @@
 import { CRUDHandler } from '../../../utils/baseCRUD';
 import { EventDocument, EventModel } from '../model/Event.model';
 import { Types } from 'mongoose';
+import { EventRegistrationHandler } from './EventRegistration.handler';
+import { RegistrationStatus } from '../model/EventRegistration.model';
 
 export class EventHandler extends CRUDHandler<EventDocument> {
   constructor() {
@@ -141,5 +143,44 @@ export class EventHandler extends CRUDHandler<EventDocument> {
           eventTypeBreakdown: [],
           mostPopularEventType: null,
         };
+  }
+
+  async fetch(id: string): Promise<any | null> {
+    const eventRegistrationHandler = new EventRegistrationHandler();
+
+    // Fetch event and all registration counts in parallel
+    const [event, interestedCount, appliedCount, invitedCount, confirmedCount, waitlistedCount, declinedCount, noShowCount, attendedCount] = await Promise.all([
+      this.Schema.findById(id).lean(),
+      eventRegistrationHandler.getRegistrationCount(id, RegistrationStatus.INTERESTED),
+      eventRegistrationHandler.getRegistrationCount(id, RegistrationStatus.APPLIED),
+      eventRegistrationHandler.getRegistrationCount(id, RegistrationStatus.INVITED),
+      eventRegistrationHandler.getRegistrationCount(id, RegistrationStatus.CONFIRMED),
+      eventRegistrationHandler.getRegistrationCount(id, RegistrationStatus.WAITLISTED),
+      eventRegistrationHandler.getRegistrationCount(id, RegistrationStatus.DECLINED),
+      eventRegistrationHandler.getRegistrationCount(id, RegistrationStatus.NO_SHOW),
+      eventRegistrationHandler.getRegistrationCount(id, RegistrationStatus.ATTENDED),
+    ]);
+
+    if (!event) {
+      return null;
+    }
+
+    // Calculate total registrations
+    const totalRegistrations = interestedCount + appliedCount + invitedCount + confirmedCount + waitlistedCount + declinedCount + noShowCount + attendedCount;
+
+    return {
+      ...event,
+      registrations: {
+        total: totalRegistrations,
+        interested: interestedCount,
+        applied: appliedCount,
+        invited: invitedCount,
+        confirmed: confirmedCount,
+        waitlisted: waitlistedCount,
+        declined: declinedCount,
+        noShow: noShowCount,
+        attended: attendedCount,
+      },
+    };
   }
 }
