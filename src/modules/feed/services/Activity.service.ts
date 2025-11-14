@@ -8,6 +8,7 @@ import error from '../../../middleware/error';
 export class ActivityService extends CRUDService {
   constructor() {
     super(ActivityHandler);
+    this.queryKeys = ['actorId', 'summary', 'sport', 'tags', 'verb'];
   }
 
   public getResources = async (req: Request, res: Response): Promise<Response> => {
@@ -61,7 +62,7 @@ export class ActivityService extends CRUDService {
       console.error(err);
       return error(err, req, res);
     }
-  }
+  };
   public getResource = async (req: Request, res: Response): Promise<Response> => {
     try {
       this.ensureAuthenticated(req as AuthenticatedRequest, 'getResource');
@@ -79,5 +80,5 @@ export class ActivityService extends CRUDService {
       console.error(err);
       return error(err, req, res);
     }
-  }
+  };
 }

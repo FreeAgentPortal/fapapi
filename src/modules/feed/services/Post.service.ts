@@ -1,5 +1,7 @@
 import { CRUDService } from '../../../utils/baseCRUD';
+import { ActivityHandler } from '../handlers/Activity.handler';
 import { PostHandler } from '../handlers/Post.handler';
+import { ActivityModel } from '../model/Activity.model';
 import { ActivityClient, PublishActivityInput } from '../util/ActivityClient';
 import { mapPostCreated } from '../util/mapPostCreated';
 
@@ -10,7 +12,8 @@ export class PostService extends CRUDService {
       create: true,
       updateResource: true,
       removeResource: true,
-    }
+    };
+    this.queryKeys = ['authorId', 'body'];
   }
 
   protected async afterCreate(doc: any): Promise<void> {
@@ -36,6 +39,16 @@ export class PostService extends CRUDService {
       return ActivityClient.publish(mapPostCreated(doc) as PublishActivityInput)
         .then(() => Promise.resolve())
         .catch((err) => Promise.reject(err));
+    }
+    return Promise.resolve();
+  }
+
+  protected async afterRemove(doc: any | null): Promise<void> {
+    // we need to fire off an activity event here for post deletion
+    if (doc) {
+      await ActivityModel.findOneAndDelete({
+        'object.id': doc._id.toString(),
+      });
     }
     return Promise.resolve();
   }
