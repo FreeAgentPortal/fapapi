@@ -11,20 +11,33 @@ export class SMSHandler {
    * Body: { to: string, message: string, from?: string }
    */
   static testSMS = asyncHandler(async (req: Request, res: Response) => {
-    const { to, message, from } = req.body;
+    const { message, from, data } = req.body;
+    let { to } = req.body;
 
     // Validation
-    if (!to || !message) {
-      throw new ErrorUtil('Missing required fields: to and message are required', 400);
+    if (!to) {
+      throw new ErrorUtil('Missing required field: to is required', 400);
+    }
+
+    // Message is required unless using a template
+    const usingTemplate = data?.contentSid || data?.messagingServiceSid;
+    if (!usingTemplate && !message) {
+      throw new ErrorUtil('Message is required when not using a template', 400);
     }
 
     // Validate phone number format
     if (!SMSService.isValidPhoneNumber(to)) {
-      throw new ErrorUtil('Invalid phone number format. Use E.164 format (e.g., +1234567890)', 400);
+      // if not valid, attempt to format it
+      const formattedNumber = SMSService.formatPhoneNumber(to);
+      console.log(formattedNumber);
+      if (!SMSService.isValidPhoneNumber(formattedNumber)) {
+        throw new ErrorUtil('Invalid phone number format. Use E.164 format (e.g., +1234567890)', 400);
+      }
+      to = formattedNumber;
     }
 
     // Validate message length
-    if (message.length > 1600) {
+    if (message && message.length > 1600) {
       throw new ErrorUtil('Message too long. Maximum length is 1600 characters', 400);
     }
 
@@ -33,6 +46,7 @@ export class SMSHandler {
         to,
         message,
         from,
+        data: data || { contentSid: 'HX762f1dc9c222adbc92383b2f53bdd222', contentVariables: { message: message } },
       });
 
       res.status(200).json({
@@ -87,20 +101,32 @@ export class SMSHandler {
    * Body: { to: string, message: string, from?: string, data?: Record<string, any> }
    */
   static sendSMS = asyncHandler(async (req: Request, res: Response) => {
-    const { to, message, from, data } = req.body;
+    const { message, from, data } = req.body;
+    let { to } = req.body;
 
     // Validation
-    if (!to || !message) {
-      throw new ErrorUtil('Missing required fields: to and message are required', 400);
+    if (!to) {
+      throw new ErrorUtil('Missing required field: to is required', 400);
+    }
+
+    // Message is required unless using a template
+    const usingTemplate = data?.contentSid || data?.messagingServiceSid;
+    if (!usingTemplate && !message) {
+      throw new ErrorUtil('Message is required when not using a template', 400);
     }
 
     // Validate phone number format
     if (!SMSService.isValidPhoneNumber(to)) {
-      throw new ErrorUtil('Invalid phone number format. Use E.164 format (e.g., +1234567890)', 400);
+      // if not valid, attempt to format it
+      const formattedNumber = SMSService.formatPhoneNumber(to);
+      if (!SMSService.isValidPhoneNumber(formattedNumber)) {
+        throw new ErrorUtil('Invalid phone number format. Use E.164 format (e.g., +1234567890)', 400);
+      }
+      to = formattedNumber;
     }
 
     // Validate message length
-    if (message.length > 1600) {
+    if (message && message.length > 1600) {
       throw new ErrorUtil('Message too long. Maximum length is 1600 characters', 400);
     }
 

@@ -128,15 +128,26 @@ export class AthleteProfileCompletionHandler {
    */
   private static async emitCompletionAlertEvent(athlete: IAthlete, completionStatus: ProfileCompletionStatus): Promise<void> {
     try {
+      // Populate userId to get user details including notification settings
+      const populatedAthlete = await athlete.populate('userId');
+      const user = (populatedAthlete as any).userId;
+
       eventBus.publish('athlete.profile.completion.alert', {
         athleteId: athlete._id,
         userId: athlete.userId,
         athleteName: athlete.fullName,
-        email: (athlete as any).userId?.email || athlete.email,
+        email: user?.email || athlete.email,
+        phoneNumber: user?.phoneNumber,
         completionPercentage: completionStatus.completionPercentage,
         missingFields: completionStatus.missingFields,
         criticalFieldsMissing: completionStatus.criticalFieldsMissing,
         profileId: athlete._id,
+        fullName: athlete.fullName,
+        // Pass notification settings to avoid additional lookups
+        notificationSettings: {
+          accountNotificationSMS: user?.notificationSettings?.accountNotificationSMS ?? false,
+          accountNotificationEmail: user?.notificationSettings?.accountNotificationEmail ?? true,
+        },
       });
 
       console.info(`[AthleteProfileCompletion] Event emitted for athlete: ${athlete.fullName}`);

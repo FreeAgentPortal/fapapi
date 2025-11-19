@@ -30,25 +30,44 @@ export class TwilioProvider implements SMSProvider {
         throw new ErrorUtil(`Invalid phone number format: ${to}. Phone number must be in E.164 format (e.g., +1234567890).`, 400);
       }
 
-      // Validate message content
-      if (!message || message.trim().length === 0) {
-        throw new ErrorUtil('SMS message content cannot be empty.', 400);
+      // Validate message content (only if not using templates)
+      const usingTemplate = data?.contentSid || data?.messagingServiceSid;
+      if (!usingTemplate && (!message || message.trim().length === 0)) {
+        throw new ErrorUtil('SMS message content cannot be empty when not using a template.', 400);
       }
 
       // Check message length (SMS limit is typically 160 characters for single SMS)
-      if (message.length > 1600) {
+      if (message && message.length > 1600) {
         // Twilio supports up to 1600 chars but splits into multiple messages
         console.warn(`[TwilioProvider] Message length (${message.length}) exceeds recommended limit. Message will be split into multiple SMS.`);
       }
 
       const smsOptions: any = {
-        body: message,
         from: from || this.defaultFromNumber,
         to: to,
       };
 
+      // Only add body if message is provided
+      if (message) {
+        smsOptions.body = message;
+      }
+
       // Add any additional Twilio-specific options from data
       if (data) {
+        // Template/Messaging Service SID
+        if (data.messagingServiceSid) {
+          smsOptions.messagingServiceSid = data.messagingServiceSid;
+          // When using messaging service, 'from' is not required
+          delete smsOptions.from;
+        }
+        // Content Template SID (for Twilio Content API templates)
+        if (data.contentSid) {
+          smsOptions.contentSid = data.contentSid;
+        }
+        // Content Variables (for template substitution)
+        if (data.contentVariables) {
+          smsOptions.contentVariables = JSON.stringify(data.contentVariables);
+        }
         // Example: statusCallback, maxPrice, etc.
         if (data.statusCallback) smsOptions.statusCallback = data.statusCallback;
         if (data.maxPrice) smsOptions.maxPrice = data.maxPrice;

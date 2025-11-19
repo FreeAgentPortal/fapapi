@@ -4,14 +4,15 @@ import { EmailService } from '../email/EmailService';
 import Notification from '../model/Notification';
 import { ModelKey, ModelMap } from '../../../utils/ModelMap';
 import { ITeamProfile } from '../../profiles/team/model/TeamModel';
+import { SMSService } from '../sms/SMSService';
 
 export default class AthleteEventHandler {
   private modelMap: Record<ModelKey, Model<any>> = ModelMap;
 
-  profileIncomplete = async (event: any) => {
-    console.info(`[Notification]: Sending profile incomplete alert to ${event.email}`);
- 
-    // use the email service to send an email
+  /**
+   * Send profile incomplete email notification
+   */
+  private async sendProfileIncompleteEmail(event: any): Promise<void> {
     try {
       await EmailService.sendEmail({
         to: event.email,
@@ -24,10 +25,56 @@ export default class AthleteEventHandler {
           currentYear: new Date().getFullYear(),
         },
       });
+      console.info(`[Notification]: Profile incomplete email sent to ${event.email}`);
     } catch (error) {
-      console.error(`[Notification]: Error sending profile incomplete alert to ${event.email}:`, error);
+      console.error(`[Notification]: Error sending profile incomplete email to ${event.email}:`, error);
     }
-    console.info(`[Notification]: Profile incomplete alert sent to ${event.email}`);
+  }
+
+  /**
+   * Send profile incomplete SMS notification
+   * Expects notification settings to be passed in event data
+   */
+  private async sendProfileIncompleteSMS(event: any): Promise<void> {
+    try {
+      // Check if phone number is provided
+      if (!event.phoneNumber) {
+        console.warn(`[Notification]: No phone number provided for user ${event.userId}, skipping SMS notification`);
+        return;
+      }
+
+      // Check the notificationSettings passed in the event
+      if (!event.notificationSettings?.accountNotificationSMS) {
+        console.info(`[Notification]: User ${event.userId} has [accountNotificationSMS] SMS alerts disabled, skipping SMS notification`);
+        return;
+      }
+
+      // Send the SMS
+      await SMSService.sendSMS({
+        to: event.phoneNumber,
+        data: {
+          contentSid: 'HX762f1dc9c222adbc92383b2f53bdd222',
+          contentVariables: {
+            message: `Hello ${event.fullName}, our records indicate that your profile is incomplete. 
+            Please update your profile to get the most out of our platform.
+            Athlete's with a complete profile get 3x more views!
+            Visit: https://athlete.thefreeagentportal.com/account_details/profile`,
+          },
+        },
+      });
+      console.info(`[Notification]: Profile incomplete SMS sent to ${event.phoneNumber}`);
+    } catch (error) {
+      console.error(`[Notification]: Error sending SMS to ${event.phoneNumber}:`, error);
+    }
+  }
+
+  profileIncomplete = async (event: any) => {
+    console.info(`[Notification]: Sending profile incomplete alert to ${event.email}`);
+
+    // Send email and SMS notifications in parallel
+    await Promise.all([this.sendProfileIncompleteEmail(event), this.sendProfileIncompleteSMS(event)]);
+
+    console.info(`[Notification]: Profile incomplete alert processing completed for ${event.email}`);
   };
 
   athleteViewRecorded = async (event: any) => {
@@ -58,7 +105,14 @@ export default class AthleteEventHandler {
           throw new ErrorUtil('Viewer profile not found', 404);
         }
         const viewerName = viewerProfile ? viewerProfile.name : 'A team';
-        await Notification.insertNotification(event.athleteId, undefined as any, `A new view on your profile has been recorded by ${viewerName}.`, 'TBD', 'athlete.view.recorded', event.viewerId);
+        await Notification.insertNotification(
+          event.athleteId,
+          undefined as any,
+          `A new view on your profile has been recorded by ${viewerName}.`,
+          'TBD',
+          'athlete.view.recorded',
+          event.viewerId
+        );
       }
       await Notification.insertNotification(event.athleteId, undefined as any, 'A new view on your profile has been recorded.', 'TBD', 'athlete.view.recorded', event.viewerId);
     } catch (error) {
