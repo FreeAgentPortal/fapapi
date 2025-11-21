@@ -1,7 +1,9 @@
 // modules/notification/NotificationService.ts
 import { EmailService } from '../email/EmailService';
+import { SMSService } from '../sms/SMSService';
 import NAthleteEventsService from './NAthleteEvents.service';
 import NAuthService from './NAuthService';
+import NBillingEventsService from './NBillingEvents.service';
 import NClaimService from './NClaimService';
 import NConversationService from './NConversationService';
 import NSupportService from './NSupportService';
@@ -19,9 +21,11 @@ export default class NotificationService {
     private readonly nconversationService: NConversationService = new NConversationService(),
     private readonly nteamsEventService: NTeamsEventService = new NTeamsEventService(),
     private readonly nathleteEventService: NAthleteEventsService = new NAthleteEventsService(),
+    private readonly nbillingEventService: NBillingEventsService = new NBillingEventsService()
   ) {}
   public init() {
     EmailService.init('sendgrid');
+    SMSService.init('twilio');
     this.nauthService.init();
     this.nclaimService.init();
     this.nticketService.init();
@@ -30,5 +34,6 @@ export default class NotificationService {
     this.nconversationService.init();
     this.nteamsEventService.init();
     this.nathleteEventService.init();
+    this.nbillingEventService.init();
   }
 }

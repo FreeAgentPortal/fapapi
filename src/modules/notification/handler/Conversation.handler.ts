@@ -3,6 +3,7 @@ import Notification from '../model/Notification';
 import { IMessage } from '../../messaging/models/Message';
 import User from '../../auth/model/User';
 import { EmailService } from '../email/EmailService';
+import { SMSService } from '../sms/SMSService';
 import { IConversation } from '../../messaging/models/Conversation';
 import TeamModel from '../../profiles/team/model/TeamModel';
 import { AthleteModel } from '../../profiles/athlete/models/AthleteModel';
@@ -42,12 +43,24 @@ export default class ConversationEventHandler {
 
     try {
       const team = await TeamModel.findById(conversation.participants.team);
-      const athlete = await AthleteModel.findById(conversation.participants.athlete);
+      const athlete = await AthleteModel.findById(conversation.participants.athlete).populate('userId');
 
       if (!team || !athlete) {
         throw new ErrorUtil('Team or Athlete not found', 404);
       }
 
+      // Send email and SMS notifications in parallel (athlete only)
+      await Promise.all([this.sendConversationStartedEmail(athlete, team), this.sendConversationStartedSMS(athlete, team)]);
+    } catch (error) {
+      console.error('Error sending conversation started notifications', error);
+    }
+  }
+
+  /**
+   * Send conversation started email to athlete
+   */
+  private async sendConversationStartedEmail(athlete: any, team: any): Promise<void> {
+    try {
       await EmailService.sendEmail({
         to: athlete?.email || '',
         subject: 'Your conversation with the ' + team?.name + ' has started',
@@ -62,8 +75,51 @@ export default class ConversationEventHandler {
           subject: 'Your conversation with the ' + team?.name + ' has started',
         },
       });
+      console.info(`[Notification]: Conversation started email sent to ${athlete?.email}`);
     } catch (error) {
-      console.error('Error sending email', error);
+      console.error(`[Notification]: Error sending conversation started email to ${athlete?.email}:`, error);
+    }
+  }
+
+  /**
+   * Send conversation started SMS to athlete
+   * Only sends if athlete has SMS notifications enabled
+   */
+  private async sendConversationStartedSMS(athlete: any, team: any): Promise<void> {
+    try {
+      // Check if athlete has a userId populated
+      if (!athlete.userId) {
+        console.warn(`[Notification]: Athlete ${athlete._id} does not have userId populated, skipping SMS notification`);
+        return;
+      }
+
+      // Check if phone number is provided
+      const phoneNumber = athlete.userId.phoneNumber || athlete.contactNumber;
+      if (!phoneNumber) {
+        console.warn(`[Notification]: No phone number available for athlete ${athlete._id}, skipping SMS notification`);
+        return;
+      }
+
+      // Check SMS notification preferences
+      if (!athlete.userId.notificationSettings?.accountNotificationSMS) {
+        console.info(`[Notification]: Athlete ${athlete._id} has SMS alerts disabled, skipping SMS notification`);
+        return;
+      }
+
+      // Send the SMS
+      await SMSService.sendSMS({
+        to: phoneNumber,
+        data: {
+          contentSid: 'HXa0e6d64c6e7c3f8b9e0a1d2c3f4b5a6c7',
+          contentVariables: {
+            message: `Good news ${athlete?.fullName}! Someone from the ${team?.name} has started a conversation with you! 
+            Log in to your account to check your messages and respond promptly.`,
+          },
+        },
+      });
+      console.info(`[Notification]: Conversation started SMS sent to ${phoneNumber}`);
+    } catch (error) {
+      console.error(`[Notification]: Error sending conversation started SMS:`, error);
     }
   }
 }
