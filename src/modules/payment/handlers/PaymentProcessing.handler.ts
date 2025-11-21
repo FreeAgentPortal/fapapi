@@ -334,6 +334,13 @@ export default class PaymentProcessingHandler {
 
     await receipt.save();
     console.info(`[PaymentProcessingHandler] Success receipt created: ${receipt.transactionId}`);
+
+    // Emit payment success event for notifications
+    eventBus.publish('billing.payment.success', {
+      receiptId: receipt._id,
+      receipt: receipt.toObject(),
+    });
+
     return receipt;
   }
 
@@ -374,6 +381,13 @@ export default class PaymentProcessingHandler {
 
     await receipt.save();
     console.info(`[PaymentProcessingHandler] Failure receipt created: ${receipt.transactionId}`);
+
+    // Emit payment failure event for notifications
+    eventBus.publish('billing.payment.failed', {
+      receiptId: receipt._id,
+      receipt: receipt.toObject(),
+    });
+
     return receipt;
   }
 
