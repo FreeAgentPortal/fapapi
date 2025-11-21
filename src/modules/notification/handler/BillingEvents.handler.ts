@@ -135,7 +135,7 @@ export default class BillingEventHandler {
       await EmailService.sendEmail({
         to: user.email,
         subject: 'Payment Confirmation - Free Agent Portal',
-        templateId: 'd-payment-success-template-id', // TODO: Replace with actual SendGrid template ID
+        templateId: 'd-576fe7ca1f4c4883b6b9aa04d099d4f3', // TODO: Replace with actual SendGrid template ID
         data: {
           customerName: `${user.firstName} ${user.lastName}`,
           productName: receipt.planInfo?.planName ? `${receipt.planInfo.planName} — ${receipt.planInfo.billingCycle === 'yearly' ? 'Annual' : 'Monthly'}` : 'Payment',
@@ -211,7 +211,7 @@ export default class BillingEventHandler {
       await EmailService.sendEmail({
         to: user.email,
         subject: 'Payment Failed - Action Required',
-        templateId: 'd-payment-failed-template-id', // TODO: Replace with actual SendGrid template ID
+        templateId: 'd-e566f031748145ccbdcd199c100bfdc3', // TODO: Replace with actual SendGrid template ID
         data: {
           customerName: `${user.firstName} ${user.lastName}`,
           productName: receipt.planInfo?.planName ? `${receipt.planInfo.planName} — ${receipt.planInfo.billingCycle === 'yearly' ? 'Annual' : 'Monthly'}` : 'Payment',
@@ -286,7 +286,7 @@ export default class BillingEventHandler {
       await SMSService.sendSMS({
         to: user.phoneNumber,
         data: {
-          contentSid: 'HXpayment-success-template-id', // TODO: Replace with actual Twilio template ID
+          contentSid: 'HXa0e6d64c6e7c3f8b9e0a1d2c3f4b5a6c7',
           contentVariables: {
             message,
           },
@@ -324,7 +324,7 @@ export default class BillingEventHandler {
       await SMSService.sendSMS({
         to: user.phoneNumber,
         data: {
-          contentSid: 'HXpayment-failed-template-id', // TODO: Replace with actual Twilio template ID
+          contentSid: 'HXa0e6d64c6e7c3f8b9e0a1d2c3f4b5a6c7', 
           contentVariables: {
             message,
           },
