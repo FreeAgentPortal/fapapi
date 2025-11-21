@@ -29,17 +29,11 @@ jobs:
           npm run build --if-present
           npm run test --if-present
 
-      - name: Zip artifact for deployment
-        # We want to ensure that only the necessary files are included in the zip
-        # that would be dist, package.json, and any other necessary files
-        # run: zip -r release.zip dist public package.json package-lock.json
-        run: zip release.zip ./* -r
-
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: node-app
-          path: release.zip
+          path: .
 
   deploy:
     runs-on: ubuntu-latest
@@ -50,9 +44,7 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: node-app
-
-      - name: Unzip artifact for deployment
-        run: unzip release.zip
+ 
 
       - name: 'Deploy to Azure Web App'
         id: deploy-to-webapp
