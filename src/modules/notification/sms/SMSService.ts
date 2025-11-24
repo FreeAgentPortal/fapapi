@@ -32,6 +32,11 @@ class SMSService {
     if (!this.isValidPhoneNumber(payload.to)) {
       const formattedNumber = this.formatPhoneNumber(payload.to);
       payload.to = formattedNumber;
+      console.log(`[SMSService] Formatted phone number to E.164: ${formattedNumber}`);
+      // check again to ensure formatting worked
+      if (!this.isValidPhoneNumber(payload.to)) {
+        throw new Error(`Invalid phone number after formatting: ${payload.to}`);
+      }
     }
 
     console.log(`[SMSService] Sending SMS to ${payload.to}`);

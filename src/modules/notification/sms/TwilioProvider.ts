@@ -25,11 +25,6 @@ export class TwilioProvider implements SMSProvider {
 
   async sendSMS({ to, message, from, data }: SMSPayload): Promise<void> {
     try {
-      // Validate phone number format (basic E.164 validation)
-      if (!this.isValidPhoneNumber(to)) {
-        throw new ErrorUtil(`Invalid phone number format: ${to}. Phone number must be in E.164 format (e.g., +1234567890).`, 400);
-      }
-
       // Validate message content (only if not using templates)
       const usingTemplate = data?.contentSid || data?.messagingServiceSid;
       if (!usingTemplate && (!message || message.trim().length === 0)) {
@@ -92,9 +87,4 @@ export class TwilioProvider implements SMSProvider {
     }
   }
 
-  private isValidPhoneNumber(phoneNumber: string): boolean {
-    // Basic E.164 format validation: starts with + followed by country code and number
-    const e164Regex = /^\+[1-9]\d{1,14}$/;
-    return e164Regex.test(phoneNumber);
-  }
 }
