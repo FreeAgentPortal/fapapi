@@ -5,6 +5,7 @@ import { AthleteModel } from '../../profiles/athlete/models/AthleteModel';
 import TeamModel from '../../profiles/team/model/TeamModel';
 import { EmailService } from '../../notification/email/EmailService';
 import { SMSService } from '../../notification/sms/SMSService';
+import Notification from '../../notification/model/Notification';
 
 export class UnreadMessageAlertHandler {
   /**
@@ -51,9 +52,23 @@ export class UnreadMessageAlertHandler {
             continue;
           }
 
-          // Send email and SMS in parallel
-          const [emailResult, smsResult] = await Promise.allSettled([this.sendUnreadMessageEmail(athlete, team, message), this.sendUnreadMessageSMS(athlete, team, message)]);
+          // Check if we should send alert for this message (not already sent today)
+          const shouldAlert = await this.shouldSendMessageAlert(athlete, message);
+          if (!shouldAlert) {
+            console.info(`[UnreadMessageAlert] Alert already sent for message ${message._id} within last 24 hours, skipping`);
+            continue;
+          }
 
+          // Send notification insert, email and SMS in parallel
+          const [notificationResult, emailResult, smsResult] = await Promise.allSettled([
+            this.insertUnreadMessageNotification(athlete, team, message),
+            this.sendUnreadMessageEmail(athlete, team, message),
+            this.sendUnreadMessageSMS(athlete, team, message),
+          ]);
+
+          if (notificationResult.status === 'rejected') {
+            console.error(`[UnreadMessageAlert] Failed to insert notification for message ${message._id}`);
+          }
           if (emailResult.status === 'fulfilled' && emailResult.value) {
             emailsSent++;
           }
@@ -61,7 +76,7 @@ export class UnreadMessageAlertHandler {
             smsSent++;
           }
 
-          if (emailResult.status === 'rejected' || smsResult.status === 'rejected') {
+          if (notificationResult.status === 'rejected' || emailResult.status === 'rejected' || smsResult.status === 'rejected') {
             errors++;
           }
         } catch (error) {
@@ -85,6 +100,63 @@ export class UnreadMessageAlertHandler {
   }
 
   /**
+   * Check if we should send an alert for this specific message
+   * (to avoid spamming - only alert once per day per message)
+   * @param athlete - The athlete profile
+   * @param message - The unread message
+   * @returns boolean indicating if alert should be sent
+   */
+  private static async shouldSendMessageAlert(athlete: any, message: any): Promise<boolean> {
+    try {
+      // Check if we've sent an alert for this specific message in the last 24 hours
+      const recentAlert = await Notification.findOne({
+        userTo: athlete.userId,
+        notificationType: 'message',
+        entityId: message._id,
+        createdAt: { $gte: new Date(Date.now() - 24 * 60 * 60 * 1000) },
+      });
+
+      return !recentAlert;
+    } catch (error) {
+      console.warn(`[UnreadMessageAlert] Error checking recent alerts for message ${message._id}:`, error);
+      // If we can't check, err on the side of sending the alert
+      return true;
+    }
+  }
+
+  /**
+   * Insert in-app notification for unread message
+   * @param athlete - The athlete profile
+   * @param team - The team that sent the message
+   * @param message - The unread message
+   */
+  private static async insertUnreadMessageNotification(athlete: any, team: any, message: any): Promise<boolean> {
+    try {
+      if (!athlete.userId) {
+        console.warn(`[UnreadMessageAlert] No userId for athlete ${athlete._id}`);
+        return false;
+      }
+
+      const messagePreview = message.content.length > 50 ? `${message.content.substring(0, 50)}...` : message.content;
+
+      await Notification.insertNotification(
+        athlete.userId as any,
+        null as any, // No specific sender for system notifications
+        `New message from ${team.name}`,
+        `${team.name} sent you a message: "${messagePreview}"`,
+        'message',
+        message._id as any
+      );
+
+      console.info(`[UnreadMessageAlert] Notification inserted for athlete ${athlete._id} for message ${message._id}`);
+      return true;
+    } catch (error) {
+      console.error(`[UnreadMessageAlert] Error inserting notification for message ${message._id}:`, error);
+      throw error;
+    }
+  }
+
+  /**
    * Send unread message email to athlete
    */
   private static async sendUnreadMessageEmail(athlete: any, team: any, message: any): Promise<boolean> {
@@ -97,7 +169,7 @@ export class UnreadMessageAlertHandler {
       await EmailService.sendEmail({
         to: athlete.email,
         subject: `New message from ${team.name}`,
-        templateId: 'd-8c9d1e2f3a4b5c6d7e8f9a0b1c2d3e4f', // TODO: Replace with actual template ID
+        templateId: 'd-2a603e8ef7434ffca83c795057f1d58f', // TODO: Replace with actual template ID
         data: {
           athleteName: athlete.fullName,
           teamName: team.name,
@@ -194,7 +266,18 @@ export class UnreadMessageAlertHandler {
         throw new Error('Athlete or Team not found');
       }
 
-      await Promise.all([this.sendUnreadMessageEmail(athlete, team, message), this.sendUnreadMessageSMS(athlete, team, message)]);
+      // Check if we should send alert
+      const shouldAlert = await this.shouldSendMessageAlert(athlete, message);
+      if (!shouldAlert) {
+        console.info(`[UnreadMessageAlert] Alert already sent for message ${messageId} within last 24 hours, skipping`);
+        return;
+      }
+
+      await Promise.all([
+        this.insertUnreadMessageNotification(athlete, team, message),
+        this.sendUnreadMessageEmail(athlete, team, message),
+        this.sendUnreadMessageSMS(athlete, team, message),
+      ]);
 
       console.info(`[UnreadMessageAlert] Alert sent for message ${messageId}`);
     } catch (error) {
