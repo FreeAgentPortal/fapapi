@@ -110,7 +110,7 @@ export default class ConversationEventHandler {
       await SMSService.sendSMS({
         to: phoneNumber,
         data: {
-          contentSid: 'HXa0e6d64c6e7c3f8b9e0a1d2c3f4b5a6c7',
+          contentSid: 'HX762f1dc9c222adbc92383b2f53bdd222',
           contentVariables: {
             message: `Good news ${athlete?.fullName}! Someone from the ${team?.name} has started a conversation with you! 
             Log in to your account to check your messages and respond promptly.`,

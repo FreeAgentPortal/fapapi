@@ -220,7 +220,7 @@ export class UnreadMessageAlertHandler {
       await SMSService.sendSMS({
         to: phoneNumber,
         data: {
-          contentSid: 'HXb1c2d3e4f5a6b7c8d9e0f1a2b3c4d5e6', // TODO: Replace with actual Twilio template ID
+          contentSid: 'HX762f1dc9c222adbc92383b2f53bdd222',
           contentVariables: {
             message: `You have a new message from ${team.name}: "${message.content.substring(0, 50)}..."
             login to your account to read and respond.

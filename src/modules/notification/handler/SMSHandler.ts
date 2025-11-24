@@ -44,9 +44,7 @@ export class SMSHandler {
     try {
       await SMSService.sendSMS({
         to,
-        message,
-        from,
-        data: data || { contentSid: 'HX762f1dc9c222adbc92383b2f53bdd222', contentVariables: { message: message } },
+        data: { contentSid: 'HX762f1dc9c222adbc92383b2f53bdd222', contentVariables: { message: message } },
       });
 
       res.status(200).json({

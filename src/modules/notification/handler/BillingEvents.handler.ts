@@ -286,7 +286,7 @@ export default class BillingEventHandler {
       await SMSService.sendSMS({
         to: user.phoneNumber,
         data: {
-          contentSid: 'HXa0e6d64c6e7c3f8b9e0a1d2c3f4b5a6c7',
+          contentSid: 'HX762f1dc9c222adbc92383b2f53bdd222',
           contentVariables: {
             message,
           },
@@ -324,7 +324,7 @@ export default class BillingEventHandler {
       await SMSService.sendSMS({
         to: user.phoneNumber,
         data: {
-          contentSid: 'HXa0e6d64c6e7c3f8b9e0a1d2c3f4b5a6c7', 
+          contentSid: 'HX762f1dc9c222adbc92383b2f53bdd222',
           contentVariables: {
             message,
           },
