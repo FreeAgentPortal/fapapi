@@ -55,7 +55,7 @@ export class UnreadMessageAlertHandler {
           // Check if we should send alert for this message (not already sent today)
           const shouldAlert = await this.shouldSendMessageAlert(athlete, message);
           if (!shouldAlert) {
-            console.info(`[UnreadMessageAlert] Alert already sent for message ${message._id} within last 24 hours, skipping`);
+            // console.info(`[UnreadMessageAlert] Alert already sent for message ${message._id} within last 24 hours, skipping`);
             continue;
           }
 
@@ -269,7 +269,7 @@ export class UnreadMessageAlertHandler {
       // Check if we should send alert
       const shouldAlert = await this.shouldSendMessageAlert(athlete, message);
       if (!shouldAlert) {
-        console.info(`[UnreadMessageAlert] Alert already sent for message ${messageId} within last 24 hours, skipping`);
+        // console.info(`[UnreadMessageAlert] Alert already sent for message ${messageId} within last 24 hours, skipping`);
         return;
       }
 

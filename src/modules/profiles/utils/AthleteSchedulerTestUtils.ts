@@ -11,7 +11,7 @@ export class AthleteSchedulerTestUtils {
     try {
       console.info(`Testing completion alert for athlete: ${athleteId}`);
 
-      const athlete = await AthleteModel.findById(athleteId).populate('userId', 'email firstName lastName fullName');
+      const athlete = await AthleteModel.findById(athleteId).populate('userId', 'email firstName lastName fullName phoneNumber notificationSettings');
       if (!athlete) {
         throw new Error('Athlete not found');
       }

@@ -45,6 +45,8 @@ export class AthleteProfileAnalysisHandler {
                   lastName: 1,
                   isEmailVerified: 1,
                   fullName: 1,
+                  phoneNumber: 1,
+                  notificationSettings: 1,
                 },
               },
             ],
@@ -160,7 +162,7 @@ export class AthleteProfileAnalysisHandler {
 
     try {
       // Find the athlete
-      const athlete = await AthleteModel.findById(athleteId).populate('userId', 'email firstName lastName fullName');
+      const athlete = await AthleteModel.findById(athleteId).populate('userId', 'email firstName lastName fullName phoneNumber notificationSettings');
       if (!athlete) {
         throw new Error(`Athlete profile not found: ${athleteId}`);
       }

@@ -129,8 +129,7 @@ export class AthleteProfileCompletionHandler {
   private static async emitCompletionAlertEvent(athlete: IAthlete, completionStatus: ProfileCompletionStatus): Promise<void> {
     try {
       // Populate userId to get user details including notification settings
-      const populatedAthlete = await athlete.populate('userId');
-      const user = (populatedAthlete as any).userId;
+      const user = (athlete as any).userId;
 
       eventBus.publish('athlete.profile.completion.alert', {
         athleteId: athlete._id,
