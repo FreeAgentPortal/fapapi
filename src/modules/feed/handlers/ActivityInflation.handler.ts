@@ -113,6 +113,7 @@ export class ActivityInflationHandler {
         athlete: 'athleteprofiles',
         team: 'teamprofiles',
         scout: 'scoutprofiles',
+        admin: 'admins'
       };
 
       const collectionName = collectionMap[profileType.toLowerCase()];
@@ -161,6 +162,8 @@ export class ActivityInflationHandler {
       user: 'User',
       teams: 'Team',
       team: 'Team',
+      admin: "Admin",
+      admins: "Admin",
     };
 
     return modelMap[collection.toLowerCase()] || null;
