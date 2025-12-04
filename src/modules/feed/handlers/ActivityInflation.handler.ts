@@ -105,15 +105,26 @@ export class ActivityInflationHandler {
   /**
    * Inflates a profile and attaches it to the object
    * Only retrieves specific fields: _id, fullName, email, profileImageUrl
+   * For admin profiles, creates a static profile object instead
    */
   private async inflateProfile(obj: any, profileType: string, profileId: string): Promise<void> {
     try {
+      // Handle admin profiles differently - use static data
+      if (profileType.toLowerCase() === 'admin') {
+        obj.profile = {
+          _id: profileId,
+          fullName: 'FreeAgentPortal',
+          profileImageUrl: 'https://res.cloudinary.com/dsltlng97/image/upload/v1752863629/placeholder-logo_s7jg3y.png',
+          isAdmin: true,
+        };
+        return;
+      }
+
       // Map profile type to collection name
       const collectionMap: Record<string, string> = {
         athlete: 'athleteprofiles',
         team: 'teamprofiles',
         scout: 'scoutprofiles',
-        admin: 'admins'
       };
 
       const collectionName = collectionMap[profileType.toLowerCase()];
@@ -162,8 +173,8 @@ export class ActivityInflationHandler {
       user: 'User',
       teams: 'Team',
       team: 'Team',
-      admin: "Admin",
-      admins: "Admin",
+      admin: 'Admin',
+      admins: 'Admin',
     };
 
     return modelMap[collection.toLowerCase()] || null;

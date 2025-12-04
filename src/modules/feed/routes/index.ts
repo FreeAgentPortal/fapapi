@@ -7,6 +7,7 @@ import eventRoutes from './event';
 import activityRoutes from './activity';
 import postRoutes from './post';
 import interactionRoutes from './interaction';
+import signingRoutes from './signing';
 
 const router = express.Router();
 
@@ -17,6 +18,7 @@ router.use('/event', eventRoutes);
 router.use('/activity', activityRoutes);
 router.use('/post', interactionRoutes); 
 router.use('/post', postRoutes);
+router.use('/signing', signingRoutes)
 
 router.route('/health').get((req, res) => {
   res.status(200).json({
