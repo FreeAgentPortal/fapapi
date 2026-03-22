@@ -131,6 +131,51 @@ export class BillingHandler {
   }
 
   /**
+   * @description Cancel a user's account: removes their customer record from the payment
+   *              processor and marks the billing account as inactive with needsUpdate = true.
+   *              Only the account owner or an admin/developer may cancel an account.
+   */
+  async cancelAccount(req: AuthenticatedRequest): Promise<Boolean> {
+    const { id } = req.params;
+    const billing = await BillingAccount.findOne({ profileId: id });
+    if (!billing) {
+      throw new ErrorUtil('Could not find billing information', 404);
+    }
+
+    // Ensure the caller is either the account owner or an admin/developer
+    const isOwner = billing.payor?.toString() === req.user._id?.toString();
+    const isAdmin = req.user.roles?.some((r) => ['admin', 'developer'].includes(r));
+    if (!isOwner && !isAdmin) {
+      throw new ErrorUtil('Not authorized to cancel this account', 403);
+    }
+
+    // Remove customer from the payment processor.
+    // A failure here is intentionally non-fatal: we still want to mark the
+    // billing account as cancelled so that no further charges can occur.
+    if (billing.processor) {
+      try {
+        const factory = new PaymentProcessorFactory();
+        const processor = factory.chooseProcessor(billing.processor);
+        const customerId = billing.processor === 'stripe'
+          ? billing.paymentProcessorData?.stripe?.customer?.id
+          : billing.customerId;
+
+        if (customerId) {
+          await processor.deleteVault(customerId);
+        }
+      } catch (err) {
+        console.error('[BillingHandler] Error removing customer from processor:', err);
+      }
+    }
+
+    billing.needsUpdate = true;
+    billing.status = 'inactive';
+    await billing.save();
+
+    return true;
+  }
+
+  /**
    * @description Fetch billing information for user from profile id
    */
   async getVault(id: string): Promise<any> {
