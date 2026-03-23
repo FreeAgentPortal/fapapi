@@ -30,6 +30,9 @@ class PaymentProcessor {
   createVault(customerId: string, vaultData: any, ...args: any[]) {
     throw new Error('Not implemented');
   }
+  deleteVault(vaultId: string, ...args: any[]) {
+    throw new Error('Not implemented');
+  }
   fetchTransactions(paymentDetails: any, ...args: any[]) {
     throw new Error('Not implemented');
   }

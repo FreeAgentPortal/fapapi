@@ -17,6 +17,6 @@ router.route('/health').get((req, res) => {
   });
 });
 
-router.route('/:id').get(AuthMiddleware.protect, paymentService.fetchBilling).post(AuthMiddleware.protect, paymentService.updateBilling);
+router.route('/:id').get(AuthMiddleware.protect, paymentService.fetchBilling).post(AuthMiddleware.protect, paymentService.updateBilling).delete(AuthMiddleware.protect, paymentService.cancelAccount);
 
 export default router;

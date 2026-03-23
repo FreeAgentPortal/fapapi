@@ -21,6 +21,7 @@ export interface BillingAccountType extends mongoose.Document {
   vaultId: string;
   nextBillingDate?: Date;
   needsUpdate?: boolean;
+  pendingCancellation?: boolean;
   payor: UserType;
   plan: PlanType;
   // is yearly? whether or not the subscription is yearly
@@ -100,6 +101,10 @@ const Schema = new mongoose.Schema(
       ref: 'User',
     },
     needsUpdate: {
+      type: Boolean,
+      default: false,
+    },
+    pendingCancellation: {
       type: Boolean,
       default: false,
     },

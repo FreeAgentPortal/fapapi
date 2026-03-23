@@ -11,6 +11,8 @@ export default class NBillingEventsService {
   public init() {
     eventBus.subscribe('billing.payment.success', this.handler.paymentSuccess);
     eventBus.subscribe('billing.payment.failed', this.handler.paymentFailed);
+    eventBus.subscribe('billing.cancellation.requested', this.handler.cancellationRequested);
+    eventBus.subscribe('billing.account.cancelled', this.handler.accountCancelled);
 
     console.info('[NBillingEventsService] Billing event listeners initialized');
   }
