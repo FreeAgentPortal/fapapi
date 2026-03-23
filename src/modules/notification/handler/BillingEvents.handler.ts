@@ -66,6 +66,67 @@ export default class BillingEventHandler {
   };
 
   /**
+   * Handle cancellation requested event
+   * Confirms to the user that their cancellation request was received and that
+   * their account will remain active until the end of the current billing period.
+   */
+  cancellationRequested = async (event: any) => {
+    console.info(`[Notification] Cancellation requested for billing: ${event.billing?._id}`);
+
+    try {
+      const { billing, userId } = event;
+
+      const user = await User.findById(userId);
+      if (!user) {
+        console.warn(`[Notification] User ${userId} not found for cancellation requested notification`);
+        return;
+      }
+
+      const nextBillingDate = billing.nextBillingDate
+        ? new Date(billing.nextBillingDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+        : 'the end of your billing period';
+
+      await Promise.all([
+        this.insertCancellationRequestedNotification(user._id, billing, nextBillingDate),
+        this.sendCancellationRequestedEmail(user, billing, nextBillingDate),
+        this.sendCancellationRequestedSMS(user, nextBillingDate),
+      ]);
+
+      console.info(`[Notification] Cancellation requested notifications sent for user ${user._id}`);
+    } catch (error) {
+      console.error('[Notification] Error sending cancellation requested notifications:', error);
+    }
+  };
+
+  /**
+   * Handle account cancelled event
+   * Notifies the user that their account has been fully cancelled.
+   */
+  accountCancelled = async (event: any) => {
+    console.info(`[Notification] Account cancelled for billing: ${event.billing?._id}`);
+
+    try {
+      const { billing, userId } = event;
+
+      const user = await User.findById(userId);
+      if (!user) {
+        console.warn(`[Notification] User ${userId} not found for account cancelled notification`);
+        return;
+      }
+
+      await Promise.all([
+        this.insertAccountCancelledNotification(user._id, billing),
+        this.sendAccountCancelledEmail(user, billing),
+        this.sendAccountCancelledSMS(user),
+      ]);
+
+      console.info(`[Notification] Account cancelled notifications sent for user ${user._id}`);
+    } catch (error) {
+      console.error('[Notification] Error sending account cancelled notifications:', error);
+    }
+  };
+
+  /**
    * Insert in-app notification for payment success
    */
   private async insertPaymentSuccessNotification(userId: string, receipt: any): Promise<void> {
@@ -334,6 +395,124 @@ export default class BillingEventHandler {
       console.info(`[Notification] Payment failure SMS sent to ${user.phoneNumber}`);
     } catch (error) {
       console.error(`[Notification] Error sending payment failure SMS to user ${user._id}:`, error);
+    }
+  }
+
+  // ─── Cancellation Requested ───────────────────────────────────────────────
+
+  private async insertCancellationRequestedNotification(userId: any, billing: any, nextBillingDate: string): Promise<void> {
+    try {
+      await Notification.insertNotification(
+        userId,
+        null as any,
+        'Cancellation Requested',
+        `Your account cancellation has been scheduled. Your account will remain active until ${nextBillingDate}.`,
+        'billing',
+        billing._id
+      );
+    } catch (error) {
+      console.error(`[Notification] Error creating cancellation requested notification for user ${userId}:`, error);
+    }
+  }
+
+  private async sendCancellationRequestedEmail(user: any, billing: any, nextBillingDate: string): Promise<void> {
+    try {
+      if (!user.email) return;
+      await EmailService.sendEmail({
+        to: user.email,
+        subject: 'Cancellation Confirmed - Free Agent Portal',
+        templateId: 'd-576fe7ca1f4c4883b6b9aa04d099d4f3', // TODO: Replace with dedicated cancellation template
+        data: {
+          customerName: `${user.firstName} ${user.lastName}`,
+          message: `Your cancellation request has been received. Your account will remain active until ${nextBillingDate}. No further charges will be made after that date.`,
+          supportEmail: 'support@freeagentportal.com',
+          logoUrl: 'https://res.cloudinary.com/dsltlng97/image/upload/v1752863629/placeholder-logo_s7jg3y.png',
+          orgAddress: '123 Gridiron Ave, Charlotte, NC',
+          year: new Date().getFullYear(),
+        },
+      });
+      console.info(`[Notification] Cancellation requested email sent to ${user.email}`);
+    } catch (error) {
+      console.error(`[Notification] Error sending cancellation requested email to ${user.email}:`, error);
+    }
+  }
+
+  private async sendCancellationRequestedSMS(user: any, nextBillingDate: string): Promise<void> {
+    try {
+      if (!user.phoneNumber) return;
+      if (!user.notificationSettings?.accountNotificationSMS) return;
+
+      const message = `Hi ${user.firstName}, your cancellation request has been received. Your account will remain active until ${nextBillingDate}. No further charges will be made after that date.`;
+
+      await SMSService.sendSMS({
+        to: user.phoneNumber,
+        data: {
+          contentSid: 'HX762f1dc9c222adbc92383b2f53bdd222',
+          contentVariables: { message },
+        },
+      });
+      console.info(`[Notification] Cancellation requested SMS sent to ${user.phoneNumber}`);
+    } catch (error) {
+      console.error(`[Notification] Error sending cancellation requested SMS to user ${user._id}:`, error);
+    }
+  }
+
+  // ─── Account Cancelled ────────────────────────────────────────────────────
+
+  private async insertAccountCancelledNotification(userId: any, billing: any): Promise<void> {
+    try {
+      await Notification.insertNotification(
+        userId,
+        null as any,
+        'Account Cancelled',
+        'Your account has been cancelled. We hope to see you again soon!',
+        'billing',
+        billing._id
+      );
+    } catch (error) {
+      console.error(`[Notification] Error creating account cancelled notification for user ${userId}:`, error);
+    }
+  }
+
+  private async sendAccountCancelledEmail(user: any, billing: any): Promise<void> {
+    try {
+      if (!user.email) return;
+      await EmailService.sendEmail({
+        to: user.email,
+        subject: 'Your Account Has Been Cancelled - Free Agent Portal',
+        templateId: 'd-576fe7ca1f4c4883b6b9aa04d099d4f3', // TODO: Replace with dedicated cancellation template
+        data: {
+          customerName: `${user.firstName} ${user.lastName}`,
+          message: 'Your account has been fully cancelled and your payment information has been removed. We hope to see you again soon!',
+          supportEmail: 'support@freeagentportal.com',
+          logoUrl: 'https://res.cloudinary.com/dsltlng97/image/upload/v1752863629/placeholder-logo_s7jg3y.png',
+          orgAddress: '123 Gridiron Ave, Charlotte, NC',
+          year: new Date().getFullYear(),
+        },
+      });
+      console.info(`[Notification] Account cancelled email sent to ${user.email}`);
+    } catch (error) {
+      console.error(`[Notification] Error sending account cancelled email to ${user.email}:`, error);
+    }
+  }
+
+  private async sendAccountCancelledSMS(user: any): Promise<void> {
+    try {
+      if (!user.phoneNumber) return;
+      if (!user.notificationSettings?.accountNotificationSMS) return;
+
+      const message = `Hi ${user.firstName}, your Free Agent Portal account has been cancelled. Your payment information has been removed. We hope to see you again!`;
+
+      await SMSService.sendSMS({
+        to: user.phoneNumber,
+        data: {
+          contentSid: 'HX762f1dc9c222adbc92383b2f53bdd222',
+          contentVariables: { message },
+        },
+      });
+      console.info(`[Notification] Account cancelled SMS sent to ${user.phoneNumber}`);
+    } catch (error) {
+      console.error(`[Notification] Error sending account cancelled SMS to user ${user._id}:`, error);
     }
   }
 }

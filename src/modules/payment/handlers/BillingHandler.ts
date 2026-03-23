@@ -7,6 +7,7 @@ import { PaymentHandler } from './PaymentHandler';
 import { getPaymentSafeCountryCode } from '../utils/countryHelpers';
 import { validatePaymentFormData } from '../utils/paymentValidation';
 import PaymentProcessingHandler from './PaymentProcessing.handler';
+import { eventBus } from '../../../lib/eventBus';
 
 export class BillingHandler {
   constructor(private readonly paymentHandler: PaymentHandler = new PaymentHandler()) {}
@@ -131,8 +132,11 @@ export class BillingHandler {
   }
 
   /**
-   * @description Cancel a user's account: removes their customer record from the payment
-   *              processor and marks the billing account as inactive with needsUpdate = true.
+   * @description Request cancellation of a user's account.
+   *              Sets `pendingCancellation = true` so the account stays active through the
+   *              end of the current billing period. The scheduler will finalize the
+   *              cancellation (remove from processor, set inactive) when the next billing
+   *              date is reached instead of processing a payment.
    *              Only the account owner or an admin/developer may cancel an account.
    */
   async cancelAccount(req: AuthenticatedRequest): Promise<Boolean> {
@@ -149,28 +153,16 @@ export class BillingHandler {
       throw new ErrorUtil('Not authorized to cancel this account', 403);
     }
 
-    // Remove customer from the payment processor.
-    // A failure here is intentionally non-fatal: we still want to mark the
-    // billing account as cancelled so that no further charges can occur.
-    if (billing.processor) {
-      try {
-        const factory = new PaymentProcessorFactory();
-        const processor = factory.chooseProcessor(billing.processor);
-        const customerId = billing.processor === 'stripe'
-          ? billing.paymentProcessorData?.stripe?.customer?.id
-          : billing.customerId;
-
-        if (customerId) {
-          await processor.deleteVault(customerId);
-        }
-      } catch (err) {
-        console.error('[BillingHandler] Error removing customer from processor:', err);
-      }
-    }
-
-    billing.needsUpdate = true;
-    billing.status = 'inactive';
+    // Mark the account as pending cancellation so it stays active until the end
+    // of the current billing period. The scheduler will finalize cancellation.
+    billing.pendingCancellation = true;
     await billing.save();
+
+    // Notify the user that their cancellation request has been received
+    eventBus.publish('billing.cancellation.requested', {
+      billing: billing.toObject(),
+      userId: billing.payor,
+    });
 
     return true;
   }

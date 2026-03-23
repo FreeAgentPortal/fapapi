@@ -35,7 +35,10 @@ export default class PaymentProcessingHandler {
       // Get all profiles due for payment
       const profilesDue = await this.getProfilesDueForPayment();
 
-      if (profilesDue.length === 0) {
+      // Get all profiles whose billing date has been reached and want to cancel
+      const profilesPendingCancellation = await this.getProfilesPendingCancellation();
+
+      if (profilesDue.length === 0 && profilesPendingCancellation.length === 0) {
         console.info('[PaymentProcessingHandler] No profiles due for payment.');
         return { success: true, message: 'No profiles due for payment.' };
       }
@@ -45,6 +48,7 @@ export default class PaymentProcessingHandler {
         total: profilesDue.length,
         successful: 0,
         failed: 0,
+        cancelled: 0,
         errors: [] as string[],
       };
       // if we still dont have a processor here, we have a big problem
@@ -68,11 +72,25 @@ export default class PaymentProcessingHandler {
         }
       }
 
+      // Finalize cancellations for accounts whose billing period has ended
+      if (profilesPendingCancellation.length > 0) {
+        console.info(`[PaymentProcessingHandler] Finalizing ${profilesPendingCancellation.length} pending cancellations.`);
+        for (const profile of profilesPendingCancellation) {
+          try {
+            await this.finalizeAccountCancellation(profile);
+            results.cancelled++;
+          } catch (error: any) {
+            results.errors.push(`Cancellation for ${profile._id}: ${error.message}`);
+            console.error(`[PaymentProcessingHandler] Error finalizing cancellation for profile ${profile._id}:`, error);
+          }
+        }
+      }
+
       console.info('[PaymentProcessingHandler] Scheduled payments processing completed.', results);
 
       return {
         success: true,
-        message: `Processed ${results.total} profiles: ${results.successful} successful, ${results.failed} failed.`,
+        message: `Processed ${results.total} profiles: ${results.successful} successful, ${results.failed} failed, ${results.cancelled} cancelled.`,
         results,
       };
     } catch (error: any) {
@@ -95,6 +113,7 @@ export default class PaymentProcessingHandler {
         vaulted: true,
         plan: { $exists: true, $ne: null },
         needsUpdate: { $ne: true }, // Exclude accounts needing update
+        pendingCancellation: { $ne: true }, // Exclude accounts pending cancellation
       })
         .populate('plan')
         .populate('payor')
@@ -111,6 +130,66 @@ export default class PaymentProcessingHandler {
       console.error('[PaymentProcessingHandler] Error fetching profiles due for payment:', error);
       return [];
     }
+  }
+
+  public static async getProfilesPendingCancellation(): Promise<BillingAccountType[]> {
+    try {
+      const currentDate = new Date();
+      currentDate.setHours(23, 59, 59, 999); // End of today
+
+      const profiles = await BillingAccount.find({
+        pendingCancellation: true,
+        nextBillingDate: { $lte: currentDate },
+        status: { $in: ['active', 'trialing'] },
+      })
+        .populate('plan')
+        .populate('payor')
+        .lean();
+
+      console.info(`[PaymentProcessingHandler] Found ${profiles.length} profiles pending cancellation.`);
+      return profiles as BillingAccountType[];
+    } catch (error: any) {
+      console.error('[PaymentProcessingHandler] Error fetching profiles pending cancellation:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Finalize the cancellation of an account whose billing period has ended:
+   * removes the customer from the payment processor and marks the account inactive.
+   */
+  public static async finalizeAccountCancellation(billingAccount: BillingAccountType): Promise<void> {
+    // Remove customer from the payment processor.
+    // Non-fatal: we always mark the account as cancelled regardless.
+    if (billingAccount.processor) {
+      try {
+        const factory = new PaymentProcessorFactory();
+        const processor = factory.chooseProcessor(billingAccount.processor);
+        const customerId =
+          billingAccount.processor === 'stripe'
+            ? (billingAccount.paymentProcessorData as any)?.stripe?.customer?.id
+            : billingAccount.customerId;
+
+        if (customerId) {
+          await processor.deleteVault(customerId);
+        }
+      } catch (err) {
+        console.error(`[PaymentProcessingHandler] Error removing customer from processor for ${billingAccount._id}:`, err);
+      }
+    }
+
+    await BillingAccount.findByIdAndUpdate(billingAccount._id, {
+      status: 'inactive',
+      pendingCancellation: false,
+      needsUpdate: false,
+    });
+
+    console.info(`[PaymentProcessingHandler] Account ${billingAccount._id} cancelled successfully.`);
+
+    eventBus.publish('billing.account.cancelled', {
+      billing: billingAccount,
+      userId: (billingAccount.payor as any)?._id ?? billingAccount.payor,
+    });
   }
 
   public static async processPaymentForProfile(
