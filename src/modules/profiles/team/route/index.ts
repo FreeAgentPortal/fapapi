@@ -1,0 +1,34 @@
+import express from 'express';
+import { AuthMiddleware } from '../../../../middleware/AuthMiddleware';
+import TeamService from '../service/TeamService';
+
+const router = express.Router();
+
+const service = new TeamService();
+
+router.route('/health').get((req, res) => {
+  res.status(200).json({
+    message: 'team service is up and running',
+    success: true,
+  });
+});
+
+// Additional routes for favorite athletes
+router.route('/favorite-athlete').get(AuthMiddleware.protect, service.fetchFavoritedAthletes);
+router.route('/favorite-athlete/:athleteId').post(AuthMiddleware.protect, service.toggleFavoriteAthlete);
+
+router.route('/:id/invite-user').post(AuthMiddleware.protect, service.inviteUserToTeam); // invite a user to an existing team
+router.route('/invite').post(AuthMiddleware.protect, service.inviteTeam); // invite a team
+router.route('/validate-token').post(AuthMiddleware.protect, service.validateToken); // validate claim token
+
+router.route('/check').get(service.checkResource); // check if a resource exists in the database
+router.route('/').get(service.getResources).post(AuthMiddleware.protect, service.create); // ideally this would never be used as profiles should be created during registration
+router
+  .route('/:id')
+  .get(service.getResource) // get public profile by id
+  .put(AuthMiddleware.protect, service.updateResource) // update profile by user id
+  .delete(AuthMiddleware.protect, AuthMiddleware.authorizeRoles(['admin', 'developer', 'teams.delete']) as any, service.removeResource); // delete profile by user id
+router.route('/profile/:id').get(AuthMiddleware.protect, service.getResource); // get profile by user id
+
+// authenticated routes
+export default router;

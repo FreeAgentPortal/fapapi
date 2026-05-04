@@ -4,20 +4,23 @@ import { SchedulerHandler } from '../handlers/Scheduler.handler';
 
 export class ReportSchedulerCron {
   private static isRunning = false;
+  // keep a running total of success and failures
+  private static successCount = 0;
+  private static errorCount = 0;
 
   /**
    * Initialize the daily report generation cron job
    * Runs once daily at midnight
    */
   public static init(): void {
-    console.log('[ReportScheduler] Initializing daily report generation cron job...');
+    console.info('[ReportScheduler] Initializing daily report generation cron job...');
 
     // Schedule to run daily at midnight (00:00)
     cron.schedule(
       '0 0 * * *', // At 00:00 every day
       async () => {
         if (ReportSchedulerCron.isRunning) {
-          console.log('[ReportScheduler] Previous job still running, skipping...');
+          console.info('[ReportScheduler] Previous job still running, skipping...');
           return;
         }
 
@@ -36,25 +39,29 @@ export class ReportSchedulerCron {
       }
     );
 
-    console.log('[ReportScheduler] Daily report generation cron job initialized');
+    console.info('[ReportScheduler] Daily report generation cron job initialized');
   }
 
   /**
    * Process all search preferences that are due for report generation
    */
   public static async processDailyReports(): Promise<void> {
-    console.log('[ReportScheduler] Starting daily report generation process...');
+    console.info('[ReportScheduler] Starting daily report generation process...');
 
     try {
+      // Reset totals
+      ReportSchedulerCron.successCount = 0;
+      ReportSchedulerCron.errorCount = 0;
+
       // Get all search preferences that are ready for report generation
       const duePreferences = await ReportSchedulerCron.getDueSearchPreferences();
 
       if (duePreferences.length === 0) {
-        console.log('[ReportScheduler] No search preferences due for report generation');
+        console.info('[ReportScheduler] No search preferences due for report generation');
         return;
       }
 
-      console.log(`[ReportScheduler] Found ${duePreferences.length} search preferences due for reports\n`);
+      console.info(`[ReportScheduler] Found ${duePreferences.length} search preferences due for reports\n`);
 
       // Process each search preference
       let successCount = 0;
@@ -74,7 +81,10 @@ export class ReportSchedulerCron {
         }
       }
 
-      console.log(`[ReportScheduler] Daily report generation completed. Success: ${successCount}, Errors: ${errorCount}`);
+      ReportSchedulerCron.successCount += successCount;
+      ReportSchedulerCron.errorCount += errorCount;
+
+      console.info(`[ReportScheduler] Daily report generation completed. Success: ${successCount}, Errors: ${errorCount}`);
     } catch (error) {
       console.error('[ReportScheduler] Error in processDailyReports:', error);
       throw error;
@@ -154,7 +164,7 @@ export class ReportSchedulerCron {
    * Manual trigger for testing purposes
    */
   public static async triggerManualReportGeneration(searchPreferenceId?: string): Promise<void> {
-    console.log('[ReportScheduler] Manual report generation triggered');
+    console.info('[ReportScheduler] Manual report generation triggered');
 
     try {
       if (searchPreferenceId) {
@@ -165,7 +175,7 @@ export class ReportSchedulerCron {
         }
 
         await SchedulerHandler.generateReport(preference);
-        console.log(`[ReportScheduler] Manual report generated for preference: ${searchPreferenceId}`);
+        console.info(`[ReportScheduler] Manual report generated for preference: ${searchPreferenceId}`);
       } else {
         // Generate reports for all due preferences
         await ReportSchedulerCron.processDailyReports();
@@ -179,7 +189,7 @@ export class ReportSchedulerCron {
   /**
    * Get status of the cron job
    */
-  public static getStatus(): { isRunning: boolean; nextRun?: Date } {
+  public static getStatus(): { isRunning: boolean; nextRun?: Date, successCount: number; errorCount: number } {
     // Get next scheduled run time (midnight)
     const now = new Date();
     const nextRun = new Date(now);
@@ -188,6 +198,8 @@ export class ReportSchedulerCron {
 
     return {
       isRunning: ReportSchedulerCron.isRunning,
+      successCount: ReportSchedulerCron.successCount,
+      errorCount: ReportSchedulerCron.errorCount,
       nextRun,
     };
   }

@@ -17,7 +17,7 @@ export class SearchPreferencesService extends CRUDService {
       updateResource: true,
       removeResource: true,
     };
-    this.queryKeys = ['name', 'description', 'tags']
+    this.queryKeys = ['name', 'description', 'tags'];
   }
 
   public create = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
@@ -28,7 +28,7 @@ export class SearchPreferencesService extends CRUDService {
       await this.afterCreate(result);
       return res.status(201).json({ success: true, payload: { _id: result._id } });
     } catch (err) {
-      console.log(err);
+      console.error(err);
       return error(err, req, res);
     }
   });

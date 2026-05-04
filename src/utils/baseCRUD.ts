@@ -108,14 +108,16 @@ export abstract class CRUDService {
       this.ensureAuthenticated(req as AuthenticatedRequest, 'create');
       let data = { ...req.body };
       if ('user' in req && req.user && typeof req.user === 'object' && '_id' in req.user) {
-        data = { ...data, user: (req.user as any)._id };
+        if (!data.user) {
+          data = { ...data, user: (req.user as any)._id };
+        }
       }
       await this.beforeCreate(data);
       const result = await this.handler.create(data);
       await this.afterCreate(result);
       return res.status(201).json({ success: true });
     } catch (err) {
-      console.log(err);
+      console.error(err);
       return error(err, req, res);
     }
   });
@@ -135,14 +137,14 @@ export abstract class CRUDService {
         },
       });
     } catch (err) {
-      console.log(err);
+      console.error(err);
       return error(err, req, res);
     }
   };
   public getResources = async (req: Request, res: Response): Promise<Response> => {
     try {
       this.ensureAuthenticated(req as AuthenticatedRequest, 'getResources');
-      const pageSize = Number(req.query?.limit) || 10;
+      const pageSize = Number(req.query?.pageLimit) || 10;
       const page = Number(req.query?.pageNumber) || 1;
       // Generate the keyword query
       const keywordQuery = AdvFilters.query(this.queryKeys, req.query?.keyword as string);
@@ -183,7 +185,7 @@ export abstract class CRUDService {
         },
       });
     } catch (err) {
-      console.log(err);
+      console.error(err);
       return error(err, req, res);
     }
   };
@@ -195,7 +197,7 @@ export abstract class CRUDService {
       await this.afterUpdate(result);
       return res.status(201).json({ success: true });
     } catch (err) {
-      console.log(err);
+      console.error(err);
       return error(err, req, res);
     }
   };
@@ -207,7 +209,7 @@ export abstract class CRUDService {
       await this.afterDelete(result);
       return res.status(201).json({ success: true });
     } catch (err) {
-      console.log(err);
+      console.error(err);
       return error(err, req, res);
     }
   };

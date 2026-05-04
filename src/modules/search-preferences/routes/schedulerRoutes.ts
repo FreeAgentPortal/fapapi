@@ -9,7 +9,7 @@ router.get('/status', AuthMiddleware.protect, AuthMiddleware.authorizeRoles(['ad
 
 router.post('/trigger/all', AuthMiddleware.protect, AuthMiddleware.authorizeRoles(['admin', 'developer']) as any, SchedulerService.triggerAllReports);
 
-router.post('/trigger/:preferenceId', AuthMiddleware.protect, AuthMiddleware.authorizeRoles(['admin', 'developer']) as any, SchedulerService.triggerSpecificReport);
+router.post('/trigger/:preferenceId', AuthMiddleware.protect, SchedulerService.triggerSpecificReport);
 
 // User-specific routes (any authenticated user)
 router.get('/preferences', AuthMiddleware.protect, SchedulerService.getUserSearchPreferences);

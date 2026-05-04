@@ -17,10 +17,6 @@ export default class SearchReportEventService {
    * Initialize event listeners
    */
   public init(): void { 
-    console.log('[SearchReportEventHandler] Initializing search report event handlers...');
-
     eventBus.subscribe('search.report.generated', this.handler.onSearchReportGenerated);
-
-    console.log('[SearchReportEventHandler] Event handlers initialized');
   }
 }

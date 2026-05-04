@@ -13,31 +13,45 @@ export interface BillingAccountType extends mongoose.Document {
   status: string;
   trialLength: number;
   processor?: string;
+  credits?: number;
+  setupFeePaid?: boolean;
   createdAt: Date;
   updatedAt: Date;
   vaulted: Boolean;
   vaultId: string;
   nextBillingDate?: Date;
   needsUpdate?: boolean;
+  pendingCancellation?: boolean;
   payor: UserType;
   plan: PlanType;
   // is yearly? whether or not the subscription is yearly
   isYearly?: boolean;
+  // Payment processor specific data map
+  paymentProcessorData?: {
+    [processorName: string]: any;
+  };
 }
 
 const Schema = new mongoose.Schema(
   {
     customerId: {
       // id of customer in pyre or payment processor
-      type: String,
-      required: true,
+      type: String, 
     },
     profileId: {
       type: mongoose.Types.ObjectId,
       required: true,
-      ref: 'Profile',
+      ref: 'AthleteProfile',
+    },
+    credits: {
+      type: Number,
+      default: 0, // credits for free usage
     },
     isYearly: {
+      type: Boolean,
+      default: false,
+    },
+    setupFeePaid: {
       type: Boolean,
       default: false,
     },
@@ -89,6 +103,15 @@ const Schema = new mongoose.Schema(
     needsUpdate: {
       type: Boolean,
       default: false,
+    },
+    pendingCancellation: {
+      type: Boolean,
+      default: false,
+    },
+    // Payment processor specific data map
+    paymentProcessorData: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
     },
   },
   {

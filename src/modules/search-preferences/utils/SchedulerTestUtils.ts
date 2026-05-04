@@ -40,7 +40,7 @@ export class SchedulerTestUtils {
     });
 
     await searchPreference.save();
-    console.log(`Created test search preference: ${searchPreference._id}`);
+    console.info(`Created test search preference: ${searchPreference._id}`);
     return searchPreference;
   }
 
@@ -49,7 +49,7 @@ export class SchedulerTestUtils {
    */
   static async testReportGeneration(searchPreferenceId: string) {
     try {
-      console.log(`Testing report generation for preference: ${searchPreferenceId}`);
+      console.info(`Testing report generation for preference: ${searchPreferenceId}`);
 
       const searchPreference = await SearchPreferences.findById(searchPreferenceId);
       if (!searchPreference) {
@@ -58,10 +58,10 @@ export class SchedulerTestUtils {
 
       const reportData = await SchedulerHandler.generateReport(searchPreference);
 
-      console.log('Report generated successfully:');
-      console.log(`- Report ID: ${reportData.reportId}`);
-      console.log(`- Results Count: ${reportData.results.length}`);
-      console.log(`- Generated At: ${reportData.generatedAt}`);
+      console.info('Report generated successfully:');
+      console.info(`- Report ID: ${reportData.reportId}`);
+      console.info(`- Results Count: ${reportData.results.length}`);
+      console.info(`- Generated At: ${reportData.generatedAt}`);
 
       return reportData;
     } catch (error) {
@@ -75,12 +75,12 @@ export class SchedulerTestUtils {
    */
   static async testCronJobLogic() {
     try {
-      console.log('Testing cron job logic...');
+      console.info('Testing cron job logic...');
 
       // This will process all due search preferences
       await ReportSchedulerCron.processDailyReports();
 
-      console.log('Cron job logic test completed');
+      console.info('Cron job logic test completed');
     } catch (error) {
       console.error('Error testing cron job logic:', error);
       throw error;
@@ -92,7 +92,7 @@ export class SchedulerTestUtils {
    */
   static getSchedulerStatus() {
     const status = ReportSchedulerCron.getStatus();
-    console.log('Scheduler Status:', status);
+    console.info('Scheduler Status:', status);
     return status;
   }
 
@@ -187,7 +187,7 @@ export class SchedulerTestUtils {
       })
     );
 
-    console.log(`Created ${preferences.length} test search preferences`);
+    console.info(`Created ${preferences.length} test search preferences`);
     return preferences;
   }
 
@@ -200,7 +200,7 @@ export class SchedulerTestUtils {
         tags: { $in: ['test', 'automated'] },
       });
 
-      console.log(`Cleaned up ${result.deletedCount} test search preferences`);
+      console.info(`Cleaned up ${result.deletedCount} test search preferences`);
       return result.deletedCount;
     } catch (error) {
       console.error('Error cleaning up test data:', error);
@@ -233,7 +233,7 @@ export class SchedulerTestUtils {
       dateLastRan: pastDate,
     });
 
-    console.log(`Updated preference ${searchPreferenceId} to be due for ${frequencyType} report`);
+    console.info(`Updated preference ${searchPreferenceId} to be due for ${frequencyType} report`);
   }
 }
 
@@ -261,7 +261,7 @@ async function runTests() {
     // Clean up
     await SchedulerTestUtils.cleanupTestData();
 
-    console.log('All tests completed successfully!');
+    console.info('All tests completed successfully!');
   } catch (error) {
     console.error('Test failed:', error);
   } finally {

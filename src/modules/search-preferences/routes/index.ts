@@ -13,14 +13,14 @@ const service = new SearchPreferencesService();
 router.use('/scheduler', schedulerRoutes);
 router.use('/report', reportRoutes);
 
-// Main search preferences CRUD routes
-router.use(AuthMiddleware.protect);
-router.route('/').get(service.getResources).post(service.create);
-router.route('/:id').get(service.getResource).put(service.updateResource).delete(service.removeResource);
-
 // Example diagnostic route
 router.get('/health', (req, res) => {
   res.json({ status: 'search preferences module online' });
 });
 
+// Main search preferences CRUD routes
+router.use(AuthMiddleware.protect);
+router.route('/').get(service.getResources).post(service.create);
+
+router.route('/:id').get(service.getResource).put(service.updateResource).delete(service.removeResource);
 export default router;

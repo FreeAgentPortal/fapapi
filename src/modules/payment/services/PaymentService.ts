@@ -10,11 +10,10 @@ export default class PaymentService {
 
   public updateBilling = asyncHandler(async (req: Request & AuthenticatedRequest, res: Response): Promise<Response> => {
     try {
-      console.log(req.body);
       const results = await this.billingHandler.updateVault(req as any);
       return res.status(201).json({ message: 'billing updated', success: true });
     } catch (err: any) {
-      console.log(err);
+      console.error(err);
       return error(err, req, res);
     }
   });
@@ -23,8 +22,19 @@ export default class PaymentService {
       const results = await this.billingHandler.getVault(req.params.id);
       return res.status(201).json({ message: 'success', payload: results });
     } catch (err) {
-      console.log(err);
+      console.error(err);
       return error(err, req, res);
     }
   });
+
+  public cancelAccount = asyncHandler(async (req: Request & AuthenticatedRequest, res: Response): Promise<Response> => {
+    try {
+      await this.billingHandler.cancelAccount(req as any);
+      return res.status(200).json({ message: 'Account cancelled', success: true });
+    } catch (err: any) {
+      console.error(err);
+      return error(err, req, res);
+    }
+  });
+
 }

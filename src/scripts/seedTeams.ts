@@ -1,12 +1,12 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
-import TeamModel from '../modules/team/model/TeamModel';
+import TeamModel from '../modules/profiles/team/model/TeamModel';
 
 dotenv.config();
 
 const seedTeams = async () => {
   await mongoose.connect(process.env.MONGO_URI as string);
-  console.log('🔗 Connected to MongoDB');
+  console.info('🔗 Connected to MongoDB');
   // make a request to https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams to get a list of the NFL teams
   const response = await fetch('https://site.api.espn.com/apis/site/v2/sports/football/nfl/teams');
   const data = await response.json();
@@ -43,7 +43,7 @@ const seedTeams = async () => {
   try {
     await TeamModel.deleteMany(); // Optional: wipe before seeding
     await TeamModel.insertMany(seedData);
-    console.log('✅ Team seed complete');
+    console.info('✅ Team seed complete');
   } catch (err) {
     console.error('❌ Seed error:', err);
   } finally {

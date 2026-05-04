@@ -1,8 +1,8 @@
 import { eventBus } from '../../../lib/eventBus';
 import Notification from '../model/Notification';
 import User from '../../auth/model/User';
-import { ErrorUtil } from '../../../middleware/ErrorUtil';
-import { ModelMap } from '../utils/ModelMap';
+import { ErrorUtil } from '../../../middleware/ErrorUtil'; 
+import { ModelMap } from '../../../utils/ModelMap';
 
 export interface SearchReportEvent {
   _id: string; // Event ID
@@ -20,30 +20,34 @@ export default class SearchReportEventHandler {
    */
   public onSearchReportGenerated = async (event: SearchReportEvent): Promise<void> => {
     try {
-      console.log(`[SearchReportEventHandler] Processing report generated event for user: ${event.userId}`);
+      // console.info(`[SearchReportEventHandler] Processing report generated event for user: ${event.userId}`);
 
       // find the model we want to use with the modelMap
-      const Model = ModelMap[event.ownerType];
+      const Model = ModelMap[event.ownerType as keyof typeof ModelMap];
       if (!Model) {
         throw new ErrorUtil(`Invalid owner type: ${event.ownerType}`, 400);
       }
       // Verify user exists
       const user = await Model.findById(event.userId);
       if (!user) {
-        throw new ErrorUtil(`Owner not found: ${event.userId}`, 404);
+        // if user is not found remove the report
+        await ModelMap['report'].findByIdAndDelete(event._id);
+        // also we dont want to break the flow so just log and return
+        console.warn(`[SearchReportEventHandler] Owner not found: ${event.userId}. Report ${event.reportId} deleted.`);
+        return;
       }
 
       // Create notification for the user
       await Notification.insertNotification(
         event.userId as any,
-        event.userId as any, // Self-notification for system-generated reports
+        undefined as any,
         'New Search Report Available',
         `Your search report for "${event.searchPreferenceName}" is ready with ${event.resultCount} results.`,
         'search.report',
         event._id as any
       );
 
-      console.log(`[SearchReportEventHandler] Notification created for user ${event.userId} regarding report ${event.reportId}`);
+      console.info(`[SearchReportEventHandler] Notification created for user ${event.userId} regarding report ${event.reportId}`);
 
       // TODO: Add email notification if user has email notifications enabled
       // await this.sendEmailNotification(user, event);
@@ -74,6 +78,6 @@ export default class SearchReportEventHandler {
     });
     */
 
-    console.log(`[SearchReportEventHandler] Email notification would be sent to ${user.email} for report ${event.reportId}`);
+    console.info(`[SearchReportEventHandler] Email notification would be sent to ${user.email} for report ${event.reportId}`);
   }
 }

@@ -8,6 +8,7 @@ import featureRoutes from './featureRoutes';
 import planRoutes from './planRoutes';
 import claimRoutes from './claimRoutes';
 import legalRoutes from './legalRoutes';
+import billingRoutes from './billingRoutes';
 
 const router = express.Router();
 
@@ -17,11 +18,12 @@ router.use('/feature', featureRoutes);
 router.use('/plan', planRoutes);
 router.use('/claim', claimRoutes);
 router.use('/legal', legalRoutes);
+router.use('/billing', billingRoutes);
 
 router.route('/:email/email').get(authService.checkEmail);
 router.post('/register', authService.register);
 router.route('/recaptcha').post(authService.recaptcha);
-router.route('/resetpassword/:resettoken').put(authService.resetPassword);
+router.route('/reset-password/:resettoken').put(authService.resetPassword);
 router.route('/forgot-password').post(authService.forgotPassword);
 router.route('/verifyEmail').post(authService.verifyEmail);
 router.route('/resend-verification-email').post(authService.resendVerificationEmail);

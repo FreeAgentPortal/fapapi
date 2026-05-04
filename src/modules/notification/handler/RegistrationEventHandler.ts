@@ -8,7 +8,7 @@ export default class RegistrationEventHandler {
     if (!user) {
       throw new ErrorUtil('User data is required for password reset completion event handling', 400);
     }
-    console.log(`[Notification] Password reset completed for email: ${user.email}`); 
+    console.info(`[Notification] Password reset completed for email: ${user.email}`); 
     try {
       await EmailService.sendEmail({
         to: user.email,
@@ -28,7 +28,7 @@ export default class RegistrationEventHandler {
   public emailVerification = async (event: any): Promise<void> => {
     try {
       const { user } = event; 
-      console.log(`[Notification] Email Verification for email: ${user.email}`); 
+      console.info(`[Notification] Email Verification for email: ${user.email}`); 
       const verificationUrl = `${process.env.FRONTEND_AUTH_URL}/verify-email?token=${user.emailVerificationToken}`;
       await EmailService.sendEmail({
         to: user.email,
@@ -42,7 +42,7 @@ export default class RegistrationEventHandler {
         },
       });
     } catch (err: any) {
-      console.log(err.response.body.errors);
+      console.error(err.response.body.errors);
       throw new ErrorUtil('Failed to handle user verify email event', 500);
     }
   };
@@ -54,7 +54,7 @@ export default class RegistrationEventHandler {
     }
 
     // Logic to handle email verification, e.g., logging or sending a confirmation email
-    console.log(`[Notification] Email verified for user: ${user.email}`);
+    console.info(`[Notification] Email verified for user: ${user.email}`);
     try {
       await EmailService.sendEmail({
         to: user.email,
@@ -77,7 +77,7 @@ export default class RegistrationEventHandler {
     if (!email || !token) {
       throw new ErrorUtil('Email and token are required for password reset event handling', 400);
     }
-    console.log(`[Notification] Password reset requested for email: ${email}`);
+    console.info(`[Notification] Password reset requested for email: ${email}`);
     // build the reset url
     const resetUrl = `${process.env.FRONTEND_AUTH_URL}/reset-password?token=${token}`; 
     try {

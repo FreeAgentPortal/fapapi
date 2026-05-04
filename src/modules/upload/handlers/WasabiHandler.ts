@@ -46,7 +46,7 @@ export class WasabiHandler {
       service: 's3',
       region: this.region,
     };
-    console.log(this.accessKey, this.secretKey);
+    console.info(this.accessKey, this.secretKey);
     const signed = aws4.sign(request, {
       accessKeyId: this.accessKey,
       secretAccessKey: this.secretKey,

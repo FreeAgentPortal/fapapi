@@ -80,13 +80,13 @@ const SupportSchema = new Schema<SupportAttributes>(
     },
     status: {
       type: String,
-      enum: ['Open', 'Closed', 'Pending', 'Solved', 'New'],
-      default: 'New',
+      enum: ['open', 'closed', 'pending', 'solved', 'new'],
+      default: 'new',
     },
     priority: {
       type: String,
-      enum: ['Low', 'Medium', 'High'],
-      default: 'Low',
+      enum: ['low', 'medium', 'high', 'urgent'],
+      default: 'low',
     },
     category: {
       // is an array of strings, as the ticket can belong to multiple categories
@@ -106,6 +106,5 @@ const SupportSchema = new Schema<SupportAttributes>(
     timestamps: true,
   }
 );
-
 
 export default mongoose.model<SupportType>('Support', SupportSchema);

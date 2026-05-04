@@ -1,10 +1,10 @@
 import { Model } from 'mongoose';
 import { ErrorUtil } from '../../../middleware/ErrorUtil';
-import AdminModel from '../../admin/model/AdminModel';
-import { AthleteModel } from '../../athlete/models/AthleteModel';
+import AdminModel from '../../profiles/admin/model/AdminModel';
+import { AthleteModel } from '../../profiles/athlete/models/AthleteModel';
 import { ClaimType } from '../../auth/model/ClaimSchema';
 import User, { UserType } from '../../auth/model/User';
-import TeamModel from '../../team/model/TeamModel';
+import TeamModel from '../../profiles/team/model/TeamModel';
 import { EmailService } from '../email/EmailService';
 import Notification from '../model/Notification';
 
@@ -20,7 +20,7 @@ export default class ClaimEventHandlers {
     if (!claimDetails) {
       throw new ErrorUtil('Claim details are required for claim creation event handling', 400);
     }
-    console.log(`[Notification] Claim created with ID: ${claimDetails._id}`);
+    console.info(`[Notification] Claim created with ID: ${claimDetails._id}`);
 
     const user = await User.findById(claimDetails.user);
     const profile = await this.modelMap[claimDetails.claimType].findById(claimDetails.profile);

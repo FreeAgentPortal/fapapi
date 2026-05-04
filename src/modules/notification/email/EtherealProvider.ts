@@ -22,6 +22,6 @@ export class EtherealProvider implements EmailProvider {
       subject,
       html,
     });
-    console.log('📧 Ethereal preview URL:', nodemailer.getTestMessageUrl(info));
+    console.info('📧 Ethereal preview URL:', nodemailer.getTestMessageUrl(info));
   }
 }

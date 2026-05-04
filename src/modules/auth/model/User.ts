@@ -26,11 +26,14 @@ export interface UserType extends mongoose.Document {
   isActive: boolean;
   resetPasswordToken: string | undefined | null;
   resetPasswordExpire: Date | undefined | null;
+  notificationSettings: Record<string, boolean>;
   accessKey: string;
   createdAt: Date;
   updatedAt: Date;
   isEmailVerified: boolean;
+  acceptedPolicies: Record<string, number>;
   permissions: string[];
+  lastSignedIn: Date | undefined | null;
   emailVerificationToken: string | undefined | null;
   emailVerificationExpires: Date | undefined | null;
   profileRefs: Record<string, string | null>;
@@ -74,9 +77,12 @@ const UserSchema = new mongoose.Schema(
       {
         type: String,
         default: ['user'],
-        enum: ['user', 'admin', 'player', 'agent', 'team', 'developer'],
+        enum: ['user', 'admin', 'scout', 'agent'],
       },
     ],
+    lastSignedIn: {
+      type: Date,
+    },
     fullName: {
       type: String,
     },
@@ -87,6 +93,10 @@ const UserSchema = new mongoose.Schema(
     permissions: {
       type: [String],
       default: ['user.all'],
+    },
+    acceptedPolicies: {
+      type: Map,
+      of: Number, // version stamp when they accepted the policy
     },
     resetPasswordToken: {
       type: String,
@@ -107,6 +117,10 @@ const UserSchema = new mongoose.Schema(
       type: String,
       select: false, // do not return this field by default
     },
+    notificationSettings: {
+      type: Object,
+      default: {},
+    },
   },
   {
     timestamps: true,
@@ -118,10 +132,11 @@ const UserSchema = new mongoose.Schema(
 UserSchema.pre('save', async function (next) {
   //conditional will check to see if the password is being modified so it wont update the password constantly.
   if (!this.isModified('password')) {
-    next();
+    return next();
   }
   const salt = await bcrypt.genSalt(10);
   this.password = await bcrypt.hash(this.password!, salt);
+  next();
 });
 
 // creates the fullName field.

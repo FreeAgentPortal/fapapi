@@ -1,4 +1,4 @@
-import User, { UserType } from '../model/User';
+import { UserType } from '../model/User';
 import mongoose from 'mongoose';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
@@ -10,6 +10,7 @@ import createCustomer from '../controller/paymentControllers/createCustomer';
 import slugify from 'slugify';
 import Notification from '../../notification/model/Notification';
 import { ErrorUtil } from '../../../middleware/ErrorUtil';
+import { ModelMap } from '../../../utils/ModelMap';
 
 type RegisterInput = {
   email: string;
@@ -26,12 +27,15 @@ export class RegisterHandler {
   private customerCreated = false;
   private data!: RegisterInput;
   private billingAccount!: BillingAccountType;
+  private modelMap: Record<string, any>;
 
   /**
    * @description Initializes the RegisterHandler with user data.
    * @param data - An object containing email, password, and roles of the user.
    */
-  constructor() {}
+  constructor() {
+    this.modelMap = ModelMap;
+  }
 
   /**
    * @description Executes the registration process by creating a user and their profiles, and generating a JWT token.
@@ -60,20 +64,20 @@ export class RegisterHandler {
       );
       // query the admin table to get all admins and populate their emails
       // role is an array of strings, so we need to use $in operator
-      const admins = await User.find({ role: { $in: ['admin'] } });
+      const admins = await this.modelMap['admin'].find({ role: { $in: ['admin'] } });
 
       // for each admin, create a notification in the system
       for (const admin of admins) {
         await Notification.insertNotification(
           admin._id as any,
-          this.user._id as any, // switch this to a centralized admin user id later
+          null as any, // switch this to a centralized admin user id later
           'Registration Event',
           `New user registered: ${this.user.email}`,
           `user_registered`,
           this.user._id as any
         );
       }
-      return {
+      const result = {
         token,
         profileRefs: this.profileRefs,
         billing: {
@@ -82,8 +86,15 @@ export class RegisterHandler {
         },
         user: this.user,
       };
+
+      // Reset state after successful execution
+      this.resetState();
+
+      return result;
     } catch (error: any) {
-      console.log(error);
+      console.error(error);
+      // Reset state after failed execution
+      this.resetState();
       throw new Error(`Registration failed: ${error.message}`);
     }
   }
@@ -93,9 +104,9 @@ export class RegisterHandler {
    * @throws {Error} If the email is already registered.
    */
   private async createUser() {
-    console.log(`attempting to create user with email: ${this.data.email}`);
+    console.info(`[RegistrationHander]: attempting to create user with email: ${this.data.email}`);
 
-    const existingUser = await User.findOne({ email: this.data.email });
+    const existingUser = await this.modelMap['user'].findOne({ email: this.data.email });
     if (existingUser) {
       throw new Error('Email already registered');
     }
@@ -108,7 +119,7 @@ export class RegisterHandler {
       trim: true, // removes leading and trailing whitespace
     });
 
-    this.user = await User.create({
+    this.user = await this.modelMap['user'].create({
       ...this.data,
       emailVerificationToken: await crypto.randomBytes(20).toString('hex'),
       emailVerificationExpires: new Date(Date.now() + 3600000), // 1 hour
@@ -117,40 +128,35 @@ export class RegisterHandler {
     // unique tail to the access key to avoid collisions
     const uniqueTail = this.user._id.toString().slice(-6);
     this.user.accessKey = `${sluggedName}-${uniqueTail}`;
-    // save the user with the access key
-    await this.user.save();
+    // Note: We'll save the user once at the end of createProfiles() to avoid multiple saves
   }
 
   /**
    * @description Creates profiles for the user based on their roles. Each role has a specific profile creator that handles the profile creation logic.
    * @throws {Error} If any profile creation fails, it will clean up the user and any created profiles.
    */
-  private async createProfiles() {
-    // console.log(this.data.roles);
-    for (const role of this.data.roles) {
-      // console.log(`Creating profile for role: ${role}`);
+  private async createProfiles() { 
+    for (const role of this.data.roles) { 
       const creator = ProfileCreationFactory.getProfileCreator(role);
-      if (!creator) continue;
-      // console.log(`Using creator for role: ${role}`);
-      const profileData = this.data.profileData?.[role] ?? {};
-      // console.log(`Profile data for role ${role}:`, profileData);
+      if (!creator) continue; 
+      const profileData = this.data.profileData?.[role] ?? {}; 
       try {
         const profile = await creator.createProfile(this.user._id, profileData);
         this.profileRefs[role] = profile.profileId;
 
         const roleMeta = RoleRegistry[role];
-        if (roleMeta?.isBillable && !this.customerCreated) {
-          // console.log(`Creating billing account for role: ${role}`);
+        if (roleMeta?.isBillable && !this.customerCreated) { 
           await this.createBillingAccount(profile.profileId, role);
           this.customerCreated = true;
         }
       } catch (err) {
-        console.log(`Failed to create profile for role ${role}:`, err);
+        console.error(`[RegistrationHandler]: Failed to create profile for role ${role}:`, err);
         await this.cleanupOnFailure();
         throw new Error(`Failed to create ${role} profile`);
       }
     }
 
+    // Set both profileRefs and accessKey, then save only once
     this.user.profileRefs = this.profileRefs;
     await this.user.save();
   }
@@ -162,28 +168,19 @@ export class RegisterHandler {
    * @param role - The role of the user for which the billing account is being created.
    */
   private async createBillingAccount(profileId: string, role: string) {
-    console.log(`Creating billing account..`);
-    try {
-      const customer = await createCustomer(this.user);
-      if (!customer.success) throw new Error(customer.message);
-      const trialDays = RoleRegistry[role]?.trialLength ?? 14;
-      const trialEndsAt = new Date(Date.now() + trialDays * 86400_000); // 86400 seconds in a day
-      const status = RoleRegistry[role]?.trial ? 'trialing' : 'inactive';
-
-      this.billingAccount = await BillingAccount.create({
-        customerId: customer.payload._id,
+    console.info(`[RegistrationHandler]: Creating billing account..`);
+    try {   
+      this.billingAccount = await BillingAccount.create({ 
         profileId,
         profileType: role,
-        email: this.data.email,
-        processor: 'pyre',
-        processorCustomerId: customer.customer_vault_id,
-        status,
-        trialLength: trialEndsAt,
+        email: this.data.email,  
+        status: 'active',
         vaulted: false,
+        payor: this.user._id,
       });
-      console.log(`Billing account created for profile ${profileId} with role ${role}`);
+      console.info(`[RegistrationHandler]: Billing account created for profile ${profileId} with role ${role}`);
     } catch (error: any) {
-      console.error(`Failed to create billing account for profile ${profileId} with role ${role}:`, error);
+      console.error(`[RegistrationHandler]: Failed to create billing account for profile ${profileId} with role ${role}:`, error);
       throw new Error(`Failed to create billing account: ${error.message}`);
     }
   }
@@ -194,7 +191,7 @@ export class RegisterHandler {
    */
   private async cleanupOnFailure() {
     await Promise.all([
-      User.findByIdAndDelete(this.user._id),
+      this.modelMap['user'].findByIdAndDelete(this.user._id),
       BillingAccount.findByIdAndDelete(this.billingAccount?._id),
       ...Object.entries(this.user.profileRefs)
         .filter(([_, pid]) => !!pid) // filter out any null or undefined profile IDs
@@ -207,7 +204,7 @@ export class RegisterHandler {
    * @param email - The email to check for registration.
    */
   public async isEmailRegistered(email: string): Promise<boolean> {
-    const user = await User.findOne({ email }).lean();
+    const user = await this.modelMap['user'].findOne({ email }).lean();
     return !!user;
   }
 
@@ -216,7 +213,7 @@ export class RegisterHandler {
    * @param email - The email to set the verification token for.
    */
   public async setEmailVerificationToken(email: string): Promise<{ token: string; user: UserType }> {
-    const user = await User.findOne({ email });
+    const user = await this.modelMap['user'].findOne({ email });
     if (!user) throw new Error('User not found');
     const token = await crypto.randomBytes(20).toString('hex');
     const expires = new Date(Date.now() + 3600000); // 1 hour
@@ -231,8 +228,8 @@ export class RegisterHandler {
    * @description Verifies the user's email using the provided token.
    * @param token - The verification token sent to the user's email.
    */
-  public async verifyEmail(token: string): Promise<{ message: string, user: UserType }> {
-    const user = await User.findOne({
+  public async verifyEmail(token: string): Promise<{ message: string; user: UserType }> {
+    const user = await this.modelMap['user'].findOne({
       emailVerificationToken: token,
       emailVerificationExpires: { $gt: new Date() },
     });
@@ -241,6 +238,18 @@ export class RegisterHandler {
     user.emailVerificationToken = undefined;
     user.emailVerificationExpires = undefined;
     await user.save();
-    return { message: 'Email verified successfully', user};
+    return { message: 'Email verified successfully', user };
+  }
+
+  /**
+   * @description Resets all instance state to prevent data bleeding between registrations.
+   * This should be called after each execute() call, whether successful or failed.
+   */
+  private resetState(): void {
+    this.user = undefined;
+    this.profileRefs = {};
+    this.customerCreated = false;
+    this.data = undefined as any;
+    this.billingAccount = undefined as any;
   }
 }

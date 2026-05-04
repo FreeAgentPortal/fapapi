@@ -14,7 +14,7 @@ export class ReportHandler extends CRUDHandler<ISearchReport> {
       })
       .populate({
         path: 'results',
-        select: '_id fullName birthdate positions profileImageUrl',
+        select: '_id fullName birthdate positions profileImageUrl diamondRating',
       })
       .lean();
   }

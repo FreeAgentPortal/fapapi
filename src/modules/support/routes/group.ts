@@ -5,14 +5,12 @@ import { AuthMiddleware } from '../../../middleware/AuthMiddleware';
 const router = express.Router();
 
 const service = new SupportGroupService();
+router.route('/').get(service.getResources); // Get all support groups
 
 router.use(AuthMiddleware.protect);
 router.use(AuthMiddleware.authorizeRoles(['admin', 'support', 'developer']) as any);
 
-router
-  .route('/')
-  .post(service.create) // Create a new support group
-  .get(service.getResources); // Get all support groups
+router.route('/').post(service.create); // Create a new support group
 router
   .route('/:id')
   .get(service.getResource) // Get a specific support group by ID

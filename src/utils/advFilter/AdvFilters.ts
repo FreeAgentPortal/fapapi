@@ -11,26 +11,19 @@ export class AdvFilters {
     if (filters === undefined || filters?.length === 0) return [{}];
     // split and remove empty strings
     const filterOptionsArray = filters.split('|').filter((option: any) => option !== '');
-    // console.log(filterOptionsArray);
 
     filterOptionsArray.forEach((filterOption: any) => {
       const [key, value] = filterOption.split(';');
-      // console.log(`key: ${key}, value: ${value}`);
       if (value === 'true') {
-        // console.log(`key is a boolean: ${key} and is true`);
         filterOptionsObject[key] = true;
       } else if (value === 'false') {
-        // console.log(`key is a boolean: ${key} and is false`);
         filterOptionsObject[key] = false;
       } else {
         try {
           // Use JSON.parse to safely convert the value to an object
-          const parsedValue = JSON.parse(value);
-          // console.log(`parsedValue: ${JSON.stringify(parsedValue)}`);
-
+          const parsedValue = JSON.parse(value)
           // Recursively parse the parsedValue if it contains nested objects
           const filteredValue = this.parseValueRecursively(parsedValue);
-          // console.log(`filteredValue: ${JSON.stringify(filteredValue)}`);
 
           // If key already exists, merge the parsed value
           filterOptionsObject[key] = {
@@ -38,8 +31,6 @@ export class AdvFilters {
             ...filteredValue,
           };
         } catch (error) {
-          // console.log(`error parsing: ${value}`);
-          // console.log(`error: ${error}`);
           // If JSON.parse fails, check for valid ObjectId
           if (mongoose.Types.ObjectId.isValid(value)) {
             filterOptionsObject[key] = new mongoose.Types.ObjectId(value);
@@ -50,7 +41,6 @@ export class AdvFilters {
         }
       }
     });
-    // console.log(filterOptionsObject);
     return [filterOptionsObject];
   }
 
@@ -130,7 +120,6 @@ export class AdvFilters {
           } else {
             const isValidDate = moment(opValue as string, true).isValid();
             const isNumber = !isNaN(Number(opValue));
-            // console.log(opKey);
             if (opKey === '$elemMatch' && typeof opValue === 'string') {
               return (acc[opKey] = { $eq: this.checkObjectId(opValue) }); // Handle simple string equality for $elemMatch
             } else if (opKey === '$in') {

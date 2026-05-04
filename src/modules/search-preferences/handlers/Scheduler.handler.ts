@@ -1,6 +1,6 @@
 import { ISearchPreferences } from '../models/SearchPreferences';
 import { eventBus } from '../../../lib/eventBus';
-import { AthleteModel, IAthlete } from '../../athlete/models/AthleteModel';
+import { AthleteModel, IAthlete } from '../../profiles/athlete/models/AthleteModel';
 import SearchReport, { ISearchReport } from '../models/SearchReport';
 
 export class SchedulerHandler {
@@ -11,36 +11,38 @@ export class SchedulerHandler {
    */
   public static async generateReport(searchPreference: ISearchPreferences): Promise<ISearchReport> {
     try {
-      console.log(`[Scheduler] Generating report for search preference: ${searchPreference.name} (ID: ${searchPreference._id})`);
+      // console.info(`[Scheduler] Generating report for search preference: ${searchPreference.name} (ID: ${searchPreference._id})`);
 
       // Mock report data for now - replace with actual search logic
       const athletes = await this.performSearch(searchPreference);
       if (!athletes || athletes.length === 0) {
-        console.warn(`[Scheduler] No athletes found for search preference: ${searchPreference.name}`);
+        // console.warn(`[Scheduler] No athletes found for search preference: ${searchPreference.name}`);
       }
       const reportData = {
         searchPreference: searchPreference._id as any,
         results: athletes.map((a) => a._id),
         generatedAt: new Date(),
-        reportId: `report_${searchPreference._id}_${searchPreference.name.replace(/\s+/g, '_')}`,
+        reportId: `report_${searchPreference._id}_${searchPreference.name.replace(/\s+/g, '_')}_${Date.now()}`,
         ownerId: searchPreference.ownerId,
         ownerType: searchPreference.ownerType,
       } as ISearchReport;
 
       // We want to upsert the report to avoid duplicates if a report already exists for this search
-      // if it already exists, and hasnt been opened, we will update it
-      const report = await SearchReport.findOneAndUpdate(
-        { searchPreference: searchPreference._id, ownerId: searchPreference.ownerId, opened: false },
+      let report: any;
+      report = await SearchReport.findOneAndUpdate(
+        { searchPreference: searchPreference._id, ownerId: searchPreference.ownerId },
         { $set: reportData },
-        { upsert: true }
+        { upsert: true, new: true }
       );
+
+      reportData._id = report._id;
 
       // Emit event to notify user of new report
       await this.notifyUserOfNewReport(searchPreference, report!);
 
-      console.log(`[Scheduler] Report generated successfully for preference: ${searchPreference.name}`);
+      // console.info(`[Scheduler] Report generated successfully for preference: ${searchPreference.name}`);
       return reportData;
-    } catch (error) {
+    } catch (error: Error | any) {
       console.error(`[Scheduler] Error generating report for preference ${searchPreference._id}:`, error);
       throw error;
     }
@@ -50,7 +52,7 @@ export class SchedulerHandler {
    * Perform the actual search based on search preferences
    */
   private static async performSearch(searchPreference: ISearchPreferences): Promise<IAthlete[]> {
-    // console.log(`[Scheduler] Performing search with preferences:`, {
+    // console.info(`[Scheduler] Performing search with preferences:`, {
     //   positions: searchPreference.positions,
     //   ageRange: searchPreference.ageRange,
     //   performanceMetrics: searchPreference.performanceMetrics,
@@ -136,8 +138,6 @@ export class SchedulerHandler {
       }
     }
 
-    console.log(`[Scheduler] Built match conditions`);
-
     // Build the aggregation pipeline
     const pipeline: any[] = [];
 
@@ -145,6 +145,8 @@ export class SchedulerHandler {
     if (matchConditions.length > 0) {
       pipeline.push({
         $match: {
+          // only isActive athletes
+          isActive: true,
           $and: matchConditions,
         },
       });
@@ -158,13 +160,9 @@ export class SchedulerHandler {
     // Sort by creation date (newest first) to get consistent results
     pipeline.push({ $sort: { createdAt: -1 } });
 
-    console.log(`[Scheduler] Executing aggregation in pipeline`);
 
     try {
       const results = await AthleteModel.aggregate(pipeline);
-
-      console.log(`[Scheduler] Found ${results.length} athletes matching search criteria`);
-
       return results;
     } catch (error) {
       console.error(`[Scheduler] Error executing search query:`, error);
@@ -187,8 +185,6 @@ export class SchedulerHandler {
         resultCount: reportData.results.length,
         generatedAt: reportData.generatedAt,
       });
-
-      console.log(`[Scheduler] Notification sent for new report: ${reportData.reportId}\n`);
     } catch (error) {
       console.error(`[Scheduler] Error sending notification for report ${reportData.reportId}:`, error);
       // Don't throw here - report generation should succeed even if notification fails

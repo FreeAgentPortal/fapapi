@@ -3,12 +3,23 @@ import { AuthMiddleware } from '../../../middleware/AuthMiddleware';
 import SubscriptionService from '../services/SubscriptionService';
 import FeedService from '../services/FeedService';
 import subscriptionRouter from './subscription';
+import eventRoutes from './event';
+import activityRoutes from './activity';
+import postRoutes from './post';
+import interactionRoutes from './interaction';
+import signingRoutes from './signing';
 
 const router = express.Router();
 
 const service = new FeedService();
 
-router.use('/subscription', subscriptionRouter)
+router.use('/subscription', subscriptionRouter);
+router.use('/event', eventRoutes);
+router.use('/activity', activityRoutes);
+router.use('/post', interactionRoutes); 
+router.use('/post', postRoutes);
+router.use('/signing', signingRoutes)
+
 router.route('/health').get((req, res) => {
   res.status(200).json({
     message: 'Feed service is up and running',
@@ -16,7 +27,7 @@ router.route('/health').get((req, res) => {
   });
 });
 
-router.route("/articles").get(service.fetchArticles);
+router.route('/articles').get(service.fetchArticles);
 
 // router.route('/').get(service.getResources);
 // router.route('/:id').get(service.getResource);

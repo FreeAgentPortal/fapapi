@@ -12,12 +12,14 @@ router.route('/health').get((req, res) => {
     success: true,
   });
 });
-
 router.use(AuthMiddleware.protect);
+router.route('/:id').get(service.getResource).put(service.updateResource);
+
 router.use(AuthMiddleware.authorizeRoles(['*', 'admin', 'moderator', 'developer', 'support']) as any);
 router.route('/').post(service.create).get(service.getResources);
-router.route('/:id').get(service.getResource).put(service.updateResource).delete(service.removeResource);
 router.route('/:id/reset-password').post(service.updatePassword);
 
+// fine tuned only, developers and people with special permissions should access this resource
+router.route('/:id').delete(AuthMiddleware.authorizeRoles(['users.delete', 'developer']) as any, service.removeResource);
 // authenticated routes
 export default router;

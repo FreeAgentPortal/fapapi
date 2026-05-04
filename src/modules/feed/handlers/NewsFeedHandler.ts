@@ -68,7 +68,7 @@ export interface WordPressApiResponse {
 
 export class NewsFeedHandler {
   private readonly wpBaseUrl = 'https://nfldraftdiamonds.com';
-  private readonly wpApiEndpoint = '/wp-json/wp/v2/posts';
+  private readonly wpApiEndpoint = '/wp-json/wp/v2/posts?_fields=id,title,excerpt,slug,date,link,author,featured_media,categories,tags,content,yoast_head_json,image';
 
   /**
    * Fetches articles from the WordPress site with pagination support

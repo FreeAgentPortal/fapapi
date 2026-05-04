@@ -3,7 +3,7 @@ import jwt, { JwtPayload } from 'jsonwebtoken';
 import asyncHandler from './asyncHandler';
 import User from '../modules/auth/model/User';
 import { AuthenticatedRequest } from '../types/AuthenticatedRequest';
-import { ErrorUtil } from './ErrorUtil'; 
+import { ErrorUtil } from './ErrorUtil';
 import { ModelMap } from '../utils/ModelMap';
 
 export class AuthMiddleware {
@@ -43,18 +43,23 @@ export class AuthMiddleware {
       // query the admin table for the profile associated with the user
       if (service) {
         const serviceName = Array.isArray(service) ? service[0] : service;
-        const Model = ModelMap[serviceName] || {};
+        const Model = ModelMap[serviceName as keyof typeof ModelMap] || {};
         const profile = await Model.findOne({ user: req.user._id });
         if (!profile) {
           return res.status(403).json({ message: `No profile found for service ${service}` });
         }
         req.user.permissions = profile.permissions || [];
+        // push the users roles onto the permissions array for large role based access control
+        req.user.roles = profile.roles || [];
+        // push the roles onto the permissions array for large role based access control
+        req.user.permissions.push(...(req.user.roles || []));
       } else {
         req.user.permissions = req.user.permissions || [];
       }
 
       next();
     } catch (err) {
+      // console.error(err);
       return res.status(401).json({ message: 'JWT validation failed. ' + err });
     }
   }

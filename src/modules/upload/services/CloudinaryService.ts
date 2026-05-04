@@ -38,10 +38,9 @@ export class CloudinaryService {
         const response = await this.handler.uploadFile(file.buffer, file.name, `users/${user.accessKey}/uploads`);
         urls.push({ url: response.secure_url, fileName: file.name, type: file.fileType });
       }
-      console.log(urls);
       res.status(201).json({ payload: urls });
     } catch (err) {
-      console.log(err);
+      console.error(err);
       error(err, req, res);
     }
   });
@@ -53,7 +52,7 @@ export class CloudinaryService {
       const response = await this.handler.deleteFile(publicId);
       res.status(200).json({ success: true, message: 'File deleted successfully', payload: response });
     } catch (err) {
-      console.log(err);
+      console.error(err);
       error(err, req, res);
     }
   });
@@ -64,7 +63,7 @@ export class CloudinaryService {
       if (!publicId) throw new ErrorUtil('Public ID is required to delete a file', 400);
       await this.handler.deleteFile(publicId);
     } catch (err) {
-      console.log(err);
+      console.error(err);
       throw err; // rethrow the error for further handling
     }
   }

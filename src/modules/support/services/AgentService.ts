@@ -12,7 +12,7 @@ export default class AgentService {
       const result = await this.agentHandler.fetchAgents(req.params.id);
       return res.status(200).json({ success: true, payload: result.agents });
     } catch (err) {
-      console.log(err);
+      console.error(err);
       return error(err, req, res);
     }
   };
