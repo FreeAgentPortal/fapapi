@@ -21,7 +21,7 @@ export interface UserType extends mongoose.Document {
   phoneNumber: string;
   email: string;
   password: string;
-  role: string;
+  role: string[];
   fullName: string;
   isActive: boolean;
   resetPasswordToken: string | undefined | null;
@@ -77,7 +77,7 @@ const UserSchema = new mongoose.Schema(
       {
         type: String,
         default: ['user'],
-        enum: ['user', 'admin', 'scout', 'agent'],
+        enum: ['user', 'athlete', 'team', 'professional', 'admin', 'scout', 'agent'],
       },
     ],
     lastSignedIn: {

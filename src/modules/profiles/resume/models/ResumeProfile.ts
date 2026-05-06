@@ -3,6 +3,7 @@ import mongoose, { Schema, Document, Types } from 'mongoose';
 
 export type OwnerKind =
   | 'AthleteProfile' // athletes
+  | 'ProfessionalProfile'
   | 'User'; // fallback if you ever want a user-level resume
 export interface IPolymorphicOwner {
   kind: OwnerKind; // model name
@@ -145,7 +146,7 @@ const ReferenceSchema = new Schema<IReference>(
 );
 const OwnerSchema = new Schema<IPolymorphicOwner>(
   {
-    kind: { type: String, required: true, enum: ['AthleteProfile', 'User'] },
+    kind: { type: String, required: true, enum: ['AthleteProfile', 'ProfessionalProfile', 'User'] },
     ref: { type: Schema.Types.ObjectId, required: true, refPath: 'owner.kind' },
   },
   { _id: false }
@@ -164,7 +165,6 @@ const ResumeProfileSchema = new Schema<IResumeProfile>(
   },
   { timestamps: true }
 );
-
 
 // One resume per owner (enforced)
 ResumeProfileSchema.index({ 'owner.kind': 1, 'owner.ref': 1 }, { unique: true });
