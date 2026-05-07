@@ -60,8 +60,7 @@ const JobPostSchema = new Schema<IJobPost>(
     team: {
       type: Schema.Types.ObjectId,
       ref: 'TeamProfile',
-      required: true,
-      index: true,
+      required: true, 
     },
     createdBy: {
       type: Schema.Types.ObjectId,
@@ -109,8 +108,7 @@ const JobPostSchema = new Schema<IJobPost>(
     status: {
       type: String,
       enum: JOB_STATUSES,
-      default: 'draft',
-      index: true,
+      default: 'draft', 
     },
     expiresAt: {
       type: Date,
