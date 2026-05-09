@@ -15,11 +15,15 @@ router.route('/health').get((req, res) => {
 
 router.use(AuthMiddleware.protect);
 
-router.route('/').get(service.getResources).post(service.create);
-router.route('/:id').get(service.getResource).patch(service.updateResource).delete(service.removeResource);
+router.route('/').get(service.getResources);
+router
+  .route('/:id')
+  .get(AuthMiddleware.authorizeRoles(['admin']) as any, service.getResource)
+  .patch(AuthMiddleware.authorizeRoles(['admin']) as any, service.updateResource)
+  .delete(AuthMiddleware.authorizeRoles(['admin']) as any, service.removeResource);
 router.route('/:jobId/applications').get(service.getApplicationsForJob).post(service.applyToJob);
-router.route("/mine").get(service.getMyApplications);
-router.route("/:id/status").patch(service.updateApplicationStatus);
-router.route("/:id/withdraw").post(service.withdrawApplication);
+router.route('/mine').get(service.getMyApplications);
+router.route('/:id/status').patch(service.updateApplicationStatus);
+router.route('/:id/withdraw').post(service.withdrawApplication);
 
 export default router;

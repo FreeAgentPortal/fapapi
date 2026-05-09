@@ -112,7 +112,7 @@ export default class JobPostService extends CRUDService {
   };
 
   private requireTeamProfile(user: AuthenticatedRequest['user'] | null | undefined): string {
-    if (!Array.isArray(user?.role) || !user.role.includes('team') || !user.profileRefs?.team) {
+    if (!Array.isArray(user?.role) || !user.profileRefs?.team) {
       throw new ErrorUtil('Only team users can perform this action', 403);
     }
 

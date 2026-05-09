@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthenticatedRequest } from '../../../types/AuthenticatedRequest';
 import { CRUDService } from '../../../utils/baseCRUD';
 import ApplicationHandler from '../handlers/Applications.handler';
+import ApplicationProfileHandler from '../handlers/ApplicationProfile.handler';
 import error from '../../../middleware/error';
 import asyncHandler from '../../../middleware/asyncHandler';
 import JobPostHandler from '../handlers/JobPostHandler';
@@ -10,15 +11,17 @@ import { eventBus } from '../../../lib/eventBus';
 export default class ApplicationService extends CRUDService {
   private applicationHandler: ApplicationHandler;
   private jobPostHandler: JobPostHandler;
+  private applicationProfileHandler: ApplicationProfileHandler;
+
   constructor() {
     super(ApplicationHandler);
     this.queryKeys = [];
     this.applicationHandler = this.handler as ApplicationHandler;
     this.jobPostHandler = new JobPostHandler();
+    this.applicationProfileHandler = new ApplicationProfileHandler();
   }
 
   getApplicationsForJob = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<void> => {
-    // Implementation for getting applications for a specific job
     try {
       const jobId = req.params.jobId;
       const pageSize = Number(req.query?.pageLimit) || 10;
@@ -30,6 +33,7 @@ export default class ApplicationService extends CRUDService {
         page,
         limit: pageSize,
       });
+
       res.status(200).json({ success: true, payload: applications[0].entries, metadata: { page, pageSize, total: applications[0].total } });
     } catch (err: any) {
       console.error(err);
@@ -38,34 +42,65 @@ export default class ApplicationService extends CRUDService {
   });
 
   public applyToJob = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
-    // Implementation for applying to a job
     try {
       const jobId = req.params.jobId;
-      // fetch the job post to ensure it exists and is open for applications
+      const professionalProfileId = await this.applicationProfileHandler.ensureProfessionalProfile(req.user);
       const jobPost = await this.jobPostHandler.fetch(jobId);
+
       if (!jobPost) {
         return res.status(404).json({ success: false, message: 'Job post not found' });
       }
-      // ensure that the job is published, not expired, and accepting applications
+
       if (jobPost.status !== 'published') {
         return res.status(400).json({ success: false, message: 'Job post is not published' });
       }
+
       if (jobPost.expiresAt && new Date() > jobPost.expiresAt) {
         return res.status(400).json({ success: false, message: 'Job post has expired' });
       }
-      // ensure that the user has a professional profile linked to their account
-      if (!req.user.profileRefs?.professionalProfile) {
+
+      if (!professionalProfileId) {
         return res.status(400).json({ success: false, message: 'User must have a professional profile to apply' });
       }
-      // create the application
+
+      const alreadyApplied = await this.applicationHandler.hasAppliedToJob(jobId, professionalProfileId);
+      if (alreadyApplied) {
+        return res.status(409).json({ success: false, message: 'User has already applied to this job' });
+      }
+
+      if (req.body?.attachResume) {
+        const resumeId = await this.applicationProfileHandler.findResumeId(professionalProfileId);
+
+        if (resumeId) {
+          req.body.resume = resumeId;
+        }
+      }
+
+      const match = await this.applicationProfileHandler.buildApplicationMatch(jobPost, professionalProfileId);
+      if (!match) {
+        return res.status(404).json({ success: false, message: 'Professional profile not found' });
+      }
+
       const applicationData = {
+        ...req.body,
         job: jobId,
         team: jobPost.team,
-        applicant: req.user.profileRefs?.professionalProfile,
-        ...req.body,
+        applicant: professionalProfileId,
+        matchScore: match.score,
+        matchReasons: match.reasons,
       };
-      const application = await this.handler.create(applicationData);
-      // trigger notification for the job poster
+      let application;
+
+      try {
+        application = await this.handler.create(applicationData);
+      } catch (err: any) {
+        if (err?.code === 11000) {
+          return res.status(409).json({ success: false, message: 'User has already applied to this job' });
+        }
+
+        throw err;
+      }
+
       eventBus.publish('job.application.submitted', {
         jobId,
         applicationId: application._id,
@@ -80,12 +115,12 @@ export default class ApplicationService extends CRUDService {
   });
 
   getMyApplications = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
-    // Implementation for getting the current user's applications
     try {
-      const applicantId = req.user.profileRefs?.professionalProfile;
+      const applicantId = this.applicationProfileHandler.getProfessionalProfileId(req.user);
       if (!applicantId) {
         return res.status(400).json({ success: false, message: 'User must have a professional profile to view applications' });
       }
+
       const pageSize = Number(req.query?.pageLimit) || 10;
       const page = Number(req.query?.pageNumber) || 1;
       const applications = await this.handler.fetchAll({
@@ -95,6 +130,7 @@ export default class ApplicationService extends CRUDService {
         page,
         limit: pageSize,
       });
+
       return res.status(200).json({ success: true, payload: applications[0].entries, metadata: { page, pageSize, total: applications[0].total } });
     } catch (err: any) {
       console.error(err);
@@ -140,7 +176,12 @@ export default class ApplicationService extends CRUDService {
         return res.status(400).json({ success: false, message: 'Application id is required' });
       }
 
-      const application = await this.applicationHandler.withdraw(applicationId, req.user.profileRefs?.professionalProfile, String(req.user._id), req.body?.note);
+      const application = await this.applicationHandler.withdraw(
+        applicationId,
+        this.applicationProfileHandler.getProfessionalProfileId(req.user),
+        String(req.user._id),
+        req.body?.note
+      );
 
       await eventBus.publish('job.application.withdrawn', {
         applicationId: application._id,

@@ -3,6 +3,7 @@ import mongoose, { Document, Schema, Types } from 'mongoose';
 export const JOB_EMPLOYMENT_TYPES = ['full_time', 'part_time', 'contract', 'internship', 'volunteer'] as const;
 export const JOB_LOCATION_TYPES = ['onsite', 'remote', 'hybrid'] as const;
 export const JOB_COMPENSATION_PERIODS = ['hourly', 'salary', 'stipend'] as const;
+export const JOB_EXPERIENCE_LEVELS = ['student', 'entry', 'mid', 'senior', 'executive'] as const;
 export const JOB_STATUSES = ['draft', 'published', 'closed', 'archived'] as const;
 
 export interface JobLocation {
@@ -23,6 +24,8 @@ export interface IJobPost extends Document {
   createdBy: Types.ObjectId;
   title: string;
   department?: string;
+  experienceLevel?: (typeof JOB_EXPERIENCE_LEVELS)[number];
+  industries: string[];
   employmentType: (typeof JOB_EMPLOYMENT_TYPES)[number];
   locationType: (typeof JOB_LOCATION_TYPES)[number];
   location?: JobLocation;
@@ -60,7 +63,7 @@ const JobPostSchema = new Schema<IJobPost>(
     team: {
       type: Schema.Types.ObjectId,
       ref: 'TeamProfile',
-      required: true, 
+      required: true,
     },
     createdBy: {
       type: Schema.Types.ObjectId,
@@ -75,6 +78,14 @@ const JobPostSchema = new Schema<IJobPost>(
     department: {
       type: String,
       trim: true,
+    },
+    experienceLevel: {
+      type: String,
+      enum: JOB_EXPERIENCE_LEVELS,
+    },
+    industries: {
+      type: [String],
+      default: [],
     },
     employmentType: {
       type: String,
@@ -108,7 +119,7 @@ const JobPostSchema = new Schema<IJobPost>(
     status: {
       type: String,
       enum: JOB_STATUSES,
-      default: 'draft', 
+      default: 'draft',
     },
     expiresAt: {
       type: Date,
@@ -122,6 +133,8 @@ const JobPostSchema = new Schema<IJobPost>(
 JobPostSchema.index({ status: 1 });
 JobPostSchema.index({ team: 1 });
 JobPostSchema.index({ title: 1 });
+JobPostSchema.index({ experienceLevel: 1 });
+JobPostSchema.index({ industries: 1 });
 JobPostSchema.index({ 'location.city': 1, 'location.state': 1, 'location.country': 1 });
 JobPostSchema.index({ createdAt: -1 });
 

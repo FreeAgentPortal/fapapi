@@ -16,6 +16,15 @@ export default class ApplicationHandler extends CRUDHandler<IJobApplication> {
     super(JobApplicationModel);
   }
 
+  async hasAppliedToJob(jobId: string, applicantProfileId: string): Promise<boolean> {
+    const existingApplication = await this.Schema.exists({
+      job: jobId,
+      applicant: applicantProfileId,
+    });
+
+    return existingApplication !== null;
+  }
+
   async updateStatus(
     applicationId: string,
     nextStatus: unknown,

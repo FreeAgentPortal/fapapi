@@ -53,17 +53,17 @@ const JobApplicationSchema = new Schema<IJobApplication>(
     job: {
       type: Schema.Types.ObjectId,
       ref: 'JobPost',
-      required: true, 
+      required: true,
     },
     team: {
       type: Schema.Types.ObjectId,
       ref: 'TeamProfile',
-      required: true, 
+      required: true,
     },
     applicant: {
       type: Schema.Types.ObjectId,
       ref: 'ProfessionalProfile',
-      required: true, 
+      required: true,
     },
     resume: {
       type: Schema.Types.ObjectId,
@@ -78,7 +78,7 @@ const JobApplicationSchema = new Schema<IJobApplication>(
       type: String,
       required: true,
       enum: JOB_APPLICATION_STATUSES,
-      default: 'submitted', 
+      default: 'submitted',
     },
     statusHistory: {
       type: [JobApplicationStatusHistorySchema],
@@ -100,6 +100,7 @@ const JobApplicationSchema = new Schema<IJobApplication>(
 JobApplicationSchema.index({ job: 1 });
 JobApplicationSchema.index({ team: 1 });
 JobApplicationSchema.index({ applicant: 1 });
+JobApplicationSchema.index({ job: 1, applicant: 1 }, { unique: true });
 JobApplicationSchema.index({ status: 1 });
 JobApplicationSchema.index({ createdAt: -1 });
 
