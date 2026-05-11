@@ -37,6 +37,7 @@ export type MatchInput = {
   job: JobPost;
   professional: ProfessionalProfile;
   resume?: ResumeProfile | null;
+  coverLetter?: string | null;
 };
 
 export type MatchResult = {

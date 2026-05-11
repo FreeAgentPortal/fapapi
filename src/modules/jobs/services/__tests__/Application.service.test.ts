@@ -4,6 +4,7 @@ const mockProfessionalFindOne: any = jest.fn();
 const mockProfessionalFindById: any = jest.fn();
 const mockResumeFindOne: any = jest.fn();
 const mockCreateProfessionalProfile: any = jest.fn();
+const mockUserFindById: any = jest.fn();
 const mockUserFindByIdAndUpdate: any = jest.fn();
 
 function buildLeanQuery(result: any) {
@@ -37,6 +38,7 @@ jest.mock('../../../../service/profile/ProfessionalProfileCreator', () => ({
 jest.mock('../../../auth/model/User', () => ({
   __esModule: true,
   default: {
+    findById: mockUserFindById,
     findByIdAndUpdate: mockUserFindByIdAndUpdate,
   },
 }));
@@ -48,6 +50,7 @@ describe('ApplicationProfileHandler professional profile fallback', () => {
     jest.clearAllMocks();
     mockProfessionalFindById.mockReturnValue(buildLeanQuery(null));
     mockResumeFindOne.mockReturnValue(buildLeanQuery(null));
+    mockUserFindById.mockReturnValue(buildLeanQuery(null));
     mockUserFindByIdAndUpdate.mockResolvedValue({ _id: 'user-1' });
   });
 
@@ -101,6 +104,84 @@ describe('ApplicationProfileHandler professional profile fallback', () => {
         'profileRefs.professional': 'professional-profile-existing',
         'profileRefs.professionalProfile': 'professional-profile-existing',
       },
+    });
+  });
+
+  it('looks up resumes with both professional and athlete ownership when the user has an athlete profile', async () => {
+    mockProfessionalFindById.mockReturnValue(buildLeanQuery({ _id: 'professional-profile-1', user: 'user-1' }));
+    mockUserFindById.mockReturnValue(buildLeanQuery({ profileRefs: { athlete: 'athlete-profile-1' } }));
+    mockResumeFindOne.mockReturnValue(buildLeanQuery({ _id: 'resume-1' }));
+
+    const handler = new ApplicationProfileHandler();
+    const resumeId = await handler.findResumeId('professional-profile-1');
+
+    expect(resumeId).toBe('resume-1');
+    expect(mockResumeFindOne).toHaveBeenCalledWith({
+      $or: [
+        {
+          'owner.kind': 'ProfessionalProfile',
+          'owner.ref': 'professional-profile-1',
+        },
+        {
+          'owner.kind': 'AthleteProfile',
+          'owner.ref': 'athlete-profile-1',
+        },
+      ],
+    });
+  });
+
+  it('builds application matches from an athlete-owned resume when present', async () => {
+    mockProfessionalFindById
+      .mockReturnValueOnce(
+        buildLeanQuery({
+          _id: 'professional-profile-1',
+          user: 'user-1',
+          desiredRoles: [],
+          industries: [],
+          openToRelocation: false,
+          openToRemote: false,
+          jobSearchStatus: 'open',
+          visibility: 'public',
+        })
+      )
+      .mockReturnValueOnce(buildLeanQuery({ _id: 'professional-profile-1', user: 'user-1' }));
+    mockUserFindById.mockReturnValue(buildLeanQuery({ profileRefs: { athlete: 'athlete-profile-1' } }));
+    mockResumeFindOne.mockReturnValue(
+      buildLeanQuery({
+        experiences: [{ orgName: 'Example Club', position: 'Forward', achievements: [] }],
+        awards: [],
+        qa: [],
+      })
+    );
+
+    const handler = new ApplicationProfileHandler();
+    const result = await handler.buildApplicationMatch(
+      {
+        title: 'Forward',
+        department: 'Sport',
+        locationType: 'remote',
+        location: { city: 'Austin', state: 'Texas', country: 'USA' },
+        description: 'Role description',
+        requirements: [],
+        preferredQualifications: [],
+        experienceLevel: 'entry',
+        industries: [],
+      },
+      'professional-profile-1'
+    );
+
+    expect(result).not.toBeNull();
+    expect(mockResumeFindOne).toHaveBeenCalledWith({
+      $or: [
+        {
+          'owner.kind': 'ProfessionalProfile',
+          'owner.ref': 'professional-profile-1',
+        },
+        {
+          'owner.kind': 'AthleteProfile',
+          'owner.ref': 'athlete-profile-1',
+        },
+      ],
     });
   });
 });

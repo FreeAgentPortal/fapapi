@@ -55,10 +55,7 @@ export default class ApplicationProfileHandler {
   }
 
   async findResumeId(professionalProfileId: string): Promise<string | null> {
-    const resume = await ResumeProfile.findOne({
-      'owner.kind': 'ProfessionalProfile',
-      'owner.ref': professionalProfileId,
-    })
+    const resume = await ResumeProfile.findOne(await this.buildResumeOwnerQuery(professionalProfileId))
       .select('_id')
       .lean();
 
@@ -72,10 +69,7 @@ export default class ApplicationProfileHandler {
       return null;
     }
 
-    const resume = await ResumeProfile.findOne({
-      'owner.kind': 'ProfessionalProfile',
-      'owner.ref': professionalProfileId,
-    }).lean();
+    const resume = await ResumeProfile.findOne(await this.buildResumeOwnerQuery(professionalProfileId, professional.user ? String(professional.user) : null)).lean();
 
     return scoreProfessionalForJob({
       job: jobPost,
@@ -94,6 +88,56 @@ export default class ApplicationProfileHandler {
     const displayName = user?.fullName?.trim() || `${user?.firstName || ''} ${user?.lastName || ''}`.trim();
 
     return displayName ? { displayName } : {};
+  }
+
+  private async buildResumeOwnerQuery(
+    professionalProfileId: string,
+    professionalUserId?: string | null
+  ): Promise<{
+    $or: Array<{
+      'owner.kind': 'ProfessionalProfile' | 'AthleteProfile';
+      'owner.ref': string;
+    }>;
+  }> {
+    const resumeOwnerCandidates: Array<{
+      'owner.kind': 'ProfessionalProfile' | 'AthleteProfile';
+      'owner.ref': string;
+    }> = [
+      {
+        'owner.kind': 'ProfessionalProfile',
+        'owner.ref': professionalProfileId,
+      },
+    ];
+
+    const athleteProfileId = await this.findAthleteProfileIdForProfessionalProfile(professionalProfileId, professionalUserId);
+
+    if (athleteProfileId) {
+      resumeOwnerCandidates.push({
+        'owner.kind': 'AthleteProfile',
+        'owner.ref': athleteProfileId,
+      });
+    }
+
+    return { $or: resumeOwnerCandidates };
+  }
+
+  private async findAthleteProfileIdForProfessionalProfile(professionalProfileId: string, professionalUserId?: string | null): Promise<string | null> {
+    const userId = professionalUserId || (await this.findProfessionalUserId(professionalProfileId));
+
+    if (!userId) {
+      return null;
+    }
+
+    const user = await User.findById(userId).select('profileRefs').lean();
+    const athleteProfileId = user?.profileRefs?.athlete || user?.profileRefs?.athleteProfile;
+
+    return athleteProfileId ? String(athleteProfileId) : null;
+  }
+
+  private async findProfessionalUserId(professionalProfileId: string): Promise<string | null> {
+    const professional = await ProfessionalProfileModel.findById(professionalProfileId).select('user').lean();
+
+    return professional?.user ? String(professional.user) : null;
   }
 
   private async persistProfessionalProfileRefs(userId: string, profileId: string, user: AuthenticatedRequest['user'] | null | undefined): Promise<void> {

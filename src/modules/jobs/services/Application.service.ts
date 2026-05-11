@@ -77,6 +77,7 @@ export default class ApplicationService extends CRUDService {
       }
 
       const match = await this.applicationProfileHandler.buildApplicationMatch(jobPost, professionalProfileId);
+      console.log('Built application match:', match);
       if (!match) {
         return res.status(404).json({ success: false, message: 'Professional profile not found' });
       }

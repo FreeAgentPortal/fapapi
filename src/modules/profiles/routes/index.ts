@@ -7,11 +7,13 @@ import scoutRoutes from '../scout/routes/index';
 import resumeRoutes from '../resume/routes/index';
 import athleteSchedulerRoutes from './athleteSchedulerRoutes';
 import athleteActivationRoutes from './athleteActivationRoutes';
+import professionalRoutes from '../professional/route/';
 
 const router = express.Router();
 
 router.use('/admin', adminRoutes);
 router.use('/athlete', athleteRoutes, athleteSchedulerRoutes, athleteActivationRoutes);
+router.use('/professional', professionalRoutes);
 router.use('/team', teamRoutes);
 router.use('/scout', scoutRoutes);
 router.use('/resume', resumeRoutes);
