@@ -8,12 +8,14 @@ import { getPaymentSafeCountryCode } from '../utils/countryHelpers';
 import { validatePaymentFormData } from '../utils/paymentValidation';
 import PaymentProcessingHandler from './PaymentProcessing.handler';
 import { eventBus } from '../../../lib/eventBus';
+import PlanSchema from '../../auth/model/PlanSchema';
 
 export class BillingHandler {
   constructor(private readonly paymentHandler: PaymentHandler = new PaymentHandler()) {}
   async updateVault(req: AuthenticatedRequest): Promise<Boolean> {
     const { id } = req.params;
     const { paymentFormValues, selectedPlans, billingCycle, paymentMethod } = req.body;
+    console.log(req.body);
     // first step find the billing information from the provided profile id
     const billing = await BillingAccount.findOne({ profileId: id }).populate('payor profileId');
     if (!billing) {
@@ -24,10 +26,16 @@ export class BillingHandler {
     if (!processor) {
       throw new ErrorUtil('No payment processor is configured', 500);
     }
-
+    // selectedPlans can be an array so we need to plan for an array and single object, we will standardize it to an array for easier handling
+    const selectedPlan = Array.isArray(selectedPlans) ? selectedPlans[0] : selectedPlans; // Assuming only one plan can be selected at a time
+    const plan = await PlanSchema.findById(selectedPlan?._id ?? req.body?.planId).lean();
+    if (!plan) {
+      throw new ErrorUtil('Selected plan not found', 404);
+    }
     // Check if the selected plan is free
-    const selectedPlan = selectedPlans[0];
-    const isFree = selectedPlan.price === 0;
+    console.log(`Selected plan: ${plan?.name}, Price: ${plan?.price}`);
+    const isFree = plan?.price === 0 as any;
+    console.log(`Selected plan ${plan?.name} is ${isFree ? 'free' : 'paid'}`);
 
     // Validate payment form data for paid plans based on processor requirements
     if (!isFree) {
@@ -44,7 +52,7 @@ export class BillingHandler {
         paymentMethod: paymentMethod,
         country: getPaymentSafeCountryCode(paymentFormValues.country),
         phone: billing.payor?.phoneNumber,
-        stripeToken: paymentFormValues?.stripeToken, // For Stripe tokenized payments
+        stripeToken: paymentFormValues?.stripeToken ?? req.body.stripeToken, // For Stripe tokenized payments
         creditCardDetails: {
           ccnumber: paymentFormValues?.ccnumber,
           ccexp: paymentFormValues?.ccexp,
@@ -84,7 +92,7 @@ export class BillingHandler {
     }
 
     // Update billing details for both free and paid plans
-    billing.plan = selectedPlan._id;
+    billing.plan = plan._id as any;
     billing.isYearly = billingCycle === 'yearly';
 
     // For free plans, we might not need a nextBillingDate or set it far in the future
@@ -109,7 +117,7 @@ export class BillingHandler {
       }
       billing.status = 'active';
       billing.needsUpdate = false; // if it was true set by admin, this will flip it off
-      
+
       await billing.save();
 
       if (!billing.setupFeePaid) {

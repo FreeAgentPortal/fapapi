@@ -14,7 +14,7 @@ router.route('/health').get((req, res) => {
 });
 
 router.use(AuthMiddleware.protect);
-router.route('/profile/:id').get(service.getResource);
+router.use('/profile', require('./profileRoutes').default);
 
 router.route('/').post(service.create).get(service.getResources);
 router.route('/:id').get(service.getResource).put(service.updateResource).delete(service.removeResource);
