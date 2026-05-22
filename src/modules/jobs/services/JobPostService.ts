@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import { Request, Response } from 'express';
 import asyncHandler from '../../../middleware/asyncHandler';
 import error from '../../../middleware/error';
@@ -6,13 +7,22 @@ import { AuthenticatedRequest } from '../../../types/AuthenticatedRequest';
 import authenticateUser from '../../../utils/authenticateUser';
 import { CRUDService } from '../../../utils/baseCRUD';
 import JobPostHandler from '../handlers/JobPostHandler';
+import ApplicationProfileHandler from '../handlers/ApplicationProfile.handler';
+import { ProfessionalProfileModel } from '../../profiles/professional/model/ProfessionalProfile';
+import { ResumeProfile } from '../../profiles/resume/models/ResumeProfile';
+import JobApplicationModel from '../models/JobApplication';
+import { JobPostModel } from '../models/JobPost';
+import { buildJobRecommendationQuery } from '../utils/buildJobRecommendationQuery';
 
 type JobPostUpdatePayload = Record<string, any>;
 
 export default class JobPostService extends CRUDService {
+  private profileHandler: ApplicationProfileHandler;
+
   constructor() {
     super(JobPostHandler);
     this.queryKeys = ['title', 'department', 'description', 'requirements', 'preferredQualifications', 'location.city', 'location.state', 'location.country'];
+    this.profileHandler = new ApplicationProfileHandler();
   }
 
   public create = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
@@ -117,6 +127,102 @@ export default class JobPostService extends CRUDService {
     }
 
     return String(user!.profileRefs.team);
+  }
+
+  public getRecommended = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+    try {
+      const page = Math.max(1, Number(req.query?.pageNumber) || 1);
+      const limit = Math.max(1, Math.min(50, Number(req.query?.pageLimit) || 20));
+
+      const profileId = this.profileHandler.getProfessionalProfileId(req.user);
+
+      if (!profileId) {
+        return this.recommendedFallback(res, page, limit);
+      }
+
+      const [profile, resumeId] = await Promise.all([ProfessionalProfileModel.findById(profileId).lean(), this.profileHandler.findResumeId(profileId)]);
+
+      const resume = resumeId ? await ResumeProfile.findById(resumeId).lean() : null;
+
+      const pastApplications = await JobApplicationModel.find({ applicant: profileId }).sort({ createdAt: -1 }).limit(20).select('job').lean();
+
+      const pastJobIds = pastApplications.map((a) => a.job as mongoose.Types.ObjectId);
+
+      const pastJobPosts =
+        pastJobIds.length > 0
+          ? await JobPostModel.find({ _id: { $in: pastJobIds } })
+              .select('title department industries')
+              .lean()
+          : [];
+
+      const { orConditions, industryTerms } = buildJobRecommendationQuery(profile as any, resume as any, pastJobPosts);
+
+      if (industryTerms.length > 0) {
+        orConditions.push({ industries: { $in: industryTerms } });
+      }
+
+      if (orConditions.length === 0) {
+        return this.recommendedFallback(res, page, limit);
+      }
+
+      const { payload, metadata } = await (this.handler as JobPostHandler).fetchRecommended(orConditions, pastJobIds, page, limit);
+
+      return res.status(200).json({
+        success: true,
+        payload,
+        metadata: {
+          page,
+          pages: Math.ceil((metadata.totalCount || 0) / limit) || 0,
+          totalCount: metadata.totalCount || 0,
+          prevPage: page - 1,
+          nextPage: page + 1,
+        },
+      });
+    } catch (err) {
+      return error(err, req, res);
+    }
+  });
+
+  private async recommendedFallback(res: Response, page: number, limit: number): Promise<Response> {
+    const now = new Date();
+    const [result] = await JobPostModel.aggregate([
+      {
+        $match: {
+          status: 'published',
+          $or: [{ expiresAt: { $exists: false } }, { expiresAt: null }, { expiresAt: { $gt: now } }],
+        },
+      },
+      {
+        $lookup: {
+          from: 'jobapplications',
+          localField: '_id',
+          foreignField: 'job',
+          as: 'applications',
+        },
+      },
+      { $addFields: { applicationCount: { $size: '$applications' } } },
+      { $project: { applications: 0 } },
+      { $sort: { applicationCount: -1, createdAt: -1 } },
+      {
+        $facet: {
+          metadata: [{ $count: 'totalCount' }, { $addFields: { page, limit } }],
+          entries: [{ $skip: (page - 1) * limit }, { $limit: limit }],
+        },
+      },
+    ]);
+
+    return res.status(200).json({
+      success: true,
+      payload: result?.entries ?? [],
+      metadata: {
+        page,
+        pages: Math.ceil((result?.metadata?.[0]?.totalCount || 0) / limit) || 0,
+        totalCount: result?.metadata?.[0]?.totalCount || 0,
+        prevPage: page - 1,
+        nextPage: page + 1,
+        mode: 'fallback',
+      },
+    });
   }
 
   private canManageJob(user: any, jobTeamId: unknown): boolean {

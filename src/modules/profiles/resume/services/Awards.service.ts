@@ -7,7 +7,7 @@ import { AuthenticatedRequest } from '../../../../types/AuthenticatedRequest';
 
 export default class AwardsService extends CRUDService {
   constructor() {
-    super(AwardsCRUDHandler);
+    super(AwardsCRUDHandler); 
   }
 
   public create = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
@@ -18,6 +18,7 @@ export default class AwardsService extends CRUDService {
       const result = await this.handler.addAward(ownerKind, ownerRef, req.body);
       return res.status(201).json(result);
     } catch (err) {
+      console.error(err);
       return error(err, req, res);
     }
   });
@@ -42,6 +43,7 @@ export default class AwardsService extends CRUDService {
       const result = await this.handler.removeAward(id, itemId);
       return res.status(200).json(result);
     } catch (err) {
+      console.error(err);
       return error(err, req, res);
     }
   });
