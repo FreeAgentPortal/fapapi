@@ -32,6 +32,7 @@ export default class JobPostHandler extends CRUDHandler<IJobPost> {
           entries: [
             { $skip: (page - 1) * limit },
             { $limit: limit },
+            { $project: { viewers: 0 } },
             {
               $lookup: {
                 from: 'teamprofiles',
@@ -56,6 +57,16 @@ export default class JobPostHandler extends CRUDHandler<IJobPost> {
       payload: result?.entries ?? [],
       metadata: result?.metadata?.[0] ?? { totalCount: 0, page, limit },
     };
+  }
+
+  async recordView(jobId: string, userId: mongoose.Types.ObjectId, ip: string): Promise<void> {
+    await this.Schema.updateOne(
+      { _id: jobId, 'viewers.userId': { $ne: userId } },
+      {
+        $inc: { viewCount: 1 },
+        $push: { viewers: { userId, ip, viewedAt: new Date() } },
+      }
+    );
   }
 
   async updateOwned(id: string, teamId: string, data: Partial<IJobPost>): Promise<IJobPost | null> {
@@ -92,6 +103,7 @@ export default class JobPostHandler extends CRUDHandler<IJobPost> {
           entries: [
             { $skip: (options.page - 1) * options.limit },
             { $limit: options.limit },
+            { $project: { viewers: 0 } },
             {
               $lookup: {
                 from: 'teamprofiles',

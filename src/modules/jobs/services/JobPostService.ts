@@ -46,6 +46,30 @@ export default class JobPostService extends CRUDService {
     }
   });
 
+  public getResource = async (req: Request, res: Response): Promise<Response> => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const job = await JobPostModel.findById(req.params.id).select('-viewers').lean();
+
+      if (!job) {
+        throw new ErrorUtil('Job post not found', 404);
+      }
+
+      const userId = new mongoose.Types.ObjectId(String(authReq.user._id));
+      const rawIp = (req.headers['x-forwarded-for'] as string | undefined)?.split(',')[0]?.trim() ?? (req as any).socket?.remoteAddress ?? '';
+      const ip = rawIp.replace(/^::ffff:/, '');
+
+      (this.handler as JobPostHandler).recordView(String(req.params.id), userId, ip).catch(() => {});
+
+      return res.status(200).json({
+        success: true,
+        payload: job,
+      });
+    } catch (err) {
+      return error(err, req, res);
+    }
+  };
+
   public updateResource = async (req: Request, res: Response): Promise<Response> => {
     try {
       const authReq = req as AuthenticatedRequest;

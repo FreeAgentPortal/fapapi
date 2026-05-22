@@ -19,6 +19,12 @@ export interface JobCompensation {
   period?: (typeof JOB_COMPENSATION_PERIODS)[number];
 }
 
+export interface IJobPostViewer {
+  userId: Types.ObjectId;
+  ip: string;
+  viewedAt: Date;
+}
+
 export interface IJobPost extends Document {
   team: Types.ObjectId;
   createdBy: Types.ObjectId;
@@ -35,6 +41,8 @@ export interface IJobPost extends Document {
   compensation?: JobCompensation;
   status: (typeof JOB_STATUSES)[number];
   expiresAt?: Date;
+  viewCount: number;
+  viewers: IJobPostViewer[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -54,6 +62,15 @@ const JobCompensationSchema = new Schema<JobCompensation>(
     max: { type: Number },
     currency: { type: String, trim: true, uppercase: true },
     period: { type: String, enum: JOB_COMPENSATION_PERIODS },
+  },
+  { _id: false }
+);
+
+const JobPostViewerSchema = new Schema<IJobPostViewer>(
+  {
+    userId: { type: Schema.Types.ObjectId, ref: 'User', required: true },
+    ip: { type: String, required: true },
+    viewedAt: { type: Date, default: Date.now },
   },
   { _id: false }
 );
@@ -123,6 +140,14 @@ const JobPostSchema = new Schema<IJobPost>(
     },
     expiresAt: {
       type: Date,
+    },
+    viewCount: {
+      type: Number,
+      default: 0,
+    },
+    viewers: {
+      type: [JobPostViewerSchema],
+      default: [],
     },
   },
   {
