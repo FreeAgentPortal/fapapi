@@ -7,6 +7,7 @@ import error from '../../../middleware/error';
 import asyncHandler from '../../../middleware/asyncHandler';
 import JobPostHandler from '../handlers/JobPostHandler';
 import { eventBus } from '../../../lib/eventBus';
+import { AdvFilters } from '../../../utils/advFilter/AdvFilters';
 
 export default class ApplicationService extends CRUDService {
   private applicationHandler: ApplicationHandler;
@@ -122,12 +123,12 @@ export default class ApplicationService extends CRUDService {
         return res.status(400).json({ success: false, message: 'User must have a professional profile to view applications' });
       }
 
+      console.log('Fetching applications for applicantId:', applicantId);
+
       const pageSize = Number(req.query?.pageLimit) || 10;
       const page = Number(req.query?.pageNumber) || 1;
       const applications = await this.handler.fetchAll({
-        filters: {
-          applicant: applicantId,
-        },
+        filters: AdvFilters.filter(`applicant;${applicantId}`),
         page,
         limit: pageSize,
       });

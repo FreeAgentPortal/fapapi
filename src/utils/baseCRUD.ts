@@ -28,16 +28,16 @@ export class CRUDHandler<T extends mongoose.Document> {
     return result;
   }
 
-  async fetchAll(options: PaginationOptions): Promise<{ entries: T[]; metadata: any[] }[]> {
+  async fetchAll(options: PaginationOptions): Promise<{ entries: T[]; metadata: any[] }[]> { 
     return await this.Schema.aggregate([
       {
         $match: {
           $and: [...options.filters],
-          ...(options.query.length > 0 && { $or: options.query }),
+          ...(options.query?.length > 0 && { $or: options.query }),
         },
       },
       {
-        $sort: options.sort,
+        $sort: options.sort ?? { createdAt: -1 },
       },
       {
         $facet: {

@@ -1,6 +1,6 @@
 import { Types } from 'mongoose';
 import { ErrorUtil } from '../../../middleware/ErrorUtil';
-import { CRUDHandler } from '../../../utils/baseCRUD';
+import { CRUDHandler, PaginationOptions } from '../../../utils/baseCRUD';
 import JobApplicationModel, { IJobApplication, JOB_APPLICATION_STATUSES } from '../models/JobApplication';
 
 type ApplicationActorContext = {
@@ -14,6 +14,58 @@ const TERMINAL_APPLICATION_STATUSES: IJobApplication['status'][] = ['rejected', 
 export default class ApplicationHandler extends CRUDHandler<IJobApplication> {
   constructor() {
     super(JobApplicationModel);
+  }
+
+  async fetchAll(options: PaginationOptions): Promise<{ entries: any[]; metadata: any[] }[]> {
+    return await this.Schema.aggregate([
+      {
+        $match: {
+          $and: [...options.filters],
+          ...(options.query?.length > 0 && { $or: options.query }),
+        },
+      },
+      {
+        $sort: options.sort ?? { createdAt: -1 },
+      },
+      {
+        $facet: {
+          metadata: [{ $count: 'totalCount' }, { $addFields: { page: options.page, limit: options.limit } }],
+          entries: [
+            { $skip: (options.page - 1) * options.limit },
+            { $limit: options.limit },
+            {
+              $lookup: {
+                from: 'jobposts',
+                localField: 'job',
+                foreignField: '_id',
+                as: 'job',
+              },
+            },
+            {
+              $lookup: {
+                from: 'teamprofiles',
+                localField: 'team',
+                foreignField: '_id',
+                as: 'team',
+                pipeline: [{ $project: { name: 1, logoUrl: 1 } }],
+              },
+            },
+            {
+              $unwind: {
+                path: '$job',
+                preserveNullAndEmptyArrays: true,
+              },
+            },
+            {
+              $unwind: {
+                path: '$team',
+                preserveNullAndEmptyArrays: true,
+              },
+            },
+          ],
+        },
+      },
+    ]);
   }
 
   async hasAppliedToJob(jobId: string, applicantProfileId: string): Promise<boolean> {
