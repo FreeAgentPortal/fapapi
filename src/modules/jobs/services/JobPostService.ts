@@ -13,6 +13,7 @@ import { ResumeProfile } from '../../profiles/resume/models/ResumeProfile';
 import JobApplicationModel from '../models/JobApplication';
 import { JobPostModel } from '../models/JobPost';
 import { buildJobRecommendationQuery } from '../utils/buildJobRecommendationQuery';
+import { AdvFilters } from '../../../utils/advFilter/AdvFilters';
 
 type JobPostUpdatePayload = Record<string, any>;
 
@@ -145,6 +146,53 @@ export default class JobPostService extends CRUDService {
     }
   };
 
+  public getResources = async (req: Request, res: Response): Promise<Response> => {
+    try {
+      const authReq = req as AuthenticatedRequest;
+      const pageSize = Number(req.query?.pageLimit) || 10;
+      const page = Number(req.query?.pageNumber) || 1;
+
+      const keywordQuery = AdvFilters.query(this.queryKeys, req.query?.keyword as string);
+      const filterIncludeOptions = AdvFilters.filter(req.query?.includeOptions as string);
+      const orConditions = [
+        ...(Object.keys(keywordQuery[0]).length > 0 ? keywordQuery : []),
+        ...(Array.isArray(filterIncludeOptions) && filterIncludeOptions.length > 0 && Object.keys(filterIncludeOptions[0]).length > 0 ? filterIncludeOptions : []),
+      ];
+
+      const options = {
+        filters: AdvFilters.filter(req.query?.filterOptions as string),
+        sort: AdvFilters.sort((req.query?.sortOptions as string) || '-createdAt'),
+        query: orConditions,
+        page,
+        limit: pageSize,
+      };
+
+      const profileId = this.profileHandler.getProfessionalProfileId(authReq.user);
+      let appliedIds: mongoose.Types.ObjectId[] = [];
+
+      if (profileId) {
+        const applications = await JobApplicationModel.find({ applicant: profileId }).select('job').lean();
+        appliedIds = applications.map((a) => a.job as mongoose.Types.ObjectId);
+      }
+
+      const [result] = await (this.handler as JobPostHandler).fetchAllAnnotated(options, appliedIds);
+
+      return res.status(200).json({
+        success: true,
+        payload: [...result.entries],
+        metadata: {
+          page,
+          pages: Math.ceil(result.metadata[0]?.totalCount / pageSize) || 0,
+          totalCount: result.metadata[0]?.totalCount || 0,
+          prevPage: page - 1,
+          nextPage: page + 1,
+        },
+      });
+    } catch (err) {
+      return error(err, req, res);
+    }
+  };
+
   private requireTeamProfile(user: AuthenticatedRequest['user'] | null | undefined): string {
     if (!Array.isArray(user?.role) || !user.profileRefs?.team) {
       throw new ErrorUtil('Only team users can perform this action', 403);
@@ -168,7 +216,7 @@ export default class JobPostService extends CRUDService {
 
       const resume = resumeId ? await ResumeProfile.findById(resumeId).lean() : null;
 
-      const pastApplications = await JobApplicationModel.find({ applicant: profileId }).sort({ createdAt: -1 }).limit(20).select('job').lean();
+      const pastApplications = await JobApplicationModel.find({ applicant: profileId }).select('job').lean();
 
       const pastJobIds = pastApplications.map((a) => a.job as mongoose.Types.ObjectId);
 
@@ -186,7 +234,7 @@ export default class JobPostService extends CRUDService {
       }
 
       if (orConditions.length === 0) {
-        return this.recommendedFallback(res, page, limit);
+        return this.recommendedFallback(res, page, limit, pastJobIds);
       }
 
       const { payload, metadata } = await (this.handler as JobPostHandler).fetchRecommended(orConditions, pastJobIds, page, limit);
@@ -207,7 +255,7 @@ export default class JobPostService extends CRUDService {
     }
   });
 
-  private async recommendedFallback(res: Response, page: number, limit: number): Promise<Response> {
+  private async recommendedFallback(res: Response, page: number, limit: number, appliedIds: mongoose.Types.ObjectId[] = []): Promise<Response> {
     const now = new Date();
     const [result] = await JobPostModel.aggregate([
       {
@@ -230,7 +278,7 @@ export default class JobPostService extends CRUDService {
       {
         $facet: {
           metadata: [{ $count: 'totalCount' }, { $addFields: { page, limit } }],
-          entries: [{ $skip: (page - 1) * limit }, { $limit: limit }],
+          entries: [{ $skip: (page - 1) * limit }, { $limit: limit }, { $addFields: { applied: { $in: ['$_id', appliedIds] } } }],
         },
       },
     ]);
@@ -247,21 +295,5 @@ export default class JobPostService extends CRUDService {
         mode: 'fallback',
       },
     });
-  }
-
-  private canManageJob(user: any, jobTeamId: unknown): boolean {
-    if (!user) {
-      return false;
-    }
-
-    if (Array.isArray(user?.role) && user.role.includes('admin')) {
-      return true;
-    }
-
-    if (!Array.isArray(user?.role) || !user.role.includes('team') || !user.profileRefs?.team) {
-      return false;
-    }
-
-    return String(user.profileRefs.team) === String(jobTeamId);
   }
 }

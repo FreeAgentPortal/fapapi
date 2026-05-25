@@ -9,19 +9,13 @@ export default class JobPostHandler extends CRUDHandler<IJobPost> {
 
   async fetchRecommended(
     orConditions: Record<string, unknown>[],
-    excludeIds: mongoose.Types.ObjectId[],
+    appliedIds: mongoose.Types.ObjectId[],
     page: number,
     limit: number
   ): Promise<{ payload: IJobPost[]; metadata: { totalCount: number; page: number; limit: number } }> {
     const now = new Date();
 
-    const andFilters: object[] = [{ status: 'published' }, { $or: [{ expiresAt: { $exists: false } }, { expiresAt: null }, { expiresAt: { $gt: now } }] }];
-
-    if (excludeIds.length > 0) {
-      andFilters.push({ _id: { $nin: excludeIds } });
-    }
-
-    andFilters.push({ $or: orConditions });
+    const andFilters: object[] = [{ status: 'published' }, { $or: [{ expiresAt: { $exists: false } }, { expiresAt: null }, { expiresAt: { $gt: now } }] }, { $or: orConditions }];
 
     const [result] = await this.Schema.aggregate([
       { $match: { $and: andFilters } },
@@ -33,6 +27,7 @@ export default class JobPostHandler extends CRUDHandler<IJobPost> {
             { $skip: (page - 1) * limit },
             { $limit: limit },
             { $project: { viewers: 0 } },
+            { $addFields: { applied: { $in: ['$_id', appliedIds] } } },
             {
               $lookup: {
                 from: 'teamprofiles',
@@ -57,6 +52,44 @@ export default class JobPostHandler extends CRUDHandler<IJobPost> {
       payload: result?.entries ?? [],
       metadata: result?.metadata?.[0] ?? { totalCount: 0, page, limit },
     };
+  }
+
+  async fetchAllAnnotated(options: PaginationOptions, appliedIds: mongoose.Types.ObjectId[]): Promise<{ entries: IJobPost[]; metadata: any[] }[]> {
+    return await this.Schema.aggregate([
+      {
+        $match: {
+          $and: [...options.filters],
+          ...(options.query.length > 0 && { $or: options.query }),
+        },
+      },
+      { $sort: options.sort },
+      {
+        $facet: {
+          metadata: [{ $count: 'totalCount' }, { $addFields: { page: options.page, limit: options.limit } }],
+          entries: [
+            { $skip: (options.page - 1) * options.limit },
+            { $limit: options.limit },
+            { $project: { viewers: 0 } },
+            { $addFields: { applied: { $in: ['$_id', appliedIds] } } },
+            {
+              $lookup: {
+                from: 'teamprofiles',
+                localField: 'team',
+                foreignField: '_id',
+                as: 'team',
+                pipeline: [{ $project: { _id: 1, name: 1, logoUrl: 1 } }],
+              },
+            },
+            {
+              $unwind: {
+                path: '$team',
+                preserveNullAndEmptyArrays: true,
+              },
+            },
+          ],
+        },
+      },
+    ]);
   }
 
   async recordView(jobId: string, userId: mongoose.Types.ObjectId, ip: string): Promise<void> {

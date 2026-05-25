@@ -68,7 +68,6 @@ const JobApplicationSchema = new Schema<IJobApplication>(
     resume: {
       type: Schema.Types.ObjectId,
       ref: 'ResumeProfile',
-      required: true,
     },
     coverLetter: {
       type: String,
