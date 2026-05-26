@@ -14,6 +14,7 @@ router.route('/health').get((req, res) => {
 });
 
 router.use(AuthMiddleware.protect);
+router.route('/mine/status-counts').get(service.getMyApplicationStatusCounts);
 router.route('/mine').get(service.getMyApplications);
 
 router.route('/').get(service.getResources);

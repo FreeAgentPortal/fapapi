@@ -1,6 +1,6 @@
 import mongoose, { Document, Schema, Types } from 'mongoose';
 
-export const JOB_APPLICATION_STATUSES = ['submitted', 'reviewing', 'shortlisted', 'contacted', 'rejected', 'hired', 'withdrawn'] as const;
+export const JOB_APPLICATION_STATUSES = ['submitted', 'reviewing', 'shortlisted', 'contacted', 'rejected', 'hired', 'withdrawn', 'interviewing', 'offered'] as const;
 
 export interface JobApplicationStatusHistory {
   status: (typeof JOB_APPLICATION_STATUSES)[number];

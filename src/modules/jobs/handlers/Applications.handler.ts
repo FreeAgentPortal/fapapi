@@ -77,6 +77,16 @@ export default class ApplicationHandler extends CRUDHandler<IJobApplication> {
     return existingApplication !== null;
   }
 
+  async getStatusCounts(applicantProfileId: string): Promise<Record<string, number>> {
+    const results = await this.Schema.aggregate([{ $match: { applicant: new Types.ObjectId(applicantProfileId) } }, { $group: { _id: '$status', count: { $sum: 1 } } }]);
+
+    const counts: Record<string, number> = Object.fromEntries(JOB_APPLICATION_STATUSES.map((s) => [s, 0]));
+    for (const result of results) {
+      counts[result._id] = result.count;
+    }
+    return counts;
+  }
+
   async updateStatus(
     applicationId: string,
     nextStatus: unknown,

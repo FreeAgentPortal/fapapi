@@ -116,6 +116,21 @@ export default class ApplicationService extends CRUDService {
     }
   });
 
+  getMyApplicationStatusCounts = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+    try {
+      const applicantId = this.applicationProfileHandler.getProfessionalProfileId(req.user);
+      if (!applicantId) {
+        return res.status(400).json({ success: false, message: 'User must have a professional profile to view application metrics' });
+      }
+
+      const counts = await this.applicationHandler.getStatusCounts(applicantId);
+      return res.status(200).json({ success: true, payload: counts });
+    } catch (err: any) {
+      console.error(err);
+      return error(err, req, res);
+    }
+  });
+
   getMyApplications = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
     try {
       const applicantId = this.applicationProfileHandler.getProfessionalProfileId(req.user);
