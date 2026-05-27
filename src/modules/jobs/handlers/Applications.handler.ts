@@ -1,7 +1,7 @@
 import { Types } from 'mongoose';
 import { ErrorUtil } from '../../../middleware/ErrorUtil';
 import { CRUDHandler, PaginationOptions } from '../../../utils/baseCRUD';
-import JobApplicationModel, { IJobApplication, JOB_APPLICATION_STATUSES } from '../models/JobApplication';
+import JobApplicationModel, { IApplicationNote, IJobApplication, JOB_APPLICATION_STATUSES } from '../models/JobApplication';
 
 type ApplicationActorContext = {
   role?: string[];
@@ -51,6 +51,15 @@ export default class ApplicationHandler extends CRUDHandler<IJobApplication> {
               },
             },
             {
+              $lookup: {
+                from: 'professional_profiles',
+                localField: 'applicant',
+                foreignField: '_id',
+                as: 'applicant',
+                pipeline: [{ $project: { displayName: 1, headline: 1, avatarUrl: 1 } }],
+              },
+            },
+            {
               $unwind: {
                 path: '$job',
                 preserveNullAndEmptyArrays: true,
@@ -59,6 +68,12 @@ export default class ApplicationHandler extends CRUDHandler<IJobApplication> {
             {
               $unwind: {
                 path: '$team',
+                preserveNullAndEmptyArrays: true,
+              },
+            },
+            {
+              $unwind: {
+                path: '$applicant',
                 preserveNullAndEmptyArrays: true,
               },
             },
@@ -109,6 +124,28 @@ export default class ApplicationHandler extends CRUDHandler<IJobApplication> {
 
     application.status = status;
     application.statusHistory = [...(application.statusHistory || []), this.buildStatusHistoryEntry(status, changedByUserId, note)];
+
+    await application.save();
+    await this.afterUpdate(application);
+
+    return application;
+  }
+
+  async reject(applicationId: string, changedByUserId: string, actor: ApplicationActorContext | null | undefined, rejectionMessage?: unknown): Promise<IJobApplication> {
+    const application = await this.requireApplication(applicationId);
+
+    if (!this.canManageApplication(actor, application.team)) {
+      throw new ErrorUtil('Forbidden: you do not have permission to reject this application', 403);
+    }
+
+    this.assertTransitionAllowed(application.status, 'rejected');
+
+    application.status = 'rejected';
+    application.statusHistory = [...(application.statusHistory || []), this.buildStatusHistoryEntry('rejected', changedByUserId, undefined)];
+
+    if (typeof rejectionMessage === 'string' && rejectionMessage.trim()) {
+      application.rejectionMessage = rejectionMessage.trim();
+    }
 
     await application.save();
     await this.afterUpdate(application);
@@ -186,10 +223,94 @@ export default class ApplicationHandler extends CRUDHandler<IJobApplication> {
       return false;
     }
 
-    if (Array.isArray(actor.role) && actor.role.includes('admin')) {
-      return true;
+    return String(actor.profileRefs?.team) === String(teamId);
+  }
+
+  async addNote(
+    applicationId: string,
+    payload: { header: unknown; body: unknown },
+    authorUserId: string,
+    actor: ApplicationActorContext | null | undefined
+  ): Promise<IJobApplication> {
+    const application = await this.requireApplication(applicationId);
+
+    if (!this.canManageApplication(actor, application.team)) {
+      throw new ErrorUtil('Forbidden: you do not have permission to add notes to this application', 403);
     }
 
-    return Array.isArray(actor.role) && actor.role.includes('team') && String(actor.profileRefs?.team) === String(teamId);
+    if (typeof payload.header !== 'string' || !payload.header.trim()) {
+      throw new ErrorUtil('Note header is required', 400);
+    }
+
+    if (typeof payload.body !== 'string' || !payload.body.trim()) {
+      throw new ErrorUtil('Note body is required', 400);
+    }
+
+    if (!Types.ObjectId.isValid(authorUserId)) {
+      throw new ErrorUtil('Invalid user context for note authorship', 400);
+    }
+
+    application.notes.push({
+      _id: new Types.ObjectId(),
+      header: payload.header.trim(),
+      body: payload.body.trim(),
+      author: new Types.ObjectId(authorUserId),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as IApplicationNote);
+
+    await application.save();
+    return application;
+  }
+
+  async updateNote(
+    applicationId: string,
+    noteId: string,
+    payload: { header?: unknown; body?: unknown },
+    actor: ApplicationActorContext | null | undefined
+  ): Promise<IJobApplication> {
+    const application = await this.requireApplication(applicationId);
+
+    if (!this.canManageApplication(actor, application.team)) {
+      throw new ErrorUtil('Forbidden: you do not have permission to update notes on this application', 403);
+    }
+
+    const note = application.notes.find((n) => String(n._id) === noteId);
+
+    if (!note) {
+      throw new ErrorUtil('Note not found', 404);
+    }
+
+    if (typeof payload.header === 'string' && payload.header.trim()) {
+      note.header = payload.header.trim();
+    }
+
+    if (typeof payload.body === 'string' && payload.body.trim()) {
+      note.body = payload.body.trim();
+    }
+
+    note.updatedAt = new Date();
+
+    await application.save();
+    return application;
+  }
+
+  async removeNote(applicationId: string, noteId: string, actor: ApplicationActorContext | null | undefined): Promise<IJobApplication> {
+    const application = await this.requireApplication(applicationId);
+
+    if (!this.canManageApplication(actor, application.team)) {
+      throw new ErrorUtil('Forbidden: you do not have permission to remove notes from this application', 403);
+    }
+
+    const noteIndex = application.notes.findIndex((n) => String(n._id) === noteId);
+
+    if (noteIndex === -1) {
+      throw new ErrorUtil('Note not found', 404);
+    }
+
+    application.notes.splice(noteIndex, 1);
+
+    await application.save();
+    return application;
   }
 }

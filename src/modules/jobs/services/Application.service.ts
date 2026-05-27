@@ -28,9 +28,7 @@ export default class ApplicationService extends CRUDService {
       const pageSize = Number(req.query?.pageLimit) || 10;
       const page = Number(req.query?.pageNumber) || 1;
       const applications = await this.handler.fetchAll({
-        filters: {
-          job: jobId,
-        },
+        filters: AdvFilters.filter(`job;${jobId}`),
         page,
         limit: pageSize,
       });
@@ -185,6 +183,36 @@ export default class ApplicationService extends CRUDService {
     }
   });
 
+  rejectApplication = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+    try {
+      const applicationId = req.params.id;
+
+      if (!applicationId) {
+        return res.status(400).json({ success: false, message: 'Application id is required' });
+      }
+
+      const application = await this.applicationHandler.reject(applicationId, String(req.user._id), req.user, req.body?.message);
+
+      await eventBus.publish('job.application.status.updated', {
+        applicationId: application._id,
+        jobId: application.job,
+        teamId: application.team,
+        applicantId: application.applicant,
+        status: application.status,
+        changedBy: req.user._id,
+      });
+
+      return res.status(200).json({
+        success: true,
+        message: 'Application rejected successfully',
+        payload: application,
+      });
+    } catch (err: any) {
+      console.error(err);
+      return error(err, req, res);
+    }
+  });
+
   withdrawApplication = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
     try {
       const applicationId = req.params.id;
@@ -213,6 +241,57 @@ export default class ApplicationService extends CRUDService {
         message: 'Application withdrawn successfully',
         payload: application,
       });
+    } catch (err: any) {
+      console.error(err);
+      return error(err, req, res);
+    }
+  });
+
+  addApplicationNote = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+    try {
+      const applicationId = req.params.id;
+
+      if (!applicationId) {
+        return res.status(400).json({ success: false, message: 'Application id is required' });
+      }
+
+      const application = await this.applicationHandler.addNote(applicationId, { header: req.body?.header, body: req.body?.body }, String(req.user._id), req.user);
+
+      return res.status(201).json({ success: true, message: 'Note added successfully', payload: application });
+    } catch (err: any) {
+      console.error(err);
+      return error(err, req, res);
+    }
+  });
+
+  updateApplicationNote = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+    try {
+      const { id: applicationId, noteId } = req.params;
+
+      if (!applicationId || !noteId) {
+        return res.status(400).json({ success: false, message: 'Application id and note id are required' });
+      }
+
+      const application = await this.applicationHandler.updateNote(applicationId, noteId, { header: req.body?.header, body: req.body?.body }, req.user);
+
+      return res.status(200).json({ success: true, message: 'Note updated successfully', payload: application });
+    } catch (err: any) {
+      console.error(err);
+      return error(err, req, res);
+    }
+  });
+
+  removeApplicationNote = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+    try {
+      const { id: applicationId, noteId } = req.params;
+
+      if (!applicationId || !noteId) {
+        return res.status(400).json({ success: false, message: 'Application id and note id are required' });
+      }
+
+      const application = await this.applicationHandler.removeNote(applicationId, noteId, req.user);
+
+      return res.status(200).json({ success: true, message: 'Note removed successfully', payload: application });
     } catch (err: any) {
       console.error(err);
       return error(err, req, res);

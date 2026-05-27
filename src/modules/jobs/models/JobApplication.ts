@@ -9,6 +9,15 @@ export interface JobApplicationStatusHistory {
   note?: string;
 }
 
+export interface IApplicationNote {
+  _id: Types.ObjectId;
+  header: string;
+  body: string;
+  author: Types.ObjectId;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
 export interface IJobApplication extends Document {
   job: Types.ObjectId;
   team: Types.ObjectId;
@@ -17,6 +26,8 @@ export interface IJobApplication extends Document {
   coverLetter?: string;
   status: (typeof JOB_APPLICATION_STATUSES)[number];
   statusHistory: JobApplicationStatusHistory[];
+  notes: IApplicationNote[];
+  rejectionMessage?: string;
   matchScore?: number;
   matchReasons: string[];
   createdAt: Date;
@@ -46,6 +57,27 @@ const JobApplicationStatusHistorySchema = new Schema<JobApplicationStatusHistory
     },
   },
   { _id: false }
+);
+
+const ApplicationNoteSchema = new Schema<IApplicationNote>(
+  {
+    header: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    body: {
+      type: String,
+      required: true,
+      trim: true,
+    },
+    author: {
+      type: Schema.Types.ObjectId,
+      ref: 'User',
+      required: true,
+    },
+  },
+  { timestamps: true }
 );
 
 const JobApplicationSchema = new Schema<IJobApplication>(
@@ -89,6 +121,14 @@ const JobApplicationSchema = new Schema<IJobApplication>(
     matchReasons: {
       type: [String],
       default: [],
+    },
+    notes: {
+      type: [ApplicationNoteSchema],
+      default: [],
+    },
+    rejectionMessage: {
+      type: String,
+      trim: true,
     },
   },
   {
