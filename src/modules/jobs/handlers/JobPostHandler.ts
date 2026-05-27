@@ -86,6 +86,29 @@ export default class JobPostHandler extends CRUDHandler<IJobPost> {
                 preserveNullAndEmptyArrays: true,
               },
             },
+            {
+              $lookup: {
+                from: 'jobapplications',
+                localField: '_id',
+                foreignField: 'job',
+                as: '_applications',
+              },
+            },
+            {
+              $addFields: {
+                applicationCount: { $size: '$_applications' },
+                activeApplicationCount: {
+                  $size: {
+                    $filter: {
+                      input: '$_applications',
+                      as: 'app',
+                      cond: { $ne: ['$$app.status', 'rejected'] },
+                    },
+                  },
+                },
+              },
+            },
+            { $project: { _applications: 0 } },
           ],
         },
       },
@@ -117,6 +140,48 @@ export default class JobPostHandler extends CRUDHandler<IJobPost> {
     const deleted = await this.Schema.findOneAndDelete({ _id: id, team: teamId });
     await this.afterDelete(deleted);
     return deleted;
+  }
+
+  async fetch(id: string): Promise<any | null> {
+    const [result] = await this.Schema.aggregate([
+      { $match: { _id: new mongoose.Types.ObjectId(id) } },
+      { $project: { viewers: 0 } },
+      {
+        $lookup: {
+          from: 'teamprofiles',
+          localField: 'team',
+          foreignField: '_id',
+          as: 'team',
+          pipeline: [{ $project: { _id: 1, name: 1, logoUrl: 1 } }],
+        },
+      },
+      { $unwind: { path: '$team', preserveNullAndEmptyArrays: true } },
+      {
+        $lookup: {
+          from: 'jobapplications',
+          localField: '_id',
+          foreignField: 'job',
+          as: '_applications',
+        },
+      },
+      {
+        $addFields: {
+          applicationCount: { $size: '$_applications' },
+          activeApplicationCount: {
+            $size: {
+              $filter: {
+                input: '$_applications',
+                as: 'app',
+                cond: { $ne: ['$$app.status', 'rejected'] },
+              },
+            },
+          },
+        },
+      },
+      { $project: { _applications: 0 } },
+    ]);
+
+    return result ?? null;
   }
 
   async fetchAll(options: PaginationOptions): Promise<{ entries: IJobPost[]; metadata: any[] }[]> {
@@ -152,6 +217,29 @@ export default class JobPostHandler extends CRUDHandler<IJobPost> {
                 preserveNullAndEmptyArrays: true,
               },
             },
+            {
+              $lookup: {
+                from: 'jobapplications',
+                localField: '_id',
+                foreignField: 'job',
+                as: '_applications',
+              },
+            },
+            {
+              $addFields: {
+                applicationCount: { $size: '$_applications' },
+                activeApplicationCount: {
+                  $size: {
+                    $filter: {
+                      input: '$_applications',
+                      as: 'app',
+                      cond: { $ne: ['$$app.status', 'rejected'] },
+                    },
+                  },
+                },
+              },
+            },
+            { $project: { _applications: 0 } },
           ],
         },
       },

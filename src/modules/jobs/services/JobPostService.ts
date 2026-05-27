@@ -7,6 +7,7 @@ import { AuthenticatedRequest } from '../../../types/AuthenticatedRequest';
 import authenticateUser from '../../../utils/authenticateUser';
 import { CRUDService } from '../../../utils/baseCRUD';
 import JobPostHandler from '../handlers/JobPostHandler';
+import JobPostStatsHandler from '../handlers/JobPostStats.handler';
 import ApplicationProfileHandler from '../handlers/ApplicationProfile.handler';
 import { ProfessionalProfileModel } from '../../profiles/professional/model/ProfessionalProfile';
 import { ResumeProfile } from '../../profiles/resume/models/ResumeProfile';
@@ -19,11 +20,13 @@ type JobPostUpdatePayload = Record<string, any>;
 
 export default class JobPostService extends CRUDService {
   private profileHandler: ApplicationProfileHandler;
+  private statsHandler: JobPostStatsHandler;
 
   constructor() {
     super(JobPostHandler);
     this.queryKeys = ['title', 'department', 'description', 'requirements', 'preferredQualifications', 'location.city', 'location.state', 'location.country'];
     this.profileHandler = new ApplicationProfileHandler();
+    this.statsHandler = new JobPostStatsHandler();
   }
 
   public create = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
@@ -200,6 +203,16 @@ export default class JobPostService extends CRUDService {
 
     return String(user!.profileRefs.team);
   }
+
+  public getTeamStats = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+    try {
+      const teamId = this.requireTeamProfile(req.user);
+      const stats = await this.statsHandler.getTeamStats(teamId);
+      return res.status(200).json({ success: true, payload: stats });
+    } catch (err) {
+      return error(err, req, res);
+    }
+  });
 
   public getRecommended = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
     try {
