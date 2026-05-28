@@ -194,7 +194,7 @@ export default class ApplicationService extends CRUDService {
         return res.status(400).json({ success: false, message: 'Application id is required' });
       }
 
-      const application = await this.applicationHandler.reject(applicationId, String(req.user._id), req.user, req.body?.message);
+      const application = await this.applicationHandler.reject(applicationId, String(req.user._id), req.user, req.body?.rejectionMessage);
 
       await eventBus.publish('job.application.status.updated', {
         applicationId: application._id,

@@ -107,6 +107,7 @@ export default class ApplicationHandler extends CRUDHandler<IJobApplication> {
                 localField: 'job',
                 foreignField: '_id',
                 as: 'job',
+                pipeline: [{ $project: { viewCount: 0, viewers: 0} }],
               },
             },
             {
@@ -207,7 +208,7 @@ export default class ApplicationHandler extends CRUDHandler<IJobApplication> {
     return application;
   }
 
-  async reject(applicationId: string, changedByUserId: string, actor: ApplicationActorContext | null | undefined, rejectionMessage?: unknown): Promise<IJobApplication> {
+  async reject(applicationId: string, changedByUserId: string, actor: ApplicationActorContext | null | undefined, rejectionMessage?: string): Promise<IJobApplication> {
     const application = await ApplicationHandlerUtils.requireApplication(this.Schema, applicationId);
 
     if (!ApplicationHandlerUtils.canManageApplication(actor, application.team)) {
@@ -219,7 +220,7 @@ export default class ApplicationHandler extends CRUDHandler<IJobApplication> {
     application.status = 'rejected';
     application.statusHistory = [...(application.statusHistory || []), ApplicationHandlerUtils.buildStatusHistoryEntry('rejected', changedByUserId, undefined)];
 
-    if (typeof rejectionMessage === 'string' && rejectionMessage.trim()) {
+    if (rejectionMessage?.trim()) {
       application.rejectionMessage = rejectionMessage.trim();
     }
 

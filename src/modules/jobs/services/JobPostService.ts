@@ -77,6 +77,7 @@ export default class JobPostService extends CRUDService {
   public updateResource = async (req: Request, res: Response): Promise<Response> => {
     try {
       const authReq = req as AuthenticatedRequest;
+
       const existing = await this.handler.fetch(req.params.id);
 
       if (!existing) {
@@ -91,12 +92,15 @@ export default class JobPostService extends CRUDService {
 
       let updated;
 
-      if (Array.isArray(authReq.user?.role) && authReq.user.role.includes('admin')) {
+      const isAdmin = Array.isArray(authReq.user?.role) && authReq.user.role.includes('admin');
+
+      if (isAdmin) {
         updated = await this.handler.update(req.params.id, payload);
       } else {
         const teamId = this.requireTeamProfile(authReq.user);
+        const existingTeamId = String((existing.team as any)?._id ?? existing.team);
 
-        if (String(existing.team) !== teamId) {
+        if (existingTeamId !== teamId) {
           throw new ErrorUtil('Forbidden: you do not own this job post', 403);
         }
 
@@ -129,8 +133,9 @@ export default class JobPostService extends CRUDService {
         await this.handler.delete(req.params.id);
       } else {
         const teamId = this.requireTeamProfile(authReq.user);
+        const existingTeamId = String((existing.team as any)?._id ?? existing.team);
 
-        if (String(existing.team) !== teamId) {
+        if (existingTeamId !== teamId) {
           throw new ErrorUtil('Forbidden: you do not own this job post', 403);
         }
 
