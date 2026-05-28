@@ -106,12 +106,10 @@ const JobPostSchema = new Schema<IJobPost>(
     },
     employmentType: {
       type: String,
-      required: true,
       enum: JOB_EMPLOYMENT_TYPES,
     },
     locationType: {
       type: String,
-      required: true,
       enum: JOB_LOCATION_TYPES,
     },
     location: {
@@ -119,7 +117,6 @@ const JobPostSchema = new Schema<IJobPost>(
     },
     description: {
       type: String,
-      required: true,
       trim: true,
     },
     requirements: {

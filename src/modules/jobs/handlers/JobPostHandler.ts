@@ -135,11 +135,11 @@ export default class JobPostHandler extends CRUDHandler<IJobPost> {
     return updated;
   }
 
-  async deleteOwned(id: string, teamId: string): Promise<IJobPost | null> {
-    await this.beforeDelete(id);
-    const deleted = await this.Schema.findOneAndDelete({ _id: id, team: teamId });
-    await this.afterDelete(deleted);
-    return deleted;
+  async archiveOwned(id: string, teamId: string): Promise<IJobPost | null> {
+    await this.beforeUpdate(id, { status: 'archived' });
+    const archived = await this.Schema.findOneAndUpdate({ _id: id, team: teamId }, { $set: { status: 'archived' } }, { new: true, runValidators: true });
+    await this.afterUpdate(archived);
+    return archived;
   }
 
   async fetch(id: string): Promise<any | null> {

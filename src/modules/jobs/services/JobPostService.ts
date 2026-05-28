@@ -46,6 +46,7 @@ export default class JobPostService extends CRUDService {
         payload: created,
       });
     } catch (err) {
+      console.error('Error creating job post:', err);
       return error(err, req, res);
     }
   });
@@ -120,7 +121,7 @@ export default class JobPostService extends CRUDService {
     }
   };
 
-  public removeResource = async (req: Request, res: Response): Promise<Response> => {
+  public archiveResource = async (req: Request, res: Response): Promise<Response> => {
     try {
       const authReq = req as AuthenticatedRequest;
       const existing = await this.handler.fetch(req.params.id);
@@ -129,30 +130,27 @@ export default class JobPostService extends CRUDService {
         throw new ErrorUtil('Job post not found', 404);
       }
 
-      if (Array.isArray(authReq.user?.role) && authReq.user.role.includes('admin')) {
-        await this.handler.delete(req.params.id);
-      } else {
-        const teamId = this.requireTeamProfile(authReq.user);
-        const existingTeamId = String((existing.team as any)?._id ?? existing.team);
+      const teamId = this.requireTeamProfile(authReq.user);
+      const existingTeamId = String((existing.team as any)?._id ?? existing.team);
 
-        if (existingTeamId !== teamId) {
-          throw new ErrorUtil('Forbidden: you do not own this job post', 403);
-        }
+      if (existingTeamId !== teamId) {
+        throw new ErrorUtil('Forbidden: you do not own this job post', 403);
+      }
 
-        const deleted = await this.handler.deleteOwned(req.params.id, teamId);
+      const archived = await (this.handler as JobPostHandler).archiveOwned(req.params.id, teamId);
 
-        if (!deleted) {
-          throw new ErrorUtil('Job post not found', 404);
-        }
+      if (!archived) {
+        throw new ErrorUtil('Job post not found', 404);
       }
 
       return res.status(200).json({
         success: true,
+        payload: archived,
       });
     } catch (err) {
       return error(err, req, res);
     }
-  };
+  }; 
 
   public getResources = async (req: Request, res: Response): Promise<Response> => {
     try {
