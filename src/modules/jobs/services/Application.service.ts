@@ -2,6 +2,7 @@ import { Response } from 'express';
 import { AuthenticatedRequest } from '../../../types/AuthenticatedRequest';
 import { CRUDService } from '../../../utils/baseCRUD';
 import ApplicationHandler from '../handlers/Applications.handler';
+import ApplicationNoteHandler from '../handlers/ApplicationNote.handler';
 import ApplicationProfileHandler from '../handlers/ApplicationProfile.handler';
 import error from '../../../middleware/error';
 import asyncHandler from '../../../middleware/asyncHandler';
@@ -11,6 +12,7 @@ import { AdvFilters } from '../../../utils/advFilter/AdvFilters';
 
 export default class ApplicationService extends CRUDService {
   private applicationHandler: ApplicationHandler;
+  private applicationNoteHandler: ApplicationNoteHandler;
   private jobPostHandler: JobPostHandler;
   private applicationProfileHandler: ApplicationProfileHandler;
 
@@ -18,6 +20,7 @@ export default class ApplicationService extends CRUDService {
     super(ApplicationHandler);
     this.queryKeys = [];
     this.applicationHandler = this.handler as ApplicationHandler;
+    this.applicationNoteHandler = new ApplicationNoteHandler();
     this.jobPostHandler = new JobPostHandler();
     this.applicationProfileHandler = new ApplicationProfileHandler();
   }
@@ -136,17 +139,17 @@ export default class ApplicationService extends CRUDService {
         return res.status(400).json({ success: false, message: 'User must have a professional profile to view applications' });
       }
 
-      console.log('Fetching applications for applicantId:', applicantId);
-
       const pageSize = Number(req.query?.pageLimit) || 10;
       const page = Number(req.query?.pageNumber) || 1;
-      const applications = await this.handler.fetchAll({
+      const applications = await this.applicationHandler.fetchAllForApplicant({
         filters: AdvFilters.filter(`applicant;${applicantId}`),
+        sort: { createdAt: -1 },
+        query: [],
         page,
         limit: pageSize,
       });
 
-      return res.status(200).json({ success: true, payload: applications[0].entries, metadata: { page, pageSize, total: applications[0].total } });
+      return res.status(200).json({ success: true, payload: applications[0].entries, metadata: { page, pageSize, total: (applications[0] as any).total } });
     } catch (err: any) {
       console.error(err);
       return error(err, req, res);
@@ -255,7 +258,7 @@ export default class ApplicationService extends CRUDService {
         return res.status(400).json({ success: false, message: 'Application id is required' });
       }
 
-      const application = await this.applicationHandler.addNote(applicationId, { header: req.body?.header, body: req.body?.body }, String(req.user._id), req.user);
+      const application = await this.applicationNoteHandler.addNote(applicationId, { header: req.body?.header, body: req.body?.body }, String(req.user._id), req.user);
 
       return res.status(201).json({ success: true, message: 'Note added successfully', payload: application });
     } catch (err: any) {
@@ -272,7 +275,7 @@ export default class ApplicationService extends CRUDService {
         return res.status(400).json({ success: false, message: 'Application id and note id are required' });
       }
 
-      const application = await this.applicationHandler.updateNote(applicationId, noteId, { header: req.body?.header, body: req.body?.body }, req.user);
+      const application = await this.applicationNoteHandler.updateNote(applicationId, noteId, { header: req.body?.header, body: req.body?.body }, req.user);
 
       return res.status(200).json({ success: true, message: 'Note updated successfully', payload: application });
     } catch (err: any) {
@@ -289,7 +292,7 @@ export default class ApplicationService extends CRUDService {
         return res.status(400).json({ success: false, message: 'Application id and note id are required' });
       }
 
-      const application = await this.applicationHandler.removeNote(applicationId, noteId, req.user);
+      const application = await this.applicationNoteHandler.removeNote(applicationId, noteId, req.user);
 
       return res.status(200).json({ success: true, message: 'Note removed successfully', payload: application });
     } catch (err: any) {
