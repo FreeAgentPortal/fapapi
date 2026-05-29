@@ -2,6 +2,7 @@
 import { ProfileCreator } from '../../../interface/ProfileCreator';
 import { AdminProfileCreator } from '../../../service/profile/AdminProfileCreator';
 import { AthleteProfileCreator } from '../../../service/profile/AthleteProfileCreator';
+import { ProfessionalProfileCreator } from '../../../service/profile/ProfessionalProfileCreator';
 import { TeamProfileCreator } from '../../../service/profile/TeamProfileCreator';
 
 export class ProfileCreationFactory {
@@ -11,6 +12,8 @@ export class ProfileCreationFactory {
         return new AthleteProfileCreator();
       case 'team':
         return new TeamProfileCreator();
+      case 'professional':
+        return new ProfessionalProfileCreator();
       case 'admin':
         return new AdminProfileCreator();
       default:

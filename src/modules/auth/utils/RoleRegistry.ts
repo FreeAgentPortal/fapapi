@@ -23,6 +23,13 @@ export const RoleRegistry: Record<string, RoleMetadata> = {
     trial: true,
     trialLength: 0,
   },
+  professional: {
+    isBillable: true,
+    billingScope: 'profile',
+    displayName: 'Front Office Professional',
+    trial: true,
+    trialLength: 0,
+  },
   admin: {
     isBillable: false,
     billingScope: 'none',

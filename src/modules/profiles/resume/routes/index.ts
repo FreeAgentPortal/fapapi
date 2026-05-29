@@ -19,7 +19,7 @@ router.route('/health').get((req, res) => {
   });
 });
 
-router.use('/award', awardsRoutes);
+router.use('/award', awardsRoutes); 
 router.use('/education', educationRoutes);
 router.use('/experience', experienceRoutes);
 router.use('/media', mediaRoutes);

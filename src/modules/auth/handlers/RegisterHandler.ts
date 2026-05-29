@@ -56,7 +56,7 @@ export class RegisterHandler {
       const token = jwt.sign(
         {
           userId: this.user._id,
-          roles: this.data.roles,
+          roles: this.user.role,
           profileRefs: this.profileRefs,
         },
         process.env.JWT_SECRET!,
@@ -121,6 +121,7 @@ export class RegisterHandler {
 
     this.user = await this.modelMap['user'].create({
       ...this.data,
+      role: this.data.roles,
       emailVerificationToken: await crypto.randomBytes(20).toString('hex'),
       emailVerificationExpires: new Date(Date.now() + 3600000), // 1 hour
     });

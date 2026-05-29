@@ -3,6 +3,7 @@ import { AthleteSchedulerCron } from '../modules/profiles/cron/AthleteScheduler.
 import { PaymentSchedulerCron } from '../modules/payment/cron/PaymentScheduler.cron';
 import { EventSchedulerCron } from '../modules/feed/cron/EventScheduler.cron';
 import { UnreadMessageAlertScheduler } from '../modules/messaging/cron/UnreadMessageAlertScheduler.cron';
+import { JobSchedulerCron } from '../modules/jobs/cron/JobScheduler.cron';
 
 export const cronJobs = async () => {
   EventSchedulerCron.init();
@@ -23,6 +24,9 @@ export const cronJobs = async () => {
 
   // Initialize the unread message alert cron job
   UnreadMessageAlertScheduler.init();
+
+  // Initialize the job expiration cron job
+  JobSchedulerCron.init();
 
   console.info('[CronJobs] All cron jobs initialized successfully');
 };

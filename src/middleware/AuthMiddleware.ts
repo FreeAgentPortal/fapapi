@@ -5,6 +5,7 @@ import User from '../modules/auth/model/User';
 import { AuthenticatedRequest } from '../types/AuthenticatedRequest';
 import { ErrorUtil } from './ErrorUtil';
 import { ModelMap } from '../utils/ModelMap';
+import { AuthActivityTracker } from '../modules/auth/handlers/AuthActivityTracker';
 
 export class AuthMiddleware {
   /**
@@ -55,6 +56,12 @@ export class AuthMiddleware {
         req.user.permissions.push(...(req.user.roles || []));
       } else {
         req.user.permissions = req.user.permissions || [];
+      }
+
+      try {
+        AuthActivityTracker.trackJwtActivity(req, token);
+      } catch (err) {
+        console.error('[AuthMiddleware] Activity tracking failed:', err);
       }
 
       next();

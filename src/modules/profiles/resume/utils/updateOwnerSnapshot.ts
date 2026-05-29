@@ -10,6 +10,9 @@ const updaters: Record<string, Updater> = {
   AthleteProfile: async (id, summary) => {
     await ModelMap['athlete'].findByIdAndUpdate(id, { resumeSummary: summary });
   },
+  ProfessionalProfile: async (id, summary) => {
+    await ModelMap['professional'].findByIdAndUpdate(id, { resumeSummary: summary });
+  },
   User: async () => {
     /* no-op by default */
   },
