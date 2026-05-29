@@ -54,7 +54,7 @@ export default class JobPostService extends CRUDService {
   public getResource = async (req: Request, res: Response): Promise<Response> => {
     try {
       const authReq = req as AuthenticatedRequest;
-      const job = await JobPostModel.findById(req.params.id).select('-viewers').lean();
+      const job = await this.handler.fetch(req.params.id);
 
       if (!job) {
         throw new ErrorUtil('Job post not found', 404);

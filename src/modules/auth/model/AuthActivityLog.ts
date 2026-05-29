@@ -21,7 +21,6 @@ const AuthActivityLogSchema = new Schema(
     bucketStart: {
       type: Date,
       required: true,
-      index: true,
     },
     firstSeenAt: {
       type: Date,
@@ -76,7 +75,6 @@ AuthActivityLogSchema.index({ lastSeenAt: -1 });
 
 export type AuthActivityLogType = InferSchemaType<typeof AuthActivityLogSchema>;
 
-const AuthActivityLog =
-  mongoose.models.AuthActivityLog || mongoose.model<AuthActivityLogType>('AuthActivityLog', AuthActivityLogSchema);
+const AuthActivityLog = mongoose.models.AuthActivityLog || mongoose.model<AuthActivityLogType>('AuthActivityLog', AuthActivityLogSchema);
 
 export default AuthActivityLog;

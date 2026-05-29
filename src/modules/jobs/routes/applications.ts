@@ -23,6 +23,7 @@ router
   .get(AuthMiddleware.authorizeRoles(['admin']) as any, service.getResource)
   .patch(AuthMiddleware.authorizeRoles(['admin']) as any, service.updateResource)
   .delete(AuthMiddleware.authorizeRoles(['admin']) as any, service.removeResource);
+router.route('/:jobId').post(service.applyToJob);
 router.route('/:jobId/team').get(service.getApplicationsForJob).post(service.applyToJob);
 router.route('/:id/status').patch(service.updateApplicationStatus);
 router.route('/:id/reject').post(service.rejectApplication);
