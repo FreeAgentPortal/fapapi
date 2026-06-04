@@ -1,5 +1,4 @@
 import mongoose, { Model } from 'mongoose';
-import { ErrorUtil } from '../middleware/ErrorUtil';
 import asyncHandler from '../middleware/asyncHandler';
 import { AuthenticatedRequest } from '../types/AuthenticatedRequest';
 import { Request, Response } from 'express';
@@ -28,7 +27,7 @@ export class CRUDHandler<T extends mongoose.Document> {
     return result;
   }
 
-  async fetchAll(options: PaginationOptions): Promise<{ entries: T[]; metadata: any[] }[]> { 
+  async fetchAll(options: PaginationOptions): Promise<{ entries: T[]; metadata: any[] }[]> {
     return await this.Schema.aggregate([
       {
         $match: {
@@ -54,7 +53,10 @@ export class CRUDHandler<T extends mongoose.Document> {
 
   async update(id: string, data: any): Promise<T | null> {
     await this.beforeUpdate(id, data);
-    const updated = await this.Schema.findByIdAndUpdate(id, data, { new: true, runValidators: true });
+    // Wrap updates in $set for safety - ensures partial updates
+    // This prevents accidental document replacement
+    const updateData = { $set: data };
+    const updated = await this.Schema.findByIdAndUpdate(id, updateData, { returnDocument: 'after', runValidators: true });
     await this.afterUpdate(updated);
     return updated;
   }
