@@ -98,21 +98,9 @@ class StripeProcessing extends PaymentProcessor {
   async createVault(
     billingInfo: any,
     details: {
-      first_name: string;
-      last_name?: string;
-      address1?: string;
-      address2?: string;
-      city?: string;
-      state?: string;
-      zip?: string;
-      country?: string;
-      phone?: string;
       email?: string;
+      phone?: string;
       currency?: string;
-      creditCardDetails?: {
-        ccnumber?: string;
-        ccexp?: string;
-      };
       achDetails?: {
         checkname: string;
         checkaba: string;
@@ -121,7 +109,6 @@ class StripeProcessing extends PaymentProcessor {
         account_type: string;
       };
       paymentMethod?: 'creditcard' | 'ach';
-      customer_vault?: string;
       stripeToken?: string;
     }
   ) {
@@ -137,17 +124,8 @@ class StripeProcessing extends PaymentProcessor {
       } catch (retrieveError) {
         // Customer doesn't exist, create new one
         stripeCustomer = await this.stripe.customers.create({
-          name: `${details.first_name} ${details.last_name || ''}`.trim(),
           email: details.email,
           phone: details.phone,
-          address: {
-            line1: details.address1,
-            line2: details.address2,
-            city: details.city,
-            state: details.state,
-            postal_code: details.zip,
-            country: details.country,
-          },
           metadata: {
             external_id: `${billingInfo._id}`, // Store our custom ID in metadata
           },
@@ -157,23 +135,11 @@ class StripeProcessing extends PaymentProcessor {
       let paymentMethod;
 
       if (details.paymentMethod === 'creditcard' && details.stripeToken) {
-        // Use the tokenized card from frontend (PCI compliant)
+        // Use the tokenized card from frontend (PCI compliant).
+        // Billing details (name, address) are embedded in the token by the frontend.
         paymentMethod = await this.stripe.paymentMethods.create({
           type: 'card',
           card: { token: details.stripeToken },
-          billing_details: {
-            name: `${details.first_name} ${details.last_name || ''}`.trim(),
-            email: details.email,
-            phone: details.phone,
-            address: {
-              line1: details.address1,
-              line2: details.address2,
-              city: details.city,
-              state: details.state,
-              postal_code: details.zip,
-              country: details.country,
-            },
-          },
         });
 
         // Attach payment method to customer
@@ -198,7 +164,7 @@ class StripeProcessing extends PaymentProcessor {
             account_type: details.achDetails.account_type as 'checking' | 'savings',
           },
           billing_details: {
-            name: details.achDetails.checkname,
+            name: details.achDetails.checkname, // ACH requires an explicit account holder name
             email: details.email,
           },
         });

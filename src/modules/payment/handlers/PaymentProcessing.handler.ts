@@ -274,7 +274,8 @@ export default class PaymentProcessingHandler {
         }
       } else {
         // amount is passed in, use it directly
-        calculatedAmount = amount;
+        // amount passed in should be in cents, i.e. 5000 for $50, we need to convert it to dollars for processing and receipts
+        calculatedAmount = amount / 100;
       }
 
       // Check if amount is 0 - skip payment processing and create success receipt

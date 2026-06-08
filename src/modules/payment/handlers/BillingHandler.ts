@@ -9,12 +9,13 @@ import { validatePaymentFormData } from '../utils/paymentValidation';
 import PaymentProcessingHandler from './PaymentProcessing.handler';
 import { eventBus } from '../../../lib/eventBus';
 import PlanSchema from '../../auth/model/PlanSchema';
+import { RoleRegistry } from '../../auth/utils/RoleRegistry';
 
 export class BillingHandler {
   constructor(private readonly paymentHandler: PaymentHandler = new PaymentHandler()) {}
   async updateVault(req: AuthenticatedRequest): Promise<Boolean> {
     const { id } = req.params;
-    const { paymentFormValues, selectedPlans, billingCycle, paymentMethod } = req.body;
+    const { paymentFormValues, selectedPlans, billingCycle, paymentMethod, stripeToken } = req.body;
     console.log(req.body);
     // first step find the billing information from the provided profile id
     const billing = await BillingAccount.findOne({ profileId: id }).populate('payor profileId');
@@ -33,13 +34,14 @@ export class BillingHandler {
       throw new ErrorUtil('Selected plan not found', 404);
     }
     // Check if the selected plan is free
-    console.log(`Selected plan: ${plan?.name}, Price: ${plan?.price}`);
-    const isFree = plan?.price === 0 as any;
-    console.log(`Selected plan ${plan?.name} is ${isFree ? 'free' : 'paid'}`);
+    const isFree = plan?.price === (0 as any);
 
+    // paymentFormValues is legacy, we should be getting all of the formValues from the stripeToken
+    // if stripeToken is present, we will use that for validation and processing, otherwise we will fall back to the
+    // legacy paymentFormValues for processors that require it (like pyre)
     // Validate payment form data for paid plans based on processor requirements
     if (!isFree) {
-      validatePaymentFormData(processor.getProcessorName(), paymentFormValues, paymentMethod);
+      validatePaymentFormData(processor.getProcessorName(), stripeToken ? { stripeToken } : paymentFormValues, 'creditcard');
     }
 
     // Handle paid plans - require payment processing
@@ -47,17 +49,10 @@ export class BillingHandler {
       billing.payor = req.user;
       // we need to update our vaulting
       const vaultResponse = await processor.createVault(billing, {
-        ...paymentFormValues,
         email: billing.email,
-        paymentMethod: paymentMethod,
-        country: getPaymentSafeCountryCode(paymentFormValues.country),
         phone: billing.payor?.phoneNumber,
-        stripeToken: paymentFormValues?.stripeToken ?? req.body.stripeToken, // For Stripe tokenized payments
-        creditCardDetails: {
-          ccnumber: paymentFormValues?.ccnumber,
-          ccexp: paymentFormValues?.ccexp,
-        } as any,
-        cvv: paymentFormValues?.cvv,
+        paymentMethod: 'creditcard',
+        stripeToken: stripeToken,
         achDetails: paymentFormValues?.achDetails,
       } as any);
 
@@ -119,11 +114,12 @@ export class BillingHandler {
       billing.needsUpdate = false; // if it was true set by admin, this will flip it off
 
       await billing.save();
-
-      if (!billing.setupFeePaid) {
+      const roleMeta = RoleRegistry[req.user.profileRefs[0] ?? 'athlete']; // default to athlete if no role found
+      if (!billing.setupFeePaid && roleMeta.requiresSetupFee) {
         // next we need to create an initial charge for them the "setup fee" they wont be charged their subscription
         // until their next billing date, but the setup fee is charged immediately.
-        const paymentResults = await PaymentProcessingHandler.processPaymentForProfile(billing._id as any, 50, false, 'Account setup fee');
+        console.log(`fell into here`);
+        const paymentResults = await PaymentProcessingHandler.processPaymentForProfile(billing._id as any, roleMeta.setupFeeAmount, false, 'Account setup fee');
         if (paymentResults.success === false) {
           console.info(`[BillingHandler] - Initial setup fee payment failed: ${paymentResults.message}`);
         }
