@@ -105,7 +105,7 @@ export class UpdatedBillingHandler {
     console.info(`[Billing] Using ${processorName}: ${reason}`);
 
     // Example vault creation (adjust based on your billing object structure)
-    const vaultResponse = await processor.createVault('customer_id_here', {
+    const vaultResponse = await processor.createVault('customer_id_here' as any, {
       first_name: paymentFormValues.firstName,
       last_name: paymentFormValues.lastName,
       email: paymentFormValues.email,
