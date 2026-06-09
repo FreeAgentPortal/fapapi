@@ -27,7 +27,7 @@ export interface BillingAccountType extends mongoose.Document {
   // is yearly? whether or not the subscription is yearly
   isYearly?: boolean;
   // Payment processor specific data map
-  paymentProcessorData?: {
+  paymentProcessorData: {
     [processorName: string]: any;
   };
 }

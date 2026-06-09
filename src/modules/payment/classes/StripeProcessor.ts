@@ -4,6 +4,7 @@ import { CommonTransactionType } from '../../../types/CommonTransactionType';
 import CommonCaptureTypes from '../../../types/CommonCaptureTypes';
 import CommonVoidTypes from '../../../types/CommonVoidTypes';
 import CommonRefundTypes from '../../../types/CommonRefundTypes';
+import { BillingAccountType } from '../../auth/model/BillingAccount';
 
 /**
  * @description StripeProcessing class, this class extends the PaymentProcessor class
@@ -96,7 +97,7 @@ class StripeProcessing extends PaymentProcessor {
    * This is Stripe's equivalent to PyreProcessing's createVault method
    */
   async createVault(
-    billingInfo: any,
+    billingInfo: BillingAccountType,
     details: {
       email?: string;
       phone?: string;
@@ -124,6 +125,7 @@ class StripeProcessing extends PaymentProcessor {
       } catch (retrieveError) {
         // Customer doesn't exist, create new one
         stripeCustomer = await this.stripe.customers.create({
+          name: billingInfo.payor.fullName,
           email: details.email,
           phone: details.phone,
           metadata: {

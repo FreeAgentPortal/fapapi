@@ -1,3 +1,5 @@
+import { BillingAccountType } from "../../auth/model/BillingAccount";
+
 class PaymentProcessor {
   constructor() {}
 
@@ -27,7 +29,7 @@ class PaymentProcessor {
   validateTransaction(paymentDetails: any, ...args: any[]) {
     throw new Error('Not implemented');
   }
-  createVault(customerId: string, vaultData: any, ...args: any[]) {
+  createVault(billingInformation: BillingAccountType | string, vaultData: any, ...args: any[]) {
     throw new Error('Not implemented');
   }
   deleteVault(vaultId: string, ...args: any[]) {

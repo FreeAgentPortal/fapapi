@@ -48,13 +48,16 @@ export class BillingHandler {
     if (!isFree) {
       billing.payor = req.user;
       // we need to update our vaulting
-      const vaultResponse = await processor.createVault(billing, {
-        email: billing.email,
-        phone: billing.payor?.phoneNumber,
-        paymentMethod: 'creditcard',
-        stripeToken: stripeToken,
-        achDetails: paymentFormValues?.achDetails,
-      } as any);
+      const vaultResponse = await processor.createVault(
+        billing as any,
+        {
+          email: billing.email,
+          phone: billing.payor?.phoneNumber,
+          paymentMethod: 'creditcard',
+          stripeToken: stripeToken,
+          achDetails: paymentFormValues?.achDetails,
+        } as any
+      );
 
       if (!vaultResponse.success) {
         console.info(`[BillingHandler] - vaulting was not successful: ${vaultResponse.message}`);
@@ -68,10 +71,13 @@ export class BillingHandler {
       if (!billing.paymentProcessorData) {
         billing.paymentProcessorData = {};
       }
+
       const name = processor.getProcessorName();
       billing.paymentProcessorData[name] = {
         ...vaultResponse.data, // since processors can return different data its safest to just store what we get back to use later.
       };
+      // Mongoose cannot detect mutations on Mixed fields — markModified forces it to include this in the next save
+      billing.markModified('paymentProcessorData');
     } else {
       // Handle free plans - no payment processing required
       if (!billing.payor) {
