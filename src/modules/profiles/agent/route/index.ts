@@ -20,6 +20,7 @@ router.route('/').get(service.getResources);
 router.use(AuthMiddleware.protect);
 
 router.use('/dashboard', dashboardRoutes);
+router.use('/profile', require('./profileRoutes').default);
 router.route('/roster').get(rosterService.getRoster);
 router.route('/roster/seats').get(rosterService.getSeatSummary);
 router.route('/roster/invitations').post(rosterService.inviteAthlete);

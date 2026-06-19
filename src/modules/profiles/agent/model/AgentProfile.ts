@@ -6,6 +6,7 @@ export interface IAgentProfile extends Document {
   user: mongoose.Types.ObjectId;
   displayName?: string;
   agencyName?: string;
+  avatarUrl?: string;
   email?: string;
   contactNumber?: string;
   bio?: string;
@@ -21,6 +22,7 @@ const AgentProfileSchema = new Schema<IAgentProfile>(
     user: { type: Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
     displayName: { type: String, trim: true },
     agencyName: { type: String, trim: true },
+    avatarUrl: { type: String, trim: true },
     email: { type: String, lowercase: true, trim: true },
     contactNumber: { type: String, trim: true },
     bio: { type: String, trim: true, maxlength: 1000 },

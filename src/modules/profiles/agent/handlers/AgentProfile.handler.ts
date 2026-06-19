@@ -2,6 +2,9 @@ import mongoose from 'mongoose';
 import { CRUDHandler, PaginationOptions } from '../../../../utils/baseCRUD';
 import { ErrorUtil } from '../../../../middleware/ErrorUtil';
 import { AgentProfileModel, IAgentProfile } from '../model/AgentProfile';
+import BillingAccount from '../../../auth/model/BillingAccount';
+import { BillingValidator } from '../../../../utils/billingValidation';
+import { IProfessionalProfile } from '../../professional/model/ProfessionalProfile';
 
 export class AgentProfileHandler extends CRUDHandler<IAgentProfile> {
   constructor() {
@@ -79,5 +82,23 @@ export class AgentProfileHandler extends CRUDHandler<IAgentProfile> {
       user.profileRefs.agent = undefined;
       await user.save();
     }
+  }
+  async getProfile(data: any): Promise<IProfessionalProfile> {
+    const profile = await this.fetch(data.id);
+    if (!profile) throw new ErrorUtil('Unable to fetch Profile', 400);
+
+    const billing = await BillingAccount.findOne({ profileId: profile._id });
+    if (!billing) {
+      throw new ErrorUtil('billing information not found', 400);
+    }
+
+    // Use the comprehensive billing validator
+    const billingValidation = BillingValidator.validateBillingAccount(billing);
+
+    return {
+      ...profile,
+      needsBillingSetup: billingValidation.needsUpdate,
+      billingValidation,
+    } as any as IProfessionalProfile;
   }
 }

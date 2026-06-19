@@ -3,6 +3,10 @@ import User from '../../../auth/model/User';
 import { CRUDService } from '../../../../utils/baseCRUD';
 import { IAgentProfile } from '../model/AgentProfile';
 import { AgentProfileHandler } from '../handlers/AgentProfile.handler';
+import asyncHandler from '../../../../middleware/asyncHandler';
+import { AuthenticatedRequest } from '../../../../types/AuthenticatedRequest';
+import { Response } from 'express';
+import error from '../../../../middleware/error';
 
 export class AgentService extends CRUDService {
   constructor() {
@@ -29,4 +33,13 @@ export class AgentService extends CRUDService {
       throw new ErrorUtil('Failed to create agent profile', 400);
     }
   }
+  public profile = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+    try {
+      const results = await this.handler.getProfile({ id: req.params.id });
+      return res.status(201).json({ success: true, payload: results });
+    } catch (err) {
+      console.error(err);
+      return error(err, req, res);
+    }
+  });
 }
