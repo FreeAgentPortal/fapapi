@@ -12,6 +12,6 @@ export class MessageService extends CRUDService {
   constructor() {
     super(MessageCRUDHandler);
    
-    this.queryKeys = ['participants.team', 'participants.athlete'];
+    this.queryKeys = ['participants.team', 'participants.athlete', 'participants.agent'];
   }
 }

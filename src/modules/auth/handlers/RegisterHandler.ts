@@ -198,7 +198,7 @@ export class RegisterHandler {
       BillingAccount.findByIdAndDelete(this.billingAccount?._id),
       ...Object.entries(this.user.profileRefs)
         .filter(([_, pid]) => !!pid) // filter out any null or undefined profile IDs
-        .map(([role, pid]) => mongoose.model(role).findByIdAndDelete(pid)), // delete profiles by role
+        .map(([role, pid]) => this.modelMap[role]?.findByIdAndDelete(pid)), // delete profiles by role
     ]);
   }
 

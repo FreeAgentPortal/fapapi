@@ -1,6 +1,7 @@
 // factories/ProfileCreationFactory.ts
 import { ProfileCreator } from '../../../interface/ProfileCreator';
 import { AdminProfileCreator } from '../../../service/profile/AdminProfileCreator';
+import { AgentProfileCreator } from '../../../service/profile/AgentProfileCreator';
 import { AthleteProfileCreator } from '../../../service/profile/AthleteProfileCreator';
 import { ProfessionalProfileCreator } from '../../../service/profile/ProfessionalProfileCreator';
 import { TeamProfileCreator } from '../../../service/profile/TeamProfileCreator';
@@ -12,6 +13,8 @@ export class ProfileCreationFactory {
         return new AthleteProfileCreator();
       case 'team':
         return new TeamProfileCreator();
+      case 'agent':
+        return new AgentProfileCreator();
       case 'professional':
         return new ProfessionalProfileCreator();
       case 'admin':
