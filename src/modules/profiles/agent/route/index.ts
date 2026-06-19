@@ -2,6 +2,7 @@ import express from 'express';
 import { AuthMiddleware } from '../../../../middleware/AuthMiddleware';
 import { AgentService } from '../service/AgentService';
 import { AgentRosterService } from '../service/AgentRoster.service';
+import dashboardRoutes from './dashboard';
 
 const router = express.Router();
 const service = new AgentService();
@@ -18,6 +19,7 @@ router.route('/').get(service.getResources);
 
 router.use(AuthMiddleware.protect);
 
+router.use('/dashboard', dashboardRoutes);
 router.route('/roster').get(rosterService.getRoster);
 router.route('/roster/seats').get(rosterService.getSeatSummary);
 router.route('/roster/invitations').post(rosterService.inviteAthlete);
