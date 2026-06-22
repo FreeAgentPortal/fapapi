@@ -120,17 +120,20 @@ export class BillingHandler {
       billing.needsUpdate = false; // if it was true set by admin, this will flip it off
 
       await billing.save();
-      const roleMeta = RoleRegistry[req.user.profileRefs[0] ?? 'athlete']; // default to athlete if no role found
-      if (!billing.setupFeePaid && roleMeta.requiresSetupFee) {
-        // next we need to create an initial charge for them the "setup fee" they wont be charged their subscription
-        // until their next billing date, but the setup fee is charged immediately.
-        console.log(`fell into here`);
-        const paymentResults = await PaymentProcessingHandler.processPaymentForProfile(billing._id as any, roleMeta.setupFeeAmount, false, 'Account setup fee');
-        if (paymentResults.success === false) {
-          console.info(`[BillingHandler] - Initial setup fee payment failed: ${paymentResults.message}`);
+      if (!billing.setupFeePaid) {
+        const roleMeta = RoleRegistry[req.user.profileRefs[0] ?? 'athlete']; // default to athlete if no role found
+        if (!roleMeta.requiresSetupFee) {
+          // Role does not require a setup fee — mark as paid and skip payment
+          billing.setupFeePaid = true;
+        } else {
+          // Process the setup fee (amount may be $0, which creates a receipt with no charge)
+          const paymentResults = await PaymentProcessingHandler.processPaymentForProfile(billing._id as any, roleMeta.setupFeeAmount, false, 'Account setup fee');
+          if (paymentResults.success) {
+            billing.setupFeePaid = true;
+          } else {
+            console.info(`[BillingHandler] - Initial setup fee payment failed: ${paymentResults.message}`);
+          }
         }
-        // update the billing for the setup fee to being paid
-        billing.setupFeePaid = true; // for now signup's dont have a setup fee
       }
     }
 

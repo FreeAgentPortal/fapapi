@@ -27,7 +27,7 @@ export const RoleRegistry: Record<string, RoleMetadata> = {
     trial: true,
     trialLength: 0,
     requiresSetupFee: true,
-    setupFeeAmount: 5000, // $50 one-time fee, in cents
+    setupFeeAmount: 0, // $0 — creates a receipt; set to e.g. 5000 to charge $50
   },
   professional: {
     isBillable: true,
