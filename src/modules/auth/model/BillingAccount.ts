@@ -1,7 +1,7 @@
 import mongoose from 'mongoose';
 import { ObjectId } from 'mongoose';
 import { UserType } from './User';
-import { PlanType } from './PlanSchema';
+import { PlanEntitlements, PlanType } from './PlanSchema';
 
 export interface BillingAccountType extends mongoose.Document {
   _id: ObjectId;
@@ -24,6 +24,7 @@ export interface BillingAccountType extends mongoose.Document {
   pendingCancellation?: boolean;
   payor: UserType;
   plan: PlanType;
+  entitlements?: PlanEntitlements;
   // is yearly? whether or not the subscription is yearly
   isYearly?: boolean;
   // Payment processor specific data map
@@ -80,6 +81,13 @@ const Schema = new mongoose.Schema(
         ref: 'Feature',
       },
     ],
+    entitlements: {
+      agentSeats: {
+        type: Number,
+        min: 0,
+        default: null,
+      },
+    },
     status: {
       type: String,
       enum: ['active', 'inactive', 'suspended', 'trialing'],

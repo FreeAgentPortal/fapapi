@@ -33,6 +33,8 @@ export class BillingHandler {
     if (!plan) {
       throw new ErrorUtil('Selected plan not found', 404);
     }
+    this.validatePlanSelection(plan, billing.profileType);
+    const resolvedEntitlements = this.resolveBillingEntitlements(plan, billing.profileType);
     // Check if the selected plan is free
     const isFree = plan?.price === (0 as any);
 
@@ -94,6 +96,8 @@ export class BillingHandler {
 
     // Update billing details for both free and paid plans
     billing.plan = plan._id as any;
+    billing.features = Array.isArray(plan.features) ? plan.features.map((featureId: any) => featureId as any) : [];
+    billing.entitlements = resolvedEntitlements;
     billing.isYearly = billingCycle === 'yearly';
 
     // For free plans, we might not need a nextBillingDate or set it far in the future
@@ -139,6 +143,30 @@ export class BillingHandler {
     await billing.save();
 
     return true;
+  }
+
+  private validatePlanSelection(plan: any, profileType: string): void {
+    if (!plan?.isActive) {
+      throw new ErrorUtil('Selected plan is not active', 400);
+    }
+
+    const availableTo = Array.isArray(plan?.availableTo) ? plan.availableTo : [];
+    if (!availableTo.includes(profileType)) {
+      throw new ErrorUtil(`Selected plan is not available for ${profileType} accounts`, 400);
+    }
+  }
+
+  private resolveBillingEntitlements(plan: any, profileType: string): { agentSeats: number | null } {
+    if (profileType !== 'agent') {
+      return { agentSeats: null };
+    }
+
+    const agentSeats = plan?.entitlements?.agentSeats;
+    if (!Number.isInteger(agentSeats) || agentSeats < 0) {
+      throw new ErrorUtil('Selected agent plan is missing a valid seat entitlement', 400);
+    }
+
+    return { agentSeats };
   }
 
   /**

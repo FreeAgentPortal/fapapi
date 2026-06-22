@@ -6,7 +6,7 @@ import { AgentProfileModel } from '../model/AgentProfile';
 
 const SEAT_REGEX = /(\d+)\s*(?:athlete|agent)?\s*seats?/i;
 
-type SeatSource = 'profile_override' | 'billing_feature' | 'unconfigured';
+type SeatSource = 'profile_override' | 'billing_entitlement' | 'billing_feature' | 'unconfigured';
 
 export interface AgentSeatSummary {
   seatLimit: number;
@@ -23,10 +23,12 @@ export class AgentSeatManager {
         agentProfile: agentProfileId,
         status: { $in: ['pending', 'accepted'] },
       }),
-      BillingAccount.findOne({ profileId: agentProfileId }).populate({
-        path: 'plan',
-        populate: { path: 'features' },
-      }),
+      BillingAccount.findOne({ profileId: agentProfileId })
+        .populate('features')
+        .populate({
+          path: 'plan',
+          populate: { path: 'features' },
+        }),
     ]);
 
     const { seatLimit, source } = this.resolveSeatLimit(agentProfile, billingAccount as any);
@@ -42,6 +44,11 @@ export class AgentSeatManager {
   private static resolveSeatLimit(agentProfile: any, billingAccount: any): { seatLimit: number; source: SeatSource } {
     if (typeof agentProfile?.seatLimitOverride === 'number') {
       return { seatLimit: agentProfile.seatLimitOverride, source: 'profile_override' };
+    }
+
+    const structuredSeatLimit = billingAccount?.entitlements?.agentSeats;
+    if (typeof structuredSeatLimit === 'number') {
+      return { seatLimit: structuredSeatLimit, source: 'billing_entitlement' };
     }
 
     const billingFeatures = Array.isArray(billingAccount?.features) ? billingAccount.features : [];
