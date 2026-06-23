@@ -65,7 +65,7 @@ export class AgentRosterHandler {
       athleteProfile: athleteProfileId,
       status: 'pending',
     })
-      .populate('agentProfile', '_id displayName agencyName email contactNumber slug')
+      .populate('agentProfile', '_id displayName agencyName headline organization location sports specialties certifications email contactNumber slug socialLinks')
       .sort({ createdAt: -1 });
   }
 
@@ -73,9 +73,9 @@ export class AgentRosterHandler {
     if (!['accept', 'decline'].includes(action)) {
       throw new ErrorUtil('Invitation action must be accept or decline.', 400);
     }
-
-    const invitation = await AgentAthleteAssignmentModel.findById(invitationId);
-    if (!invitation || invitation.athleteProfile.toString() !== athleteProfileId) {
+ 
+    const invitation = await AgentAthleteAssignmentModel.findById(invitationId); 
+    if (!invitation || invitation.athleteProfile.toString() !== athleteProfileId.toString()) {
       throw new ErrorUtil('Invitation not found.', 404);
     }
     if (invitation.status !== 'pending') {
@@ -89,10 +89,7 @@ export class AgentRosterHandler {
       return invitation;
     }
 
-    const [athlete, agentProfile] = await Promise.all([
-      AthleteModel.findById(athleteProfileId),
-      AgentProfileModel.findById(invitation.agentProfile),
-    ]);
+    const [athlete, agentProfile] = await Promise.all([AthleteModel.findById(athleteProfileId), AgentProfileModel.findById(invitation.agentProfile)]);
     if (!athlete || !agentProfile) {
       throw new ErrorUtil('Unable to resolve the athlete or agent for this invitation.', 404);
     }
@@ -150,40 +147,31 @@ export class AgentRosterHandler {
     if (!assignment || assignment.agentProfile.toString() !== agentProfileId) {
       throw new ErrorUtil('Roster assignment not found.', 404);
     }
-    if (!['pending', 'accepted'].includes(assignment.status)) {
-      throw new ErrorUtil('Only pending or accepted roster assignments can be removed.', 400);
+    return await this.removeAssignment(assignment, {
+      agentProfileId,
+      athleteIsActive: false,
+    });
+  }
+
+  async removeMyAgent(athleteProfileId: string) {
+    const athlete = await AthleteModel.findById(athleteProfileId);
+    if (!athlete || !athlete.agent?.profile || athlete.agent.status !== 'active') {
+      throw new ErrorUtil('Athlete does not have an active agent representation.', 404);
     }
 
-    assignment.status = 'removed';
-    assignment.removedAt = new Date();
-    assignment.respondedAt = new Date();
-    await assignment.save();
+    const assignment = await AgentAthleteAssignmentModel.findOne({
+      athleteProfile: athleteProfileId,
+      agentProfile: athlete.agent.profile,
+      status: 'accepted',
+    });
 
-    if (assignment.acceptedAt) {
-      const athlete = await AthleteModel.findById(assignment.athleteProfile);
-      if (athlete && athlete.agent?.profile?.toString() === agentProfileId) {
-        athlete.agent = {
-          ...athlete.agent,
-          profile: undefined,
-          status: 'removed',
-          removedAt: assignment.removedAt,
-        } as any;
-        athlete.isActive = false;
-        await athlete.save();
-      }
-
-      await BillingAccount.findOneAndUpdate(
-        { profileId: assignment.athleteProfile },
-        {
-          $set: {
-            needsUpdate: true,
-            status: 'inactive',
-          },
-        }
-      );
+    if (!assignment) {
+      throw new ErrorUtil('Active agent assignment not found.', 404);
     }
 
-    return assignment;
+    return await this.removeAssignment(assignment, {
+      agentProfileId: athlete.agent.profile.toString(),
+    });
   }
 
   private async resolveAthlete(data: { athleteId?: string; athleteEmail?: string }) {
@@ -201,5 +189,52 @@ export class AgentRosterHandler {
     }
 
     throw new ErrorUtil('athleteId or athleteEmail is required.', 400);
+  }
+
+  private async removeAssignment(
+    assignment: IAgentAthleteAssignment,
+    options: { agentProfileId: string; athleteIsActive?: boolean }
+  ) {
+    if (!['pending', 'accepted'].includes(assignment.status)) {
+      throw new ErrorUtil('Only pending or accepted roster assignments can be removed.', 400);
+    }
+
+    const removedAt = new Date();
+    assignment.status = 'removed';
+    assignment.removedAt = removedAt;
+    assignment.respondedAt = removedAt;
+    await assignment.save();
+
+    if (!assignment.acceptedAt) {
+      return assignment;
+    }
+
+    const athlete = await AthleteModel.findById(assignment.athleteProfile);
+    if (athlete && athlete.agent?.profile?.toString() === options.agentProfileId) {
+      athlete.agent = {
+        ...athlete.agent,
+        profile: undefined,
+        status: 'removed',
+        removedAt,
+      } as any;
+
+      if (typeof options.athleteIsActive === 'boolean') {
+        athlete.isActive = options.athleteIsActive;
+      }
+
+      await athlete.save();
+    }
+
+    await BillingAccount.findOneAndUpdate(
+      { profileId: assignment.athleteProfile },
+      {
+        $set: {
+          needsUpdate: true,
+          status: 'inactive',
+        },
+      }
+    );
+
+    return assignment;
   }
 }

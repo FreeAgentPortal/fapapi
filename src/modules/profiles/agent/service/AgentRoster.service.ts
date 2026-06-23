@@ -68,6 +68,16 @@ export class AgentRosterService {
     }
   });
 
+  public removeMyAgent = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+    try {
+      const result = await this.handler.removeMyAgent(this.requireProfileRef(req, 'athlete'));
+      return res.status(200).json({ success: true, payload: result });
+    } catch (err) {
+      console.error(err);
+      return error(err, req, res);
+    }
+  });
+
   private requireProfileRef(req: AuthenticatedRequest, role: 'agent' | 'athlete'): string {
     const profileId = req.user?.profileRefs?.[role];
     if (!profileId) {

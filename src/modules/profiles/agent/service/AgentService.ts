@@ -11,7 +11,7 @@ import error from '../../../../middleware/error';
 export class AgentService extends CRUDService {
   constructor() {
     super(AgentProfileHandler);
-    this.queryKeys = ['displayName', 'agencyName', 'email'];
+    this.queryKeys = ['displayName', 'agencyName', 'headline', 'organization.name', 'email'];
   }
 
   async createProfile(userId: string, data: Partial<IAgentProfile>): Promise<IAgentProfile> {

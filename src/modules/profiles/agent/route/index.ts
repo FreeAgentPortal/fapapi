@@ -27,6 +27,7 @@ router.route('/roster/invitations').post(rosterService.inviteAthlete);
 router.route('/roster/invitations/:assignmentId').delete(rosterService.removeAthlete);
 router.route('/roster/invitations/me').get(rosterService.getMyInvitations);
 router.route('/roster/invitations/:invitationId/respond').post(rosterService.respondToInvitation);
+router.route('/roster/representation/me').delete(rosterService.removeMyAgent);
 router.route('/').post(service.create);
 router.route('/:id').put(service.updateResource).delete(service.removeResource);
 router.route('/:id').get(service.getResource);
