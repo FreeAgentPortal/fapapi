@@ -4,6 +4,26 @@ import { ErrorUtil } from '../../../../middleware/ErrorUtil';
 import error from '../../../../middleware/error';
 import { AuthenticatedRequest } from '../../../../types/AuthenticatedRequest';
 import { AgentRosterHandler } from '../handlers/AgentRoster.handler';
+import { eventBus } from '../../../../lib/eventBus';
+
+export interface AthleteRepresentationInviteNotificationEvent {
+  assignmentId: string;
+  athleteProfileId: string;
+  athleteUserId?: string;
+  agentProfileId: string;
+  invitedByUserId: string;
+  message?: string;
+}
+
+export async function publishAthleteRepresentationInviteNotification(
+  event: AthleteRepresentationInviteNotificationEvent
+): Promise<void> {
+  try {
+    await eventBus.publish('athlete.representation.invited', event);
+  } catch (error) {
+    console.error('[Profiles - Agent] Failed to publish athlete representation invite notification:', error);
+  }
+}
 
 export class AgentRosterService {
   constructor(private readonly handler: AgentRosterHandler = new AgentRosterHandler()) {}
@@ -24,13 +44,21 @@ export class AgentRosterService {
       return res.status(200).json({ success: true, payload: result });
     } catch (err) {
       console.error(err);
-      return error(err, req, res);
+      return error(err, req, res); 
     }
   });
 
   public inviteAthlete = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
     try {
       const result = await this.handler.inviteAthlete(this.requireProfileRef(req, 'agent'), req.user._id, req.body);
+      await publishAthleteRepresentationInviteNotification({
+        assignmentId: result._id.toString(),
+        athleteProfileId: result.athleteProfile.toString(),
+        athleteUserId: result.athleteUser?.toString(),
+        agentProfileId: result.agentProfile.toString(),
+        invitedByUserId: result.invitedBy ? result.invitedBy.toString() : req.user._id.toString(),
+        message: result.message,
+      });
       return res.status(201).json({ success: true, payload: result });
     } catch (err) {
       console.error(err);

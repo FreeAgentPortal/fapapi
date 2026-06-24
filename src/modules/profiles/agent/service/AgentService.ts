@@ -8,6 +8,7 @@ import { AuthenticatedRequest } from '../../../../types/AuthenticatedRequest';
 import { Response } from 'express';
 import error from '../../../../middleware/error';
 
+
 export class AgentService extends CRUDService {
   constructor() {
     super(AgentProfileHandler);

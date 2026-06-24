@@ -21,6 +21,7 @@ router.use(AuthMiddleware.protect);
 
 router.use('/dashboard', dashboardRoutes);
 router.use('/profile', require('./profileRoutes').default);
+router.use('/assignment', require('./assignment').default);
 router.route('/roster').get(rosterService.getRoster);
 router.route('/roster/seats').get(rosterService.getSeatSummary);
 router.route('/roster/invitations').post(rosterService.inviteAthlete);
