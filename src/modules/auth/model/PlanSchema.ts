@@ -33,7 +33,7 @@ const Schema = new mongoose.Schema(
     },
     availableTo: {
       type: [String],
-      enum: ['athlete', 'team', 'agent', 'scout', 'professional'],
+      enum: ['athlete', 'team', 'agent', 'scout', 'professional', 'other'],
       required: true,
     },
     features: [
