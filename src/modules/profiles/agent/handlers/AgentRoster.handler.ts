@@ -1,10 +1,13 @@
 import { ErrorUtil } from '../../../../middleware/ErrorUtil';
 import BillingAccount from '../../../auth/model/BillingAccount';
+import PlanSchema from '../../../auth/model/PlanSchema';
 import User from '../../../auth/model/User';
 import { AthleteModel } from '../../athlete/models/AthleteModel';
 import { AgentAthleteAssignmentModel, IAgentAthleteAssignment } from '../model/AgentAthleteAssignment';
 import { AgentProfileModel } from '../model/AgentProfile';
 import { AgentSeatManager } from '../utils/AgentSeatManager';
+
+const AGENT_ASSISTED_ATHLETE_PLAN_ID = '6a3c0c03d7a936f2c0e3ae20';
 
 export class AgentRosterHandler {
   async getRoster(agentProfileId: string): Promise<IAgentAthleteAssignment[]> {
@@ -98,6 +101,8 @@ export class AgentRosterHandler {
       throw new ErrorUtil('Athlete already has an active agent.', 400);
     }
 
+    const billingAssignment = await this.prepareAgentAssistedPlanAssignment(athlete._id.toString());
+
     invitation.status = 'accepted';
     invitation.respondedAt = new Date();
     invitation.acceptedAt = new Date();
@@ -115,15 +120,7 @@ export class AgentRosterHandler {
     athlete.isActive = true;
     await athlete.save();
 
-    await BillingAccount.findOneAndUpdate(
-      { profileId: athlete._id },
-      {
-        $set: {
-          needsUpdate: false,
-          status: 'active',
-        },
-      }
-    );
+    await this.assignAgentAssistedPlan(billingAssignment.billing, billingAssignment.plan);
 
     await AgentAthleteAssignmentModel.updateMany(
       {
@@ -225,16 +222,55 @@ export class AgentRosterHandler {
       await athlete.save();
     }
 
-    await BillingAccount.findOneAndUpdate(
-      { profileId: assignment.athleteProfile },
-      {
-        $set: {
-          needsUpdate: true,
-          status: 'inactive',
-        },
-      }
-    );
+    await this.clearAgentAssistedPlan(assignment.athleteProfile.toString());
 
     return assignment;
+  }
+
+  private async prepareAgentAssistedPlanAssignment(athleteProfileId: string) {
+    const [billing, plan] = await Promise.all([
+      BillingAccount.findOne({ profileId: athleteProfileId }),
+      PlanSchema.findById(AGENT_ASSISTED_ATHLETE_PLAN_ID).lean(),
+    ]);
+
+    if (!billing) {
+      throw new ErrorUtil('Billing information not found for athlete.', 404);
+    }
+
+    if (!plan || !plan.isActive) {
+      throw new ErrorUtil('Configured agent-assisted athlete plan is not available.', 500);
+    }
+
+    return { billing, plan };
+  }
+
+  private async assignAgentAssistedPlan(billing: any, plan: any) {
+    billing.plan = plan._id as any;
+    billing.features = Array.isArray(plan.features) ? plan.features.map((featureId: any) => featureId as any) : [];
+    billing.needsUpdate = false;
+    billing.status = 'active';
+
+    await billing.save();
+  }
+
+  private async clearAgentAssistedPlan(athleteProfileId: string) {
+    const billing = await BillingAccount.findOne({ profileId: athleteProfileId });
+    if (!billing) {
+      return;
+    }
+
+    const isAgentAssistedPlan =
+      billing.plan && billing.plan.toString() === AGENT_ASSISTED_ATHLETE_PLAN_ID;
+
+    billing.needsUpdate = true;
+    billing.status = 'inactive';
+
+    if (isAgentAssistedPlan) {
+      billing.plan = undefined as any;
+      billing.features = [];
+      billing.entitlements = undefined;
+    }
+
+    await billing.save();
   }
 }
