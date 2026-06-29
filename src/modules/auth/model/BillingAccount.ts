@@ -31,6 +31,14 @@ export interface BillingAccountType extends mongoose.Document {
   paymentProcessorData: {
     [processorName: string]: any;
   };
+  scheduledPlanChange?: {
+    plan: ObjectId | PlanType;
+    features: ObjectId[];
+    entitlements?: PlanEntitlements;
+    effectiveDate: Date;
+    changeType: 'upgrade' | 'downgrade' | 'lateral';
+    isYearly: boolean;
+  };
 }
 
 const Schema = new mongoose.Schema(
@@ -86,6 +94,36 @@ const Schema = new mongoose.Schema(
         type: Number,
         min: 0,
         default: null,
+      },
+    },
+    scheduledPlanChange: {
+      plan: {
+        type: mongoose.Types.ObjectId,
+        ref: 'Plan',
+      },
+      features: [
+        {
+          type: mongoose.Types.ObjectId,
+          ref: 'Feature',
+        },
+      ],
+      entitlements: {
+        agentSeats: {
+          type: Number,
+          min: 0,
+          default: null,
+        },
+      },
+      effectiveDate: {
+        type: Date,
+      },
+      changeType: {
+        type: String,
+        enum: ['upgrade', 'downgrade', 'lateral'],
+      },
+      isYearly: {
+        type: Boolean,
+        default: false,
       },
     },
     status: {
