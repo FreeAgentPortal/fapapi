@@ -7,6 +7,7 @@ import { SMSService } from '../sms/SMSService';
 import { IConversation } from '../../messaging/models/Conversation';
 import TeamModel from '../../profiles/team/model/TeamModel';
 import { AthleteModel } from '../../profiles/athlete/models/AthleteModel';
+import { AgentProfileModel } from '../../profiles/agent/model/AgentProfile';
 
 export default class ConversationEventHandler {
   async messageSent(event: { message: IMessage }) {
@@ -16,19 +17,13 @@ export default class ConversationEventHandler {
       throw new ErrorUtil('message data is required for conversation event handling', 400);
     }
 
-    //Find the user based on the profileID and if the role is team or athlete
-    let receiverUser;
-    let senderUser;
-    if (message.sender.role === 'team') {
-      senderUser = await User.findOne({ 'profileRefs.athlete': message.sender.profile });
-    } else {
-      senderUser = await User.findOne({ 'profileRefs.team': message.sender.profile });
-    }
+    const [senderUser, receiverUser] = await Promise.all([
+      this.findUserByProfile(message.sender.role, message.sender.profile),
+      this.findUserByProfile(message.receiver.role, message.receiver.profile),
+    ]);
 
-    if (message.receiver.role === 'team') {
-      receiverUser = await User.findOne({ 'profileRefs.athlete': message.receiver.profile });
-    } else {
-      receiverUser = await User.findOne({ 'profileRefs.team': message.receiver.profile });
+    if (!receiverUser) {
+      return;
     }
 
     await Notification.insertNotification(receiverUser?.id, senderUser?.id, 'New message', 'You have a new message', 'message', message.id);
@@ -43,14 +38,13 @@ export default class ConversationEventHandler {
 
     try {
       const team = await TeamModel.findById(conversation.participants.team);
-      const athlete = await AthleteModel.findById(conversation.participants.athlete).populate('userId');
+      const recipient = await this.resolveConversationRecipient(conversation);
 
-      if (!team || !athlete) {
-        throw new ErrorUtil('Team or Athlete not found', 404);
+      if (!team || !recipient) {
+        throw new ErrorUtil('Team or conversation recipient not found', 404);
       }
 
-      // Send email and SMS notifications in parallel (athlete only)
-      await Promise.all([this.sendConversationStartedEmail(athlete, team), this.sendConversationStartedSMS(athlete, team)]);
+      await Promise.all([this.sendConversationStartedEmail(recipient.profile, team), this.sendConversationStartedSMS(recipient.profile, recipient.user, team)]);
     } catch (error) {
       console.error('Error sending conversation started notifications', error);
     }
@@ -59,14 +53,14 @@ export default class ConversationEventHandler {
   /**
    * Send conversation started email to athlete
    */
-  private async sendConversationStartedEmail(athlete: any, team: any): Promise<void> {
+  private async sendConversationStartedEmail(recipient: any, team: any): Promise<void> {
     try {
       await EmailService.sendEmail({
-        to: athlete?.email || '',
+        to: recipient?.email || '',
         subject: 'Your conversation with the ' + team?.name + ' has started',
         templateId: 'd-5cd1271c64db486e8b7f3521cb98f75d',
         data: {
-          athleteName: athlete?.fullName,
+          athleteName: recipient?.fullName || recipient?.displayName || recipient?.agencyName,
           teamName: team?.name,
           teamLogo: team?.logoUrl,
           supportEmail: 'support@freeagentportal.com',
@@ -75,9 +69,9 @@ export default class ConversationEventHandler {
           subject: 'Your conversation with the ' + team?.name + ' has started',
         },
       });
-      console.info(`[Notification]: Conversation started email sent to ${athlete?.email}`);
+      console.info(`[Notification]: Conversation started email sent to ${recipient?.email}`);
     } catch (error) {
-      console.error(`[Notification]: Error sending conversation started email to ${athlete?.email}:`, error);
+      console.error(`[Notification]: Error sending conversation started email to ${recipient?.email}:`, error);
     }
   }
 
@@ -85,34 +79,30 @@ export default class ConversationEventHandler {
    * Send conversation started SMS to athlete
    * Only sends if athlete has SMS notifications enabled
    */
-  private async sendConversationStartedSMS(athlete: any, team: any): Promise<void> {
+  private async sendConversationStartedSMS(recipientProfile: any, user: any, team: any): Promise<void> {
     try {
-      // Check if athlete has a userId populated
-      if (!athlete.userId) {
-        console.warn(`[Notification]: Athlete ${athlete._id} does not have userId populated, skipping SMS notification`);
+      if (!user) {
+        console.warn(`[Notification]: No user found for conversation recipient ${recipientProfile?._id}, skipping SMS notification`);
         return;
       }
 
-      // Check if phone number is provided
-      const phoneNumber = athlete.userId.phoneNumber || athlete.contactNumber;
+      const phoneNumber = user.phoneNumber || recipientProfile.contactNumber;
       if (!phoneNumber) {
-        console.warn(`[Notification]: No phone number available for athlete ${athlete._id}, skipping SMS notification`);
+        console.warn(`[Notification]: No phone number available for recipient ${recipientProfile?._id}, skipping SMS notification`);
         return;
       }
 
-      // Check SMS notification preferences
-      if (!athlete.userId.notificationSettings?.accountNotificationSMS) {
-        console.info(`[Notification]: Athlete ${athlete._id} has SMS alerts disabled, skipping SMS notification`);
+      if (!user.notificationSettings?.accountNotificationSMS) {
+        console.info(`[Notification]: Recipient ${recipientProfile?._id} has SMS alerts disabled, skipping SMS notification`);
         return;
       }
 
-      // Send the SMS
       await SMSService.sendSMS({
         to: phoneNumber,
         data: {
           contentSid: 'HX762f1dc9c222adbc92383b2f53bdd222',
           contentVariables: {
-            message: `Good news ${athlete?.fullName}! Someone from the ${team?.name} has started a conversation with you! 
+            message: `Good news ${recipientProfile?.fullName || recipientProfile?.displayName || recipientProfile?.agencyName}! Someone from the ${team?.name} has started a conversation with you! 
             Log in to your account to check your messages and respond promptly.`,
           },
         },
@@ -121,5 +111,28 @@ export default class ConversationEventHandler {
     } catch (error) {
       console.error(`[Notification]: Error sending conversation started SMS:`, error);
     }
+  }
+
+  private async findUserByProfile(role: 'team' | 'athlete' | 'agent', profileId: any) {
+    return await User.findOne({ [`profileRefs.${role}`]: profileId });
+  }
+
+  private async resolveConversationRecipient(conversation: IConversation): Promise<{ profile: any; user: any } | null> {
+    if (conversation.participants.agent) {
+      const [profile, user] = await Promise.all([
+        AgentProfileModel.findById(conversation.participants.agent).lean(),
+        User.findOne({ 'profileRefs.agent': conversation.participants.agent }).lean(),
+      ]);
+      if (!profile) {
+        return null;
+      }
+      return { profile, user };
+    }
+
+    const athlete = await AthleteModel.findById(conversation.participants.athlete).populate('userId');
+    if (!athlete) {
+      return null;
+    }
+    return { profile: athlete, user: athlete.userId };
   }
 }

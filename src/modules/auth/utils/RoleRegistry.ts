@@ -37,6 +37,14 @@ export const RoleRegistry: Record<string, RoleMetadata> = {
     trialLength: 0,
     requiresSetupFee: false,
   },
+  agent: {
+    isBillable: true,
+    billingScope: 'profile',
+    displayName: 'Agent',
+    trial: true,
+    trialLength: 0,
+    requiresSetupFee: false,
+  },
   admin: {
     isBillable: false,
     billingScope: 'none',

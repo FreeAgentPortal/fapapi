@@ -39,6 +39,11 @@ export interface IAthlete extends Document {
     name?: string;
     email?: string;
     phone?: string;
+    profile?: mongoose.Types.ObjectId;
+    status?: 'invited' | 'active' | 'removed';
+    invitedAt?: Date;
+    acceptedAt?: Date;
+    removedAt?: Date;
   };
   graduationYear?: number;
   bio?: string;
@@ -82,6 +87,11 @@ const AthleteSchema = new Schema<IAthlete>(
       name: { type: String },
       email: { type: String },
       phone: { type: String },
+      profile: { type: Schema.Types.ObjectId, ref: 'AgentProfile' },
+      status: { type: String, enum: ['invited', 'active', 'removed'] },
+      invitedAt: { type: Date },
+      acceptedAt: { type: Date },
+      removedAt: { type: Date },
     },
     links: [
       {

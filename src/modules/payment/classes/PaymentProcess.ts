@@ -7,38 +7,47 @@ class PaymentProcessor {
     paymentDetails: any,
     // any other amount of necessary arguments
     ...args: any[]
-  ) {
+  ): any {
     // Process the payment
 
     throw new Error('Not implemented');
   }
 
   // define other common methods if necessary
-  authorizeTransaction(paymentDetails: any, ...args: any[]) {
+  authorizeTransaction(paymentDetails: any, ...args: any[]): any {
     throw new Error('Not implemented');
   }
-  voidTransaction(paymentDetails: any, ...args: any[]) {
+  voidTransaction(paymentDetails: any, ...args: any[]): any {
     throw new Error('Not implemented');
   }
-  captureTransaction(paymentDetails: any, ...args: any[]) {
+  captureTransaction(paymentDetails: any, ...args: any[]): any {
     throw new Error('Not implemented');
   }
-  refundTransaction(paymentDetails: any, ...args: any[]) {
+  refundTransaction(paymentDetails: any, ...args: any[]): any {
     throw new Error('Not implemented');
   }
-  validateTransaction(paymentDetails: any, ...args: any[]) {
+  validateTransaction(paymentDetails: any, ...args: any[]): any {
     throw new Error('Not implemented');
   }
-  createVault(billingInformation: BillingAccountType | string, vaultData: any, ...args: any[]) {
+  createVault(billingInformation: BillingAccountType | string, vaultData: any, ...args: any[]): any {
     throw new Error('Not implemented');
   }
-  deleteVault(vaultId: string, ...args: any[]) {
+  createPaymentMethod(billingInformation: BillingAccountType | string, paymentMethodData: any, ...args: any[]): any {
     throw new Error('Not implemented');
   }
-  fetchTransactions(paymentDetails: any, ...args: any[]) {
+  removePaymentMethod(billingInformation: BillingAccountType | string, paymentMethodData?: any, ...args: any[]): any {
     throw new Error('Not implemented');
   }
-  vaultTransaction(paymentDetails: any, ...args: any[]) {
+  fetchPaymentMethod(billingInformation: BillingAccountType | string, paymentMethodData?: any, ...args: any[]): any {
+    throw new Error('Not implemented');
+  }
+  deleteVault(vaultId: string, ...args: any[]): any {
+    throw new Error('Not implemented');
+  }
+  fetchTransactions(paymentDetails: any, ...args: any[]): any {
+    throw new Error('Not implemented');
+  }
+  vaultTransaction(paymentDetails: any, ...args: any[]): any {
     throw new Error('Not implemented');
   }
   getProcessorName(): string {

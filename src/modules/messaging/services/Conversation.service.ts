@@ -28,6 +28,7 @@ export class ConversationService extends CRUDService {
       const { conversation, newMessage } = await this.conversationHandler.startConversation(teamId, athleteId, userId, message);
 
       eventBus.publish('conversation.started', { conversation: conversation });
+      eventBus.publish('conversation.message', { message: newMessage });
 
       return res.status(201).json({ success: true, payload: conversation });
     } catch (err) {
@@ -42,7 +43,7 @@ export class ConversationService extends CRUDService {
       const { message } = req.body;
       const userId = req.user._id;
       const profileId = req.user.profileRefs[req.query.role as string];
-      const role = req.query.role as 'team' | 'athlete';
+      const role = req.query.role as 'team' | 'athlete' | 'agent';
 
       if (!conversationId || !message || !userId || !profileId || !role) {
         return res.status(400).json({ message: 'Missing required fields' });
@@ -63,7 +64,7 @@ export class ConversationService extends CRUDService {
     try {
       const userId = req.user._id;
       const profileId = req.user.profileRefs[req.query.role as string];
-      const role = req.query.role as 'team' | 'athlete';
+      const role = req.query.role as 'team' | 'athlete' | 'agent';
 
       if (!userId || !profileId || !role) {
         return res.status(400).json({ message: 'Missing required fields' });
@@ -91,7 +92,9 @@ export class ConversationService extends CRUDService {
 
       let isAuthenticated = false;
 
-      if (req.query.role === 'athlete' && response.participants.athlete._id.toString() == profileId) {
+      if (req.query.role === 'athlete' && !response.participants.agent && response.participants.athlete._id.toString() == profileId) {
+        isAuthenticated = true;
+      } else if (req.query.role === 'agent' && response.participants.agent?._id?.toString() == profileId) {
         isAuthenticated = true;
       } else if (response.participants.team._id.toString() == profileId) {
         isAuthenticated = true;

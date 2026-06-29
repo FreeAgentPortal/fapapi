@@ -4,11 +4,11 @@ export interface IMessage extends Document {
   conversation: Types.ObjectId;
   receiver: {
     profile: Types.ObjectId;
-    role: 'team' | 'athlete';
+    role: 'team' | 'athlete' | 'agent';
   };
   sender: {
     profile: Types.ObjectId;
-    role: 'team' | 'athlete';
+    role: 'team' | 'athlete' | 'agent';
   };
   content: string;
   read: boolean;
@@ -18,7 +18,7 @@ export interface IMessage extends Document {
   moderationActions: Array<{
     performedBy: {
       profile: Types.ObjectId;
-      role: 'team' | 'athlete' | 'admin';
+      role: 'team' | 'athlete' | 'agent' | 'admin';
     };
     action: 'created' | 'edited' | 'archived' | 'hidden' | 'restored' | 'deleted';
     reason?: string;
@@ -39,11 +39,11 @@ const MessageSchema = new Schema<IMessage>(
     conversation: { type: Schema.Types.ObjectId, ref: 'Conversation', required: true },
     sender: {
       profile: { type: Schema.Types.ObjectId, refPath: 'sender.role', required: true },
-      role: { type: String, enum: ['team', 'athlete'], required: true },
+      role: { type: String, enum: ['team', 'athlete', 'agent'], required: true },
     },
     receiver: {
       profile: { type: Schema.Types.ObjectId, refPath: 'receiver.role', required: true },
-      role: { type: String, enum: ['team', 'athlete'], required: true },
+      role: { type: String, enum: ['team', 'athlete', 'agent'], required: true },
     },
     content: { type: String, required: true },
     read: { type: Boolean, default: false },
@@ -58,7 +58,7 @@ const MessageSchema = new Schema<IMessage>(
       {
         performedBy: {
           profile: { type: Schema.Types.ObjectId, refPath: 'moderationActions.performedBy.role', required: true },
-          role: { type: String, enum: ['team', 'athlete', 'admin'], required: true },
+          role: { type: String, enum: ['team', 'athlete', 'agent', 'admin'], required: true },
         },
         action: {
           type: String,

@@ -2,6 +2,7 @@
 import express from 'express';
 import adminRoutes from '../admin/route/index';
 import athleteRoutes from '../athlete/route/index';
+import agentRoutes from '../agent/route';
 import teamRoutes from '../team/route/index';
 import scoutRoutes from '../scout/routes/index';
 import resumeRoutes from '../resume/routes/index';
@@ -13,6 +14,7 @@ const router = express.Router();
 
 router.use('/admin', adminRoutes);
 router.use('/athlete', athleteRoutes, athleteSchedulerRoutes, athleteActivationRoutes);
+router.use('/agent', agentRoutes);
 router.use('/professional', professionalRoutes);
 router.use('/team', teamRoutes);
 router.use('/scout', scoutRoutes);
