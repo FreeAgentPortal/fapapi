@@ -4,6 +4,7 @@ import { CommonTransactionType } from '../../../types/CommonTransactionType';
 import CommonCaptureTypes from '../../../types/CommonCaptureTypes';
 import CommonVoidTypes from '../../../types/CommonVoidTypes';
 import CommonRefundTypes from '../../../types/CommonRefundTypes';
+import { BillingAccountType } from '../../auth/model/BillingAccount';
 
 /**
  * @description StripeProcessing class, this class extends the PaymentProcessor class
@@ -96,23 +97,11 @@ class StripeProcessing extends PaymentProcessor {
    * This is Stripe's equivalent to PyreProcessing's createVault method
    */
   async createVault(
-    billingInfo: any,
+    billingInfo: BillingAccountType,
     details: {
-      first_name: string;
-      last_name?: string;
-      address1?: string;
-      address2?: string;
-      city?: string;
-      state?: string;
-      zip?: string;
-      country?: string;
-      phone?: string;
       email?: string;
+      phone?: string;
       currency?: string;
-      creditCardDetails?: {
-        ccnumber?: string;
-        ccexp?: string;
-      };
       achDetails?: {
         checkname: string;
         checkaba: string;
@@ -121,74 +110,64 @@ class StripeProcessing extends PaymentProcessor {
         account_type: string;
       };
       paymentMethod?: 'creditcard' | 'ach';
-      customer_vault?: string;
       stripeToken?: string;
     }
   ) {
     try {
-      // Check if customer already exists in Stripe
-      let stripeCustomer;
-      const customerId = billingInfo.paymentProcessorData['stripe']?.customer?.id;
-      try {
-        stripeCustomer = await this.stripe.customers.retrieve(customerId);
-        if (stripeCustomer.deleted) {
-          throw new Error('Customer was deleted');
-        }
-      } catch (retrieveError) {
-        // Customer doesn't exist, create new one
-        stripeCustomer = await this.stripe.customers.create({
-          name: `${details.first_name} ${details.last_name || ''}`.trim(),
-          email: details.email,
-          phone: details.phone,
-          address: {
-            line1: details.address1,
-            line2: details.address2,
-            city: details.city,
-            state: details.state,
-            postal_code: details.zip,
-            country: details.country,
-          },
-          metadata: {
-            external_id: `${billingInfo._id}`, // Store our custom ID in metadata
-          },
-        });
+      const paymentMethodResult = await this.createPaymentMethod(billingInfo, details);
+      if (!paymentMethodResult.success) {
+        return paymentMethodResult;
       }
+
+      return {
+        success: true,
+        message: 'Customer Vault Created',
+        customerId: paymentMethodResult.customerId,
+        paymentMethodId: paymentMethodResult.paymentMethodId,
+        data: {
+          customer: paymentMethodResult.data?.customer,
+          paymentMethod: paymentMethodResult.data?.paymentMethod,
+        },
+      };
+    } catch (error: any) {
+      console.error('[StripeProcessor] Create vault error:', error);
+      return {
+        success: false,
+        message: `Error Creating Vault Customer - ${error.message}`,
+      };
+    }
+  }
+
+  async createPaymentMethod(
+    billingInfo: BillingAccountType,
+    details: {
+      email?: string;
+      phone?: string;
+      currency?: string;
+      achDetails?: {
+        checkname: string;
+        checkaba: string;
+        checkaccount: string;
+        account_holder_type: string;
+        account_type: string;
+      };
+      paymentMethod?: 'creditcard' | 'ach';
+      stripeToken?: string;
+    }
+  ) {
+    try {
+      const stripeCustomer = await this.ensureCustomer(billingInfo, details.email, details.phone);
+
+      await this.detachAllPaymentMethods(stripeCustomer.id);
 
       let paymentMethod;
 
       if (details.paymentMethod === 'creditcard' && details.stripeToken) {
-        // Use the tokenized card from frontend (PCI compliant)
         paymentMethod = await this.stripe.paymentMethods.create({
           type: 'card',
           card: { token: details.stripeToken },
-          billing_details: {
-            name: `${details.first_name} ${details.last_name || ''}`.trim(),
-            email: details.email,
-            phone: details.phone,
-            address: {
-              line1: details.address1,
-              line2: details.address2,
-              city: details.city,
-              state: details.state,
-              postal_code: details.zip,
-              country: details.country,
-            },
-          },
-        });
-
-        // Attach payment method to customer
-        await this.stripe.paymentMethods.attach(paymentMethod.id, {
-          customer: stripeCustomer.id,
-        });
-
-        // Set as default payment method
-        await this.stripe.customers.update(stripeCustomer.id, {
-          invoice_settings: {
-            default_payment_method: paymentMethod.id,
-          },
         });
       } else if (details.paymentMethod === 'ach' && details.achDetails) {
-        // Create ACH/Bank account payment method
         paymentMethod = await this.stripe.paymentMethods.create({
           type: 'us_bank_account',
           us_bank_account: {
@@ -202,28 +181,134 @@ class StripeProcessing extends PaymentProcessor {
             email: details.email,
           },
         });
-
-        // Attach payment method to customer
-        await this.stripe.paymentMethods.attach(paymentMethod.id, {
-          customer: stripeCustomer.id,
-        });
+      } else {
+        throw new Error('Unsupported payment method details supplied');
       }
+
+      await this.stripe.paymentMethods.attach(paymentMethod.id, {
+        customer: stripeCustomer.id,
+      });
+
+      await this.stripe.customers.update(stripeCustomer.id, {
+        invoice_settings: {
+          default_payment_method: paymentMethod.id,
+        },
+      });
+
+      const refreshedCustomer = await this.stripe.customers.retrieve(stripeCustomer.id);
 
       return {
         success: true,
-        message: 'Customer Vault Created',
+        message: 'Payment method stored successfully',
         customerId: stripeCustomer.id,
-        paymentMethodId: paymentMethod?.id,
+        paymentMethodId: paymentMethod.id,
         data: {
-          customer: stripeCustomer,
-          paymentMethod: paymentMethod,
+          customer: refreshedCustomer,
+          paymentMethod,
         },
       };
     } catch (error: any) {
-      console.error('[StripeProcessor] Create vault error:', error);
+      console.error('[StripeProcessor] Create payment method error:', error);
       return {
         success: false,
-        message: `Error Creating Vault Customer - ${error.message}`,
+        message: `Error storing payment method - ${error.message}`,
+      };
+    }
+  }
+
+  async removePaymentMethod(
+    billingInfo: BillingAccountType | string,
+    paymentMethodData?: {
+      customerId?: string;
+      paymentMethodId?: string;
+    }
+  ) {
+    try {
+      const customerId =
+        typeof billingInfo === 'string'
+          ? billingInfo
+          : billingInfo.paymentProcessorData?.stripe?.customer?.id || paymentMethodData?.customerId;
+
+      if (!customerId) {
+        throw new Error('Stripe customer not found for billing account');
+      }
+
+      const paymentMethods = await this.stripe.paymentMethods.list({
+        customer: customerId,
+        limit: 100,
+      });
+
+      for (const paymentMethod of paymentMethods.data) {
+        await this.stripe.paymentMethods.detach(paymentMethod.id);
+      }
+
+      await this.stripe.customers.update(customerId, {
+        invoice_settings: {
+          default_payment_method: null as any,
+        },
+      });
+
+      return {
+        success: true,
+        message: 'Payment method removed successfully',
+        data: {
+          customerId,
+        },
+      };
+    } catch (error: any) {
+      console.error('[StripeProcessor] Remove payment method error:', error);
+      return {
+        success: false,
+        message: `Error removing payment method - ${error.message}`,
+      };
+    }
+  }
+
+  async fetchPaymentMethod(
+    billingInfo: BillingAccountType | string,
+    paymentMethodData?: {
+      customerId?: string;
+    }
+  ) {
+    try {
+      const customerId =
+        typeof billingInfo === 'string'
+          ? billingInfo
+          : billingInfo.paymentProcessorData?.stripe?.customer?.id || paymentMethodData?.customerId;
+
+      if (!customerId) {
+        return {
+          success: true,
+          data: {
+            customer: null,
+            paymentMethod: null,
+          },
+        };
+      }
+
+      const customer = await this.stripe.customers.retrieve(customerId);
+      const paymentMethods = await this.stripe.paymentMethods.list({
+        customer: customerId,
+        limit: 100,
+      });
+
+      const defaultPaymentMethodId =
+        'invoice_settings' in customer ? (customer.invoice_settings?.default_payment_method as string | null) : null;
+      const selectedPaymentMethod =
+        paymentMethods.data.find((paymentMethod) => paymentMethod.id === defaultPaymentMethodId) ?? paymentMethods.data[0] ?? null;
+
+      return {
+        success: true,
+        data: {
+          customer,
+          paymentMethod: selectedPaymentMethod,
+        },
+      };
+    } catch (error: any) {
+      console.error('[StripeProcessor] Fetch payment method error:', error);
+      return {
+        success: false,
+        message: `Error fetching payment method - ${error.message}`,
       };
     }
   }
@@ -399,6 +484,47 @@ class StripeProcessing extends PaymentProcessor {
    */
   getProcessorName() {
     return 'stripe';
+  }
+
+  private async ensureCustomer(billingInfo: BillingAccountType, email?: string, phone?: string) {
+    const customerId = billingInfo.paymentProcessorData?.stripe?.customer?.id;
+
+    if (customerId) {
+      try {
+        const existingCustomer = await this.stripe.customers.retrieve(customerId);
+        if (!existingCustomer.deleted) {
+          return existingCustomer;
+        }
+      } catch (retrieveError) {
+        // fall through and create a replacement customer
+      }
+    }
+
+    return this.stripe.customers.create({
+      name: billingInfo.payor.fullName,
+      email,
+      phone,
+      metadata: {
+        external_id: `${billingInfo._id}`,
+      },
+    });
+  }
+
+  private async detachAllPaymentMethods(customerId: string) {
+    const paymentMethods = await this.stripe.paymentMethods.list({
+      customer: customerId,
+      limit: 100,
+    });
+
+    for (const paymentMethod of paymentMethods.data) {
+      await this.stripe.paymentMethods.detach(paymentMethod.id);
+    }
+
+    await this.stripe.customers.update(customerId, {
+      invoice_settings: {
+        default_payment_method: null as any,
+      },
+    });
   }
 }
 

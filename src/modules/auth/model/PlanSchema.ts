@@ -2,6 +2,10 @@ import mongoose, { Types } from 'mongoose';
 import { ObjectId } from 'mongoose';
 import { FeatureType } from './FeatureSchema';
 
+export interface PlanEntitlements {
+  agentSeats?: number | null;
+}
+
 export interface PlanType extends mongoose.Document {
   _id: ObjectId;
   name: string;
@@ -12,6 +16,7 @@ export interface PlanType extends mongoose.Document {
   availableTo: string[];
   tier: string;
   features: FeatureType[];
+  entitlements?: PlanEntitlements;
   isActive: boolean;
   mostPopular: boolean;
 }
@@ -28,7 +33,7 @@ const Schema = new mongoose.Schema(
     },
     availableTo: {
       type: [String],
-      enum: ['athlete', 'team', 'agent', 'scout', 'professional'],
+      enum: ['athlete', 'team', 'agent', 'scout', 'professional', 'other'],
       required: true,
     },
     features: [
@@ -38,6 +43,13 @@ const Schema = new mongoose.Schema(
         required: true,
       },
     ],
+    entitlements: {
+      agentSeats: {
+        type: Number,
+        min: 0,
+        default: null,
+      },
+    },
     tier: {
       type: String,
       enum: ['silver', 'gold', 'platinum', 'bronze', 'diamond'],

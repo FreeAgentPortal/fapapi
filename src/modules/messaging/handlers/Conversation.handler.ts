@@ -4,6 +4,9 @@ import { MessageModel, IMessage } from '../models/Message';
 import { AthleteModel } from '../../profiles/athlete/models/AthleteModel';
 import { Types } from 'mongoose';
 import TeamModel from '../../profiles/team/model/TeamModel';
+import { AgentProfileModel } from '../../profiles/agent/model/AgentProfile';
+
+type ConversationRole = 'team' | 'athlete' | 'agent';
 
 export class ConversationHandler {
   async startConversation(teamId: string, athleteId: string, userId: string, initialMessage: string) {
@@ -17,22 +20,37 @@ export class ConversationHandler {
       throw new ErrorUtil('Athlete profile not found', 404);
     }
 
-    let conversation = await ConversationModel.findOne({
+    const activeAgentProfileId = athlete.agent?.status === 'active' && athlete.agent?.profile ? athlete.agent.profile.toString() : null;
+
+    const existingConversationFilter: Record<string, any> = {
       'participants.team': teamId,
       'participants.athlete': athleteId,
-    });
+    };
+    if (activeAgentProfileId) {
+      existingConversationFilter['participants.agent'] = activeAgentProfileId;
+    } else {
+      existingConversationFilter['participants.agent'] = { $exists: false };
+    }
+
+    let conversation = await ConversationModel.findOne(existingConversationFilter);
 
     if (conversation) {
       throw new ErrorUtil('Conversation already exists', 400);
     }
 
+    const agent = activeAgentProfileId ? await AgentProfileModel.findById(activeAgentProfileId) : null;
+
     conversation = new ConversationModel({
       participants: {
         team: teamId,
         athlete: athleteId,
+        ...(agent ? { agent: agent._id } : {}),
       },
       messages: [],
     });
+
+    const receiverRole: ConversationRole = agent ? 'agent' : 'athlete';
+    const receiverProfile = agent ? agent._id : conversation.participants.athlete;
 
     const newMessage = new MessageModel({
       conversation: conversation._id,
@@ -41,8 +59,8 @@ export class ConversationHandler {
         role: 'team',
       },
       receiver: {
-        profile: conversation.participants.athlete,
-        role: 'athlete',
+        profile: receiverProfile,
+        role: receiverRole,
       },
       content: initialMessage,
     });
@@ -56,11 +74,26 @@ export class ConversationHandler {
     return { conversation, newMessage };
   }
 
-  async sendMessage(conversationId: string, senderId: string, senderProfileId: string, senderRole: 'team' | 'athlete', content: string): Promise<IMessage> {
+  async sendMessage(conversationId: string, senderId: string, senderProfileId: string, senderRole: ConversationRole, content: string): Promise<IMessage> {
     const conversation = await ConversationModel.findById(conversationId);
     if (!conversation) {
       throw new ErrorUtil('Conversation not found', 404);
     }
+
+    const athlete = await AthleteModel.findById(conversation.participants.athlete).lean();
+    const athleteHasActiveAgent = !!athlete?.agent?.profile && athlete?.agent?.status === 'active';
+
+    this.assertAuthorizedSender(conversation, senderProfileId, senderRole);
+
+    if (senderRole === 'team' && athleteHasActiveAgent && !conversation.participants.agent) {
+      throw new ErrorUtil('This athlete is represented by an agent. Start or continue the conversation with the agent instead.', 400);
+    }
+
+    if (senderRole === 'athlete' && (conversation.participants.agent || athleteHasActiveAgent)) {
+      throw new ErrorUtil('Teams must communicate with the athlete agent while representation is active.', 400);
+    }
+
+    const receiver = this.resolveReceiver(conversation, senderRole);
 
     const message = new MessageModel({
       conversation: conversationId,
@@ -68,10 +101,7 @@ export class ConversationHandler {
         profile: senderProfileId,
         role: senderRole,
       },
-      receiver: {
-        profile: conversation.participants[senderRole === 'team' ? 'athlete' : 'team'],
-        role: senderRole === 'team' ? 'athlete' : 'team',
-      },
+      receiver,
       content: content,
     });
 
@@ -83,29 +113,79 @@ export class ConversationHandler {
     return message;
   }
 
-  async getConversationsForUser(userId: string, profileId: string, role: 'team' | 'athlete'): Promise<IConversation[]> {
+  async getConversationsForUser(userId: string, profileId: string, role: ConversationRole): Promise<IConversation[]> {
     if (role === 'team') {
       return ConversationModel.find({
         'participants.team': profileId,
         // Exclude deleted conversations, and hidden conversations
         $and: [{ status: { $ne: 'deleted' } }, { status: { $ne: 'hidden' } }],
-      }).populate('participants.athlete', 'fullName profileImageUrl');
-    } else {
-      return ConversationModel.find({
-        'participants.athlete': profileId,
-        $and: [{ status: { $ne: 'deleted' } }, { status: { $ne: 'hidden' } }],
-      }).populate('participants.team', 'name logos');
+      })
+        .populate('participants.athlete', 'fullName profileImageUrl')
+        .populate('participants.agent', 'displayName agencyName email contactNumber');
     }
+
+    if (role === 'agent') {
+      return ConversationModel.find({
+        'participants.agent': profileId,
+        $and: [{ status: { $ne: 'deleted' } }, { status: { $ne: 'hidden' } }],
+      })
+        .populate('participants.team', 'name logos')
+        .populate('participants.athlete', 'fullName profileImageUrl');
+    }
+
+    return ConversationModel.find({
+      'participants.athlete': profileId,
+      'participants.agent': { $exists: false },
+      $and: [{ status: { $ne: 'deleted' } }, { status: { $ne: 'hidden' } }],
+    }).populate('participants.team', 'name logos');
   }
 
   async getConversation(conversationId: string): Promise<IConversation> {
     const conversation = await ConversationModel.findById(conversationId)
       .populate('participants.athlete', 'fullName profileImageUrl')
       .populate('participants.team', 'name logos')
+      .populate('participants.agent', 'displayName agencyName email contactNumber')
       .populate('messages');
     if (!conversation) {
       throw new ErrorUtil('Conversation not found', 404);
     }
     return conversation;
+  }
+
+  private resolveReceiver(conversation: IConversation, senderRole: ConversationRole): { profile: Types.ObjectId; role: ConversationRole } {
+    if (senderRole === 'team') {
+      if (conversation.participants.agent) {
+        return {
+          profile: conversation.participants.agent,
+          role: 'agent',
+        };
+      }
+      return {
+        profile: conversation.participants.athlete,
+        role: 'athlete',
+      };
+    }
+
+    return {
+      profile: conversation.participants.team,
+      role: 'team',
+    };
+  }
+
+  private assertAuthorizedSender(conversation: IConversation, senderProfileId: string, senderRole: ConversationRole): void {
+    if (senderRole === 'team' && conversation.participants.team.toString() !== senderProfileId) {
+      throw new ErrorUtil('Unauthorized to participate in this conversation.', 403);
+    }
+
+    if (senderRole === 'athlete') {
+      if (conversation.participants.athlete.toString() !== senderProfileId) {
+        throw new ErrorUtil('Unauthorized to participate in this conversation.', 403);
+      }
+      return;
+    }
+
+    if (!conversation.participants.agent || conversation.participants.agent.toString() !== senderProfileId) {
+      throw new ErrorUtil('Unauthorized to participate in this conversation.', 403);
+    }
   }
 }

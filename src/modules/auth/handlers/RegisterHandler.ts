@@ -170,6 +170,7 @@ export class RegisterHandler {
    */
   private async createBillingAccount(profileId: string, role: string) {
     console.info(`[RegistrationHandler]: Creating billing account..`);
+    const roleMeta = RoleRegistry[role];
     try {   
       this.billingAccount = await BillingAccount.create({ 
         profileId,
@@ -177,6 +178,7 @@ export class RegisterHandler {
         email: this.data.email,  
         status: 'active',
         vaulted: false,
+        setupFeePaid: !roleMeta.requiresSetupFee, // if the role doesn't require a setup fee, mark it as paid
         payor: this.user._id,
       });
       console.info(`[RegistrationHandler]: Billing account created for profile ${profileId} with role ${role}`);
@@ -196,7 +198,7 @@ export class RegisterHandler {
       BillingAccount.findByIdAndDelete(this.billingAccount?._id),
       ...Object.entries(this.user.profileRefs)
         .filter(([_, pid]) => !!pid) // filter out any null or undefined profile IDs
-        .map(([role, pid]) => mongoose.model(role).findByIdAndDelete(pid)), // delete profiles by role
+        .map(([role, pid]) => this.modelMap[role]?.findByIdAndDelete(pid)), // delete profiles by role
     ]);
   }
 

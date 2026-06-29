@@ -4,6 +4,14 @@ import PaymentProcessorFactory from '../factory/PaymentProcessorFactory';
 import PlanSchema from '../../auth/model/PlanSchema';
 import PaymentProcessor from '../classes/PaymentProcess';
 import { eventBus } from '../../../lib/eventBus';
+import { applyBillingPlanSnapshot, calculatePlanCycleAmount } from '../utils/billingPlanUtils';
+
+type BillingChargeOptions = {
+  updateBillingDate?: boolean;
+  description?: string;
+  failureMutationMode?: 'standard' | 'none';
+  planOverride?: any;
+};
 
 export default class PaymentProcessingHandler {
   private static processor = null as PaymentProcessor | null;
@@ -32,6 +40,12 @@ export default class PaymentProcessingHandler {
           return res.processor as PaymentProcessor;
         });
       }
+
+      const appliedPlanChanges = await this.applyDueScheduledPlanChanges();
+      if (appliedPlanChanges > 0) {
+        console.info(`[PaymentProcessingHandler] Applied ${appliedPlanChanges} scheduled plan changes before billing.`);
+      }
+
       // Get all profiles due for payment
       const profilesDue = await this.getProfilesDueForPayment();
 
@@ -154,6 +168,49 @@ export default class PaymentProcessingHandler {
     }
   }
 
+  public static async applyDueScheduledPlanChanges(): Promise<number> {
+    try {
+      const now = new Date();
+      const billings = await BillingAccount.find({
+        'scheduledPlanChange.effectiveDate': { $lte: now },
+        status: { $in: ['active', 'trialing'] },
+      });
+
+      let appliedCount = 0;
+
+      for (const billing of billings) {
+        const scheduledPlanChange = billing.scheduledPlanChange;
+        if (!scheduledPlanChange?.plan) {
+          continue;
+        }
+
+        const livePlan = await PlanSchema.findById(scheduledPlanChange.plan).select('price yearlyDiscount').lean();
+        if (!livePlan) {
+          console.warn(`[PaymentProcessingHandler] Scheduled plan change skipped because plan ${scheduledPlanChange.plan} no longer exists.`);
+          continue;
+        }
+
+        applyBillingPlanSnapshot(billing, scheduledPlanChange as any);
+        billing.scheduledPlanChange = undefined;
+        billing.status = 'active';
+        billing.needsUpdate = false;
+
+        const cycleAmount = calculatePlanCycleAmount(livePlan, Boolean(billing.isYearly));
+        if (cycleAmount === 0) {
+          billing.nextBillingDate = undefined;
+        }
+
+        await billing.save();
+        appliedCount++;
+      }
+
+      return appliedCount;
+    } catch (error: any) {
+      console.error('[PaymentProcessingHandler] Error applying scheduled plan changes:', error);
+      return 0;
+    }
+  }
+
   /**
    * Finalize the cancellation of an account whose billing period has ended:
    * removes the customer from the payment processor and marks the account inactive.
@@ -165,10 +222,7 @@ export default class PaymentProcessingHandler {
       try {
         const factory = new PaymentProcessorFactory();
         const processor = factory.chooseProcessor(billingAccount.processor);
-        const customerId =
-          billingAccount.processor === 'stripe'
-            ? (billingAccount.paymentProcessorData as any)?.stripe?.customer?.id
-            : billingAccount.customerId;
+        const customerId = billingAccount.processor === 'stripe' ? (billingAccount.paymentProcessorData as any)?.stripe?.customer?.id : billingAccount.customerId;
 
         if (customerId) {
           await processor.deleteVault(customerId);
@@ -198,8 +252,38 @@ export default class PaymentProcessingHandler {
     updateBillingDate: boolean = true,
     description?: string
   ): Promise<{ success: boolean; message: string; receipt?: ReceiptType }> {
+    return this.processBillingCharge(profileId, amount, {
+      updateBillingDate,
+      description,
+      failureMutationMode: 'standard',
+    });
+  }
+
+  public static async processPlanChangeCharge(
+    billingAccountId: string,
+    amountInCents: number,
+    planOverride: any,
+    description: string
+  ): Promise<{ success: boolean; message: string; receipt?: ReceiptType }> {
+    return this.processBillingCharge(billingAccountId, amountInCents, {
+      updateBillingDate: false,
+      description,
+      failureMutationMode: 'none',
+      planOverride,
+    });
+  }
+
+  private static async processBillingCharge(
+    billingAccountId: string,
+    amount?: number,
+    options: BillingChargeOptions = {}
+  ): Promise<{ success: boolean; message: string; receipt?: ReceiptType }> {
+    const updateBillingDate = options.updateBillingDate ?? true;
+    const failureMutationMode = options.failureMutationMode ?? 'standard';
+    const description = options.description;
+
     try {
-      console.info(`[PaymentProcessingHandler] Processing payment for profile ${profileId}...`);
+      console.info(`[PaymentProcessingHandler] Processing payment for billing account ${billingAccountId}...`);
 
       // Ensure processor is initialized
       if (!this.processor) {
@@ -217,23 +301,23 @@ export default class PaymentProcessingHandler {
       }
 
       // Get billing account with populated data
-      const billingAccount = await BillingAccount.findById(profileId).populate('plan').populate('payor');
+      const billingAccount = await BillingAccount.findById(billingAccountId).populate('plan').populate('payor');
 
       if (!billingAccount) {
-        console.log(`[PaymentProcessingHandler] Billing account was not found for id: ${profileId}`);
-        throw new Error(`Billing account not found for profile ${profileId}`);
+        console.log(`[PaymentProcessingHandler] Billing account was not found for id: ${billingAccountId}`);
+        throw new Error(`Billing account not found for profile ${billingAccountId}`);
       }
 
       if (!billingAccount?.plan?._id || !billingAccount?.payor?._id) {
         console.log(billingAccount);
         // for now do nothing, dont throw an error. plan and payor should always be populated here, but for some reason
         // the service is seeing some accounts without them and throwing errors causing scheduled payments to fail.
-        // throw new Error(`Missing plan or payor data for profile ${profileId}`);
+        // throw new Error(`Missing plan or payor data for billing account ${billingAccountId}`);
       }
 
       // Check if we have payment processor data
       if (!billingAccount.paymentProcessorData) {
-        throw new Error(`No payment processor data found for profile ${profileId}`);
+        throw new Error(`No payment processor data found for billing account ${billingAccountId}`);
       }
 
       const processorData = billingAccount.paymentProcessorData[processorName as any];
@@ -241,21 +325,25 @@ export default class PaymentProcessingHandler {
       if (!processorData) {
         // this is a rare case, but it can happen if the user has multiple processors and the one we want to use is not set up.
         // we need to then inform them to update their payment information.
-        console.warn(`[PaymentProcessingHandler] No Processor Information found for processor ${processorName} on profile ${profileId}`);
-        billingAccount.needsUpdate = true;
-        await billingAccount.save();
-        eventBus.publish('billing.needsUpdate', { profileId, reason: 'Missing processor data for scheduled payment' });
-        throw new Error(`No Processor Information found for processor ${processorName} on profile ${profileId}`);
+        console.warn(`[PaymentProcessingHandler] No Processor Information found for processor ${processorName} on billing account ${billingAccountId}`);
+
+        if (failureMutationMode === 'standard') {
+          billingAccount.needsUpdate = true;
+          await billingAccount.save();
+          eventBus.publish('billing.needsUpdate', { profileId: billingAccountId, reason: 'Missing processor data for scheduled payment' });
+        }
+
+        throw new Error(`No Processor Information found for processor ${processorName} on billing account ${billingAccountId}`);
       }
 
       // Get plan data for receipt creation
-      const plan = billingAccount.plan as any;
+      const plan = options.planOverride ?? (billingAccount.plan as any);
       let calculatedAmount: number;
 
       // if amount is not provided, calculate based on plan and billing cycle
       if (amount === undefined) {
         if (!billingAccount.plan) {
-          throw new Error(`No plan associated with billing account for profile ${profileId}`);
+          throw new Error(`No plan associated with billing account for profile ${billingAccountId}`);
         }
         // Calculate amount based on plan and billing cycle
         calculatedAmount = parseFloat(plan.price);
@@ -274,12 +362,13 @@ export default class PaymentProcessingHandler {
         }
       } else {
         // amount is passed in, use it directly
-        calculatedAmount = amount;
+        // amount passed in should be in cents, i.e. 5000 for $50, we need to convert it to dollars for processing and receipts
+        calculatedAmount = amount / 100;
       }
 
       // Check if amount is 0 - skip payment processing and create success receipt
       if (calculatedAmount === 0) {
-        console.info(`[PaymentProcessingHandler] Amount is $0 for profile ${profileId} - skipping payment processing and creating success receipt`);
+        console.info(`[PaymentProcessingHandler] Amount is $0 for billing account ${billingAccountId} - skipping payment processing and creating success receipt`);
 
         // Create a mock successful payment result for receipt creation
         const mockPaymentResult = {
@@ -305,7 +394,7 @@ export default class PaymentProcessingHandler {
           });
         }
 
-        console.info(`[PaymentProcessingHandler] Zero-amount payment processed successfully for profile ${profileId} using account credits`);
+        console.info(`[PaymentProcessingHandler] Zero-amount payment processed successfully for billing account ${billingAccountId} using account credits`);
         return {
           success: true,
           message: `Payment of $${calculatedAmount.toFixed(2)} covered by account credits`,
@@ -316,7 +405,7 @@ export default class PaymentProcessingHandler {
       // add the amount to processorData
       processorData.amount = calculatedAmount;
 
-      console.info(`[PaymentProcessingHandler] Processing payment of $${calculatedAmount} for profile ${profileId} using token ${processorData.tokenId}`);
+      console.info(`[PaymentProcessingHandler] Processing payment of $${calculatedAmount} for billing account ${billingAccountId} using token ${processorData.tokenId}`);
 
       // processor is expected to handle the information passed into it
       const paymentResult = (await this.processor?.processPayment(processorData)) as any;
@@ -337,7 +426,7 @@ export default class PaymentProcessingHandler {
           });
         }
 
-        console.info(`[PaymentProcessingHandler] Payment processed successfully for profile ${profileId}`);
+        console.info(`[PaymentProcessingHandler] Payment processed successfully for billing account ${billingAccountId}`);
         return {
           success: true,
           message: `Payment of $${calculatedAmount.toFixed(2)} processed successfully`,
@@ -348,13 +437,15 @@ export default class PaymentProcessingHandler {
         const receiptDescription = description || (amount !== undefined && !updateBillingDate ? 'One-time payment failed' : undefined); // Use default subscription description
         const receipt = await this.createFailureReceipt(billingAccount, paymentResult, calculatedAmount, plan, receiptDescription);
 
-        // Mark account as needing update
-        await BillingAccount.findByIdAndUpdate(profileId, {
-          needsUpdate: true,
-          status: 'suspended', // Optional: suspend account on payment failure
-        });
+        if (failureMutationMode === 'standard') {
+          // Mark account as needing update
+          await BillingAccount.findByIdAndUpdate(billingAccountId, {
+            needsUpdate: true,
+            status: 'suspended', // Optional: suspend account on payment failure
+          });
+        }
 
-        console.info(`[PaymentProcessingHandler] Payment failed for profile ${profileId}: ${paymentResult.message}`);
+        console.info(`[PaymentProcessingHandler] Payment failed for billing account ${billingAccountId}: ${paymentResult.message}`);
         return {
           success: false,
           message: `Payment failed: ${paymentResult.message}`,
@@ -362,15 +453,18 @@ export default class PaymentProcessingHandler {
         };
       }
     } catch (error: any) {
-      console.error(`[PaymentProcessingHandler] Error processing payment for profile ${profileId}:`, error);
+      console.error(`[PaymentProcessingHandler] Error processing payment for billing account ${billingAccountId}:`, error);
 
       // Try to create an error receipt if we have enough information
       try {
-        const billingAccount = await BillingAccount.findById(profileId).populate('plan').populate('payor');
+        const billingAccount = await BillingAccount.findById(billingAccountId).populate('plan').populate('payor');
         if (billingAccount) {
           const receiptDescription = description || (amount !== undefined && !updateBillingDate ? 'One-time payment processing error' : 'Subscription payment processing error');
           await this.createErrorReceipt(billingAccount, error.message, receiptDescription);
-          await BillingAccount.findByIdAndUpdate(profileId, { needsUpdate: true });
+
+          if (failureMutationMode === 'standard') {
+            await BillingAccount.findByIdAndUpdate(billingAccountId, { needsUpdate: true });
+          }
         }
       } catch (receiptError) {
         console.error('Failed to create error receipt:', receiptError);

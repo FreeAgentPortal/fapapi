@@ -32,9 +32,10 @@ export class BillingValidator {
     const reasons: string[] = [];
     const recommendations: string[] = [];
     let severity: 'critical' | 'warning' | 'info' = 'info';
+    const isActiveFreePlan = billing.status === 'active' && !billing.nextBillingDate;
 
     // Primary check: Payment information not vaulted
-    if (!billing.vaulted) {
+    if (!billing.vaulted && !isActiveFreePlan) {
       reasons.push('Payment information not saved (not vaulted)');
       recommendations.push('Add payment method to vault for automatic billing');
       severity = 'critical';
@@ -55,7 +56,7 @@ export class BillingValidator {
     }
 
     // Check if next billing date has passed and account is not vaulted
-    if (billing.nextBillingDate && billing.nextBillingDate < new Date() && !billing.vaulted) {
+    if (billing.nextBillingDate && billing.nextBillingDate < new Date() && !billing.vaulted && !isActiveFreePlan) {
       reasons.push('Next billing date has passed without payment method on file');
       recommendations.push('Add payment method before next billing cycle');
       severity = 'critical';
@@ -108,7 +109,7 @@ export class BillingValidator {
    * @returns boolean indicating if payment method is saved
    */
   static isPaymentMethodSaved(billing: BillingAccountType | null): boolean {
-    return billing?.vaulted === true && !!billing?.vaultId;
+    return billing?.vaulted === true;
   }
 
   /**
@@ -118,7 +119,8 @@ export class BillingValidator {
    */
   static isAccountInGoodStanding(billing: BillingAccountType | null): boolean {
     if (!billing) return false;
-    return billing.status === 'active' && billing.vaulted === true && !!billing.vaultId && !billing.needsUpdate;
+    const isActiveFreePlan = billing.status === 'active' && !billing.nextBillingDate;
+    return billing.status === 'active' && (isActiveFreePlan || billing.vaulted === true) && !billing.needsUpdate;
   }
 
   /**

@@ -4,6 +4,7 @@ export interface IConversation extends Document {
   participants: {
     team: Types.ObjectId;
     athlete: Types.ObjectId;
+    agent?: Types.ObjectId;
   };
   lastMessage?: Types.ObjectId;
   // Admin/Moderator fields
@@ -11,7 +12,7 @@ export interface IConversation extends Document {
   moderationActions: Array<{
     performedBy: {
       profile: Types.ObjectId;
-      role: 'team' | 'athlete' | 'admin';
+      role: 'team' | 'athlete' | 'agent' | 'admin';
     };
     action: 'created' | 'edited' | 'archived' | 'hidden' | 'restored' | 'deleted';
     reason?: string;
@@ -32,6 +33,7 @@ const ConversationSchema = new Schema<IConversation>(
     participants: {
       team: { type: Schema.Types.ObjectId, ref: 'TeamProfile', required: true },
       athlete: { type: Schema.Types.ObjectId, ref: 'AthleteProfile', required: true },
+      agent: { type: Schema.Types.ObjectId, ref: 'AgentProfile' },
     },
     lastMessage: { type: Schema.Types.ObjectId, ref: 'Message' },
     // Admin/Moderator fields
@@ -44,7 +46,7 @@ const ConversationSchema = new Schema<IConversation>(
       {
         performedBy: {
           profile: { type: Schema.Types.ObjectId, refPath: 'moderationActions.performedBy.role', required: true },
-          role: { type: String, enum: ['team', 'athlete', 'admin'], required: true },
+          role: { type: String, enum: ['team', 'athlete', 'agent', 'admin'], required: true },
         },
         action: { type: String, enum: ['created', 'edited', 'archived', 'hidden', 'restored', 'deleted'], required: true },
         reason: { type: String },

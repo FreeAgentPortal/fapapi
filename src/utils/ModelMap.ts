@@ -15,10 +15,12 @@ import PlanSchema from '../modules/auth/model/PlanSchema';
 import { EventModel } from '../modules/feed/model/Event.model';
 import SearchReport from '../modules/search-preferences/models/SearchReport';
 import { ProfessionalProfileModel } from '../modules/profiles/professional/model/ProfessionalProfile';
+import { AgentProfileModel } from '../modules/profiles/agent/model/AgentProfile';
 
 export type ModelKey =
   | 'team'
   | 'athlete'
+  | 'agent'
   | 'admin'
   | 'scout_report'
   | 'scout_profile'
@@ -37,6 +39,7 @@ export type ModelKey =
 export const ModelMap: Record<ModelKey, any> = {
   team: TeamModel,
   athlete: AthleteModel,
+  agent: AgentProfileModel,
   admin: AdminModel,
   scout_report: ScoutReport,
   scout_profile: ScoutModel,

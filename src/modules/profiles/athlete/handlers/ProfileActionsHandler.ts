@@ -22,11 +22,20 @@ export class ProfileActionsHandler {
 
     // Use the comprehensive billing validator
     const billingValidation = BillingValidator.validateBillingAccount(billing); 
+    const isAgentManaged = !!profile.agent?.profile && profile.agent?.status === 'active';
 
     return { 
       ...profile,
-      needsBillingSetup: billingValidation.needsUpdate,
-      billingValidation,
+      needsBillingSetup: isAgentManaged ? false : billingValidation.needsUpdate,
+      billingValidation: isAgentManaged
+        ? {
+            ...billingValidation,
+            needsUpdate: false,
+            severity: 'info',
+            reasons: ['Athlete is currently represented by an active agent seat'],
+            recommendations: [],
+          }
+        : billingValidation,
     } as any as IAthlete;
   }
 

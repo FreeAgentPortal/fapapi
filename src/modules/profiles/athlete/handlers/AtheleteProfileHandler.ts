@@ -51,10 +51,11 @@ export class AthleteProfileHandler extends CRUDHandler<IAthlete> {
     if (!billing) {
       throw new ErrorUtil('billing information not found', 400);
     }
+    const isAgentManaged = !!profile.agent?.profile && profile.agent?.status === 'active';
     console.info(`[AthleteProfileHandler] - Fetching Details for profile ${profile._id}`);
     return {
       ...profile,
-      needsBillingSetup: !billing.vaulted,
+      needsBillingSetup: isAgentManaged ? false : !billing.vaulted,
     } as any as IAthlete;
   }
 

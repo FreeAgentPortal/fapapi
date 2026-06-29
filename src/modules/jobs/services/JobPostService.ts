@@ -4,7 +4,6 @@ import asyncHandler from '../../../middleware/asyncHandler';
 import error from '../../../middleware/error';
 import { ErrorUtil } from '../../../middleware/ErrorUtil';
 import { AuthenticatedRequest } from '../../../types/AuthenticatedRequest';
-import authenticateUser from '../../../utils/authenticateUser';
 import { CRUDService } from '../../../utils/baseCRUD';
 import JobPostHandler from '../handlers/JobPostHandler';
 import JobPostStatsHandler from '../handlers/JobPostStats.handler';
@@ -15,9 +14,7 @@ import JobApplicationModel from '../models/JobApplication';
 import { JobPostModel } from '../models/JobPost';
 import { buildJobRecommendationQuery } from '../utils/buildJobRecommendationQuery';
 import { AdvFilters } from '../../../utils/advFilter/AdvFilters';
-
-type JobPostUpdatePayload = Record<string, any>;
-
+ 
 export default class JobPostService extends CRUDService {
   private profileHandler: ApplicationProfileHandler;
   private statsHandler: JobPostStatsHandler;
@@ -150,7 +147,7 @@ export default class JobPostService extends CRUDService {
     } catch (err) {
       return error(err, req, res);
     }
-  }; 
+  };
 
   public getResources = async (req: Request, res: Response): Promise<Response> => {
     try {
@@ -250,7 +247,7 @@ export default class JobPostService extends CRUDService {
       }
 
       if (orConditions.length === 0) {
-        return this.recommendedFallback(res, page, limit, pastJobIds);
+       return this.recommendedFallback(res, page, limit, pastJobIds);
       }
 
       const { payload, metadata } = await (this.handler as JobPostHandler).fetchRecommended(orConditions, pastJobIds, page, limit);
@@ -267,45 +264,21 @@ export default class JobPostService extends CRUDService {
         },
       });
     } catch (err) {
+      console.error('Error fetching recommended jobs:', err);
       return error(err, req, res);
     }
   });
 
   private async recommendedFallback(res: Response, page: number, limit: number, appliedIds: mongoose.Types.ObjectId[] = []): Promise<Response> {
-    const now = new Date();
-    const [result] = await JobPostModel.aggregate([
-      {
-        $match: {
-          status: 'published',
-          $or: [{ expiresAt: { $exists: false } }, { expiresAt: null }, { expiresAt: { $gt: now } }],
-        },
-      },
-      {
-        $lookup: {
-          from: 'jobapplications',
-          localField: '_id',
-          foreignField: 'job',
-          as: 'applications',
-        },
-      },
-      { $addFields: { applicationCount: { $size: '$applications' } } },
-      { $project: { applications: 0 } },
-      { $sort: { applicationCount: -1, createdAt: -1 } },
-      {
-        $facet: {
-          metadata: [{ $count: 'totalCount' }, { $addFields: { page, limit } }],
-          entries: [{ $skip: (page - 1) * limit }, { $limit: limit }, { $addFields: { applied: { $in: ['$_id', appliedIds] } } }],
-        },
-      },
-    ]);
+    const { payload, metadata } = await this.handler.fetchRecommended([{}], appliedIds, page, limit);
 
     return res.status(200).json({
       success: true,
-      payload: result?.entries ?? [],
+      payload,
       metadata: {
         page,
-        pages: Math.ceil((result?.metadata?.[0]?.totalCount || 0) / limit) || 0,
-        totalCount: result?.metadata?.[0]?.totalCount || 0,
+        pages: Math.ceil((metadata.totalCount || 0) / limit) || 0,
+        totalCount: metadata.totalCount || 0,
         prevPage: page - 1,
         nextPage: page + 1,
         mode: 'fallback',

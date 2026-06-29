@@ -5,6 +5,16 @@ import Notification from '../model/Notification';
 import { ModelKey, ModelMap } from '../../../utils/ModelMap';
 import { ITeamProfile } from '../../profiles/team/model/TeamModel';
 import { SMSService } from '../sms/SMSService';
+import User from '../../auth/model/User';
+
+interface AthleteRepresentationInviteEvent {
+  assignmentId: string;
+  athleteProfileId: string;
+  athleteUserId?: string;
+  agentProfileId: string;
+  invitedByUserId: string;
+  message?: string;
+}
 
 export default class AthleteEventHandler {
   private modelMap: Record<ModelKey, Model<any>> = ModelMap;
@@ -75,6 +85,73 @@ export default class AthleteEventHandler {
     await Promise.all([this.sendProfileIncompleteEmail(event), this.sendProfileIncompleteSMS(event)]);
 
     console.info(`[Notification]: Profile incomplete alert processing completed for ${event.email}`);
+  };
+
+  private async sendRepresentationInviteEmailPlaceholder(
+    user: any,
+    event: AthleteRepresentationInviteEvent,
+    agentDisplayName: string
+  ): Promise<void> {
+    if (!user?.email) {
+      console.warn(
+        `[Notification]: No email found for athlete user ${user?._id || event.athleteUserId || event.athleteProfileId}, skipping representation invite email placeholder`
+      );
+      return;
+    }
+
+    if (user.notificationSettings?.accountNotificationEmail === false) {
+      console.info(`[Notification]: User ${user._id} has email alerts disabled, skipping representation invite email placeholder`);
+      return;
+    }
+
+    // TODO: Implement athlete representation invite email delivery when the email template and copy are available.
+    console.info(
+      `[Notification]: Representation invite email placeholder for ${user.email} from ${agentDisplayName} on assignment ${event.assignmentId}`
+    );
+  }
+
+  representationInvitationReceived = async (event: AthleteRepresentationInviteEvent) => {
+    console.info(`[Notification]: Recording representation invite notification for athlete ${event.athleteProfileId}`);
+
+    try {
+      const [rawAthleteProfile, initialAthleteUser, rawAgentProfile] = await Promise.all([
+        this.modelMap['athlete'].findById(event.athleteProfileId).lean(),
+        User.findById(event.athleteUserId).lean(),
+        this.modelMap['agent'].findById(event.agentProfileId).lean(),
+      ]);
+      const athleteProfile = rawAthleteProfile as any;
+      const agentProfile = rawAgentProfile as any;
+
+      const recipientUserId = event.athleteUserId || athleteProfile?.userId?.toString();
+      if (!recipientUserId) {
+        console.warn(
+          `[Notification]: Unable to resolve athlete user for representation invite ${event.assignmentId}, skipping in-app notification`
+        );
+        return;
+      }
+
+      const agentDisplayName = agentProfile?.displayName || agentProfile?.agencyName || 'An agent';
+      const athleteUser = initialAthleteUser || (await User.findById(recipientUserId).lean());
+      const message = event.message?.trim()
+        ? `${agentDisplayName} invited you to representation on Free Agent. Message: ${event.message.trim()}`
+        : `${agentDisplayName} invited you to representation on Free Agent.`;
+
+      await Promise.all([
+        Notification.insertNotification(
+          recipientUserId as any,
+          event.invitedByUserId as any,
+          'New representation invitation',
+          message,
+          'agent.representation.invited',
+          event.assignmentId as any
+        ),
+        this.sendRepresentationInviteEmailPlaceholder(athleteUser, event, agentDisplayName),
+      ]);
+
+      console.info(`[Notification]: Representation invite notification created for athlete user ${recipientUserId}`);
+    } catch (error) {
+      console.error(`[Notification]: Error recording representation invite notification for athlete ${event.athleteProfileId}:`, error);
+    }
   };
 
   athleteViewRecorded = async (event: any) => {
