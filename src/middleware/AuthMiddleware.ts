@@ -15,10 +15,17 @@ export class AuthMiddleware {
    * @param next - Next function to call the next middleware
    * @returns {void}
    */
+  private static devLog(...args: unknown[]): void {
+    if (process.env.NODE_ENV === 'development') {
+      console.log(...args);
+    }
+  }
+
   static protect = asyncHandler(async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     const authHeader = req.headers.authorization;
 
     if (!authHeader) {
+      AuthMiddleware.devLog('[AuthMiddleware] No authorization header provided.', req.headers);
       throw new ErrorUtil('No authorization header provided.', 401);
     }
 
@@ -27,6 +34,7 @@ export class AuthMiddleware {
     } else if (authHeader.startsWith('ApiKey ')) {
       await AuthMiddleware.verifyApiKey(req, res, next);
     } else {
+      AuthMiddleware.devLog('[AuthMiddleware] Unsupported authentication method.', req.headers);
       return res.status(401).json({ message: 'Unsupported authentication method.' });
     }
   });
@@ -38,6 +46,7 @@ export class AuthMiddleware {
       const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload;
       req.user = await User.findById(decoded.userId).select('-password');
       if (!req.user) {
+        AuthMiddleware.devLog('[AuthMiddleware] User not found for JWT.', decoded);
         return res.status(401).json({ message: 'User not found.' });
       }
       // if the service is provided we need to then attempt to find the users permissions for that service, i.e. 'admin'
@@ -47,6 +56,7 @@ export class AuthMiddleware {
         const Model = ModelMap[serviceName as keyof typeof ModelMap] || {};
         const profile = await Model.findOne({ $or: [{ user: req.user._id }, { userId: req.user._id }] });
         if (!profile) {
+          AuthMiddleware.devLog('[AuthMiddleware] No profile found for service.', service);
           return res.status(403).json({ message: `No profile found for service ${service}` });
         }
         req.user.permissions = profile.permissions || [];
@@ -66,7 +76,7 @@ export class AuthMiddleware {
 
       next();
     } catch (err) {
-      // console.error(err);
+      console.error('[AuthMiddleware] JWT validation failed:', err);
       return res.status(401).json({ message: 'JWT validation failed. ' + err });
     }
   }

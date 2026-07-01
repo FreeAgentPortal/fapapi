@@ -354,12 +354,12 @@ export class BillingHandler {
       chargedAmountCents = this.calculateProratedDifferenceInCents(currentAmount, targetAmount, nextBillingDate, billingIsYearly);
 
       if (chargedAmountCents > 0) {
-        const chargeResult = await PaymentProcessingHandler.processPlanChangeCharge(
+        const chargeResult = (await PaymentProcessingHandler.processPlanChangeCharge(
           billing._id.toString(),
           chargedAmountCents,
           targetPlan,
           `Prorated upgrade charge for ${targetPlan.name}`
-        ) as any;
+        )) as any;
 
         if (!chargeResult.success) {
           throw new ErrorUtil(`Upgrade charge failed: ${chargeResult.message}`, 400);
@@ -497,7 +497,7 @@ export class BillingHandler {
     processor: string | null;
     vaulted: boolean;
     paymentMethod: Record<string, any> | null;
-    }> {
+  }> {
     const billing = await this.loadBillingForOwnerAction(req);
 
     if (!billing.processor || !billing.paymentProcessorData?.[billing.processor]?.customer?.id) {
@@ -520,7 +520,7 @@ export class BillingHandler {
     }
 
     return {
-      billingId: billing._id.toString(), 
+      billingId: billing._id.toString(),
       profileId: (billing.profileId as any)?._id?.toString?.() ?? billing.profileId.toString(),
       processor: billing.processor || null,
       vaulted: this.hasStoredPaymentMethod(billing),
@@ -529,7 +529,10 @@ export class BillingHandler {
   }
 
   private logUpdateVault(operationId: string, step: string, payload: any) {
-    console.log(`[BillingHandler.updateVault][${operationId}] ${step}`, payload);
+    // only if we're in a development or debug environment, otherwise we may not want to log sensitive billing info
+    if (process.env.NODE_ENV === 'development' || process.env.DEBUG_BILLING === 'true') {
+      console.log(`[BillingHandler.updateVault][${operationId}] ${step}`, payload);
+    }
   }
 
   private summarizeBilling(billing: any) {
@@ -585,11 +588,7 @@ export class BillingHandler {
   }
 
   private resolveSelectedPlanId(body: any, currentPlan?: any): string {
-    const candidates = [
-      body?.planId,
-      body?.selectedPlanId,
-      ...(Array.isArray(body?.selectedPlans) ? body.selectedPlans : [body?.selectedPlans]),
-    ]
+    const candidates = [body?.planId, body?.selectedPlanId, ...(Array.isArray(body?.selectedPlans) ? body.selectedPlans : [body?.selectedPlans])]
       .map((candidate) => this.extractPlanId(candidate))
       .filter((candidate): candidate is string => Boolean(candidate));
 
@@ -600,7 +599,7 @@ export class BillingHandler {
     const uniqueCandidates = [...new Set(candidates)];
     const currentPlanId = this.extractPlanId(currentPlan);
     const nextPlanId = currentPlanId
-      ? [...uniqueCandidates].reverse().find((candidate) => candidate !== currentPlanId) ?? uniqueCandidates[uniqueCandidates.length - 1]
+      ? ([...uniqueCandidates].reverse().find((candidate) => candidate !== currentPlanId) ?? uniqueCandidates[uniqueCandidates.length - 1])
       : uniqueCandidates[uniqueCandidates.length - 1];
 
     if (!nextPlanId) {
@@ -767,13 +766,19 @@ export class BillingHandler {
       type: paymentMethod.type,
     };
   }
-
   private requireFutureNextBillingDate(billing: any, errorMessage: string): Date {
-    if (!billing.nextBillingDate || !moment(billing.nextBillingDate).isAfter(moment())) {
+    const nextBillingMoment = moment(billing.nextBillingDate);
+    if (nextBillingMoment.isValid() && nextBillingMoment.isAfter(moment())) {
+      return nextBillingMoment.toDate();
+    }
+
+    const fallbackNextBillingDate = moment().add(1, 'month').startOf('month');
+    if (!fallbackNextBillingDate.isValid()) {
       throw new ErrorUtil(errorMessage, 400);
     }
 
-    return new Date(billing.nextBillingDate);
+    billing.nextBillingDate = fallbackNextBillingDate.toDate();
+    return billing.nextBillingDate;
   }
 
   private calculateProratedDifferenceInCents(currentAmount: number, targetAmount: number, nextBillingDate: Date, isYearly: boolean): number {
