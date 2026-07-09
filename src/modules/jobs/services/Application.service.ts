@@ -9,6 +9,7 @@ import asyncHandler from '../../../middleware/asyncHandler';
 import JobPostHandler from '../handlers/JobPostHandler';
 import { eventBus } from '../../../lib/eventBus';
 import { AdvFilters } from '../../../utils/advFilter/AdvFilters';
+import logger from '../../../utils/logger';
 
 export default class ApplicationService extends CRUDService {
   private applicationHandler: ApplicationHandler;
@@ -79,7 +80,7 @@ export default class ApplicationService extends CRUDService {
       }
 
       const match = await this.applicationProfileHandler.buildApplicationMatch(jobPost, professionalProfileId);
-      console.log('Built application match:', match);
+      logger.debug({ match }, '[ApplicationService] Built application match');
       if (!match) {
         return res.status(404).json({ success: false, message: 'Professional profile not found' });
       }

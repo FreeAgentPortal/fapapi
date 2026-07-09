@@ -1,3 +1,5 @@
+import logger from "../utils/logger";
+
 const mongoose = require('mongoose');
 const colors = require('colors');
 
@@ -7,9 +9,9 @@ export default async () => {
     await mongoose.connect(uri, {
       dbName: process.env.MONGO_DBNAME,
     });
-    console.info(colors.bgGreen.white('MongoDB Connected'));
+    logger.info('[DB] Database Connected');
   } catch (error) {
-    console.error(error);
+    logger.error({ error }, '[DB] Failed to connect to MongoDB'); 
     process.exit(1);
   }
 };

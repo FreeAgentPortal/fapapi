@@ -4,7 +4,7 @@ import { ErrorUtil } from '../../../../middleware/ErrorUtil';
 import { AgentProfileModel, IAgentProfile } from '../model/AgentProfile';
 import BillingAccount from '../../../auth/model/BillingAccount';
 import { BillingValidator } from '../../../../utils/billingValidation';
-import { IProfessionalProfile } from '../../professional/model/ProfessionalProfile';
+import logger from '../../../../utils/logger';
 
 export class AgentProfileHandler extends CRUDHandler<IAgentProfile> {
   constructor() {
@@ -83,22 +83,23 @@ export class AgentProfileHandler extends CRUDHandler<IAgentProfile> {
       await user.save();
     }
   }
-  async getProfile(data: any): Promise<IProfessionalProfile> {
+  async getProfile(data: any): Promise<IAgentProfile> {
     const profile = await this.fetch(data.id);
     if (!profile) throw new ErrorUtil('Unable to fetch Profile', 400);
 
-    const billing = await BillingAccount.findOne({ profileId: profile._id });
+    const billing = await BillingAccount.findOne({ profileId: profile._id }).populate('plan');
     if (!billing) {
       throw new ErrorUtil('billing information not found', 400);
     }
 
     // Use the comprehensive billing validator
     const billingValidation = BillingValidator.validateBillingAccount(billing);
+    logger.debug({ billingValidation }, '[AgentProfileHandler] Billing validation result');
 
     return {
       ...profile,
       needsBillingSetup: billingValidation.needsUpdate,
       billingValidation,
-    } as any as IProfessionalProfile;
+    } as any as IAgentProfile;
   }
 }

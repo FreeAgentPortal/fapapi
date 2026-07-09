@@ -10,6 +10,7 @@ import PaymentProcessingHandler from './PaymentProcessing.handler';
 import { eventBus } from '../../../lib/eventBus';
 import PlanSchema from '../../auth/model/PlanSchema';
 import { RoleRegistry } from '../../auth/utils/RoleRegistry';
+import logger from '../../../utils/logger';
 import {
   applyBillingPlanSnapshot,
   BillingPlanChangeType,
@@ -222,7 +223,7 @@ export class BillingHandler {
         });
 
         if (!billing.setupFeePaid && roleMeta.requiresSetupFee) {
-          console.log(`fell into here`);
+          logger.debug({ billingId: String(billing._id) }, '[BillingHandler] Processing initial setup fee');
           const paymentResults = await PaymentProcessingHandler.processPaymentForProfile(billing._id as any, roleMeta.setupFeeAmount, false, 'Account setup fee');
           this.logUpdateVault(operationId, 'setup_fee_result', paymentResults);
           if (paymentResults.success === false) {
@@ -531,7 +532,7 @@ export class BillingHandler {
   private logUpdateVault(operationId: string, step: string, payload: any) {
     // only if we're in a development or debug environment, otherwise we may not want to log sensitive billing info
     if (process.env.NODE_ENV === 'development' || process.env.DEBUG_BILLING === 'true') {
-      console.log(`[BillingHandler.updateVault][${operationId}] ${step}`, payload);
+      logger.debug({ operationId, step, payload }, '[BillingHandler] updateVault');
     }
   }
 

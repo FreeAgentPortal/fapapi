@@ -1,4 +1,5 @@
 import { BillingAccountType } from '../modules/auth/model/BillingAccount';
+import logger from './logger';
 
 /**
  * Result interface for billing validation checks
@@ -32,7 +33,8 @@ export class BillingValidator {
     const reasons: string[] = [];
     const recommendations: string[] = [];
     let severity: 'critical' | 'warning' | 'info' = 'info';
-    const isActiveFreePlan = billing.status === 'active' && !billing.nextBillingDate;
+    const isActiveFreePlan = billing.status === 'active' && Number(billing.plan?.price) === 0;
+    logger.debug({ status: billing.status, vaulted: billing.vaulted, planPrice: billing.plan?.price, isActiveFreePlan }, 'BillingValidator: validateBillingAccount called');
 
     // Primary check: Payment information not vaulted
     if (!billing.vaulted && !isActiveFreePlan) {
@@ -57,6 +59,7 @@ export class BillingValidator {
 
     // Check if next billing date has passed and account is not vaulted
     if (billing.nextBillingDate && billing.nextBillingDate < new Date() && !billing.vaulted && !isActiveFreePlan) {
+      logger.debug({ nextBillingDate: billing.nextBillingDate, vaulted: billing.vaulted, isActiveFreePlan }, 'BillingValidator: next billing date passed without payment method');
       reasons.push('Next billing date has passed without payment method on file');
       recommendations.push('Add payment method before next billing cycle');
       severity = 'critical';
@@ -119,7 +122,7 @@ export class BillingValidator {
    */
   static isAccountInGoodStanding(billing: BillingAccountType | null): boolean {
     if (!billing) return false;
-    const isActiveFreePlan = billing.status === 'active' && !billing.nextBillingDate;
+    const isActiveFreePlan = billing.status === 'active' && Number(billing.plan?.price) === 0;
     return billing.status === 'active' && (isActiveFreePlan || billing.vaulted === true) && !billing.needsUpdate;
   }
 

@@ -5,6 +5,7 @@ import PlanSchema from '../../auth/model/PlanSchema';
 import PaymentProcessor from '../classes/PaymentProcess';
 import { eventBus } from '../../../lib/eventBus';
 import { applyBillingPlanSnapshot, calculatePlanCycleAmount } from '../utils/billingPlanUtils';
+import logger from '../../../utils/logger';
 
 type BillingChargeOptions = {
   updateBillingDate?: boolean;
@@ -304,12 +305,12 @@ export default class PaymentProcessingHandler {
       const billingAccount = await BillingAccount.findById(billingAccountId).populate('plan').populate('payor');
 
       if (!billingAccount) {
-        console.log(`[PaymentProcessingHandler] Billing account was not found for id: ${billingAccountId}`);
+        logger.warn({ billingAccountId }, '[PaymentProcessingHandler] Billing account not found');
         throw new Error(`Billing account not found for profile ${billingAccountId}`);
       }
 
       if (!billingAccount?.plan?._id || !billingAccount?.payor?._id) {
-        console.log(billingAccount);
+        logger.debug({ billingAccountId, planId: billingAccount?.plan?._id, payorId: billingAccount?.payor?._id }, '[PaymentProcessingHandler] Missing plan or payor on billing account');
         // for now do nothing, dont throw an error. plan and payor should always be populated here, but for some reason
         // the service is seeing some accounts without them and throwing errors causing scheduled payments to fail.
         // throw new Error(`Missing plan or payor data for billing account ${billingAccountId}`);

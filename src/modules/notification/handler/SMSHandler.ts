@@ -3,6 +3,7 @@ import { Request, Response } from 'express';
 import { SMSService } from '../sms/SMSService';
 import asyncHandler from '../../../middleware/asyncHandler';
 import { ErrorUtil } from '../../../middleware/ErrorUtil';
+import logger from '../../../utils/logger';
 
 export class SMSHandler {
   /**
@@ -29,7 +30,7 @@ export class SMSHandler {
     if (!SMSService.isValidPhoneNumber(to)) {
       // if not valid, attempt to format it
       const formattedNumber = SMSService.formatPhoneNumber(to);
-      console.log(formattedNumber);
+      logger.debug({ formattedNumber }, '[SMSHandler] Reformatted invalid phone number');
       if (!SMSService.isValidPhoneNumber(formattedNumber)) {
         throw new ErrorUtil('Invalid phone number format. Use E.164 format (e.g., +1234567890)', 400);
       }

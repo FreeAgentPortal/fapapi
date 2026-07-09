@@ -2,6 +2,7 @@
 import twilio from 'twilio';
 import { SMSPayload, SMSProvider } from './SMSProvider';
 import { ErrorUtil } from '../../../middleware/ErrorUtil';
+import logger from '../../../utils/logger';
 
 export class TwilioProvider implements SMSProvider {
   private client: twilio.Twilio;
@@ -71,7 +72,7 @@ export class TwilioProvider implements SMSProvider {
 
       const messageSid = await this.client.messages.create(smsOptions);
 
-      console.log(`[TwilioProvider] SMS sent successfully. MessageSid: ${messageSid.sid}, To: ${to}`);
+      logger.info({ messageSid: messageSid.sid, to }, '[TwilioProvider] SMS sent successfully');
     } catch (error: any) {
       // Handle Twilio-specific errors
       if (error.code) {

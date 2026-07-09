@@ -5,6 +5,7 @@ import User from '../modules/auth/model/User';
 import { AuthenticatedRequest } from '../types/AuthenticatedRequest';
 import { ErrorUtil } from './ErrorUtil';
 import { ModelMap } from '../utils/ModelMap';
+import logger from '../utils/logger';
 import { AuthActivityTracker } from '../modules/auth/handlers/AuthActivityTracker';
 
 export class AuthMiddleware {
@@ -16,9 +17,7 @@ export class AuthMiddleware {
    * @returns {void}
    */
   private static devLog(...args: unknown[]): void {
-    if (process.env.NODE_ENV === 'development') {
-      console.log(...args);
-    }
+    logger.debug({ data: args.slice(1).length ? args.slice(1) : undefined }, String(args[0] ?? ''));
   }
 
   static protect = asyncHandler(async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {

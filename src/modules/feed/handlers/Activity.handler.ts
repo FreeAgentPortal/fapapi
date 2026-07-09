@@ -2,6 +2,7 @@ import { CRUDHandler, PaginationOptions } from '../../../utils/baseCRUD';
 import { ActivityModel, IActivity } from '../model/Activity.model';
 import { ActivityEnrichmentHandler } from './ActivityEnrichment.handler';
 import { ActivityInflationHandler } from './ActivityInflation.handler';
+import logger from '../../../utils/logger';
 
 export class ActivityHandler extends CRUDHandler<IActivity> {
   private enrichmentHandler: ActivityEnrichmentHandler;
@@ -38,7 +39,7 @@ export class ActivityHandler extends CRUDHandler<IActivity> {
 
       // Enrich activities with interaction data if user is authenticated
       if (currentUserId) {
-        console.log(`[ActivityHandler]: Enriching activities with interaction data`);
+        logger.debug('[ActivityHandler] Enriching activities with interaction data');
         await this.enrichmentHandler.enrichWithInteractions(results[0].entries, currentUserId);
       }
     }
@@ -58,7 +59,7 @@ export class ActivityHandler extends CRUDHandler<IActivity> {
 
     // Enrich activity with interaction data if user is authenticated
     if (currentUserId) {
-      console.log(`[ActivityHandler]: Enriching activity with interaction data`);
+        logger.debug('[ActivityHandler] Enriching activity with interaction data');
       await this.enrichmentHandler.enrichWithInteractions([activity], currentUserId);
     }
 

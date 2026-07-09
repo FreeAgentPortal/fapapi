@@ -2,6 +2,7 @@
 import { SMSPayload, SMSProvider } from './SMSProvider';
 import { TwilioProvider } from './TwilioProvider';
 import { PhoneNumberUtil, PhoneNumberFormat } from 'google-libphonenumber';
+import logger from '../../../utils/logger';
 // Add other SMS providers as needed:
 // import { MockSMSProvider } from './MockSMSProvider';
 
@@ -20,7 +21,7 @@ class SMSService {
         throw new Error(`Unknown SMS provider: ${providerName}`);
     }
 
-    console.log(`[SMSService] Initialized with provider: ${providerName}`);
+    logger.info({ provider: providerName }, '[SMSService] Initialized with provider');
   }
 
   static async sendSMS(payload: SMSPayload): Promise<void> {
@@ -32,14 +33,14 @@ class SMSService {
     if (!this.isValidPhoneNumber(payload.to)) {
       const formattedNumber = this.formatPhoneNumber(payload.to);
       payload.to = formattedNumber;
-      console.log(`[SMSService] Formatted phone number to E.164: ${formattedNumber}`);
+      logger.debug({ formattedNumber }, '[SMSService] Formatted phone number to E.164');
       // check again to ensure formatting worked
       if (!this.isValidPhoneNumber(payload.to)) {
         throw new Error(`Invalid phone number after formatting: ${payload.to}`);
       }
     }
 
-    console.log(`[SMSService] Sending SMS to ${payload.to}`);
+    logger.info({ to: payload.to }, '[SMSService] Sending SMS');
     await this.provider.sendSMS(payload);
   }
 
