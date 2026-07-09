@@ -5,6 +5,7 @@ import { AuthenticationHandler } from '../handlers/AuthenticationHandler';
 import { AuthenticatedRequest } from '../../../types/AuthenticatedRequest';
 import { PasswordRecoveryHandler } from '../handlers/PasswordRecoveryHandler';
 import error from '../../../middleware/error';
+import logger from '../../../utils/logger';
 
 export default class AuthService {
   constructor(
@@ -24,7 +25,7 @@ export default class AuthService {
       result.user = null;
       return res.status(201).json(result);
     } catch (err: any) {
-      console.error(err);
+      logger.error({ err }, '[AuthService] Registration failed.');
       return error(err, req, res);
     }
   };
@@ -34,7 +35,7 @@ export default class AuthService {
       const result = await this.authHandler.login(req);
       return res.status(200).json(result);
     } catch (err: any) {
-      console.error(err);
+      logger.error({ err }, '[AuthService] Login failed.');
       return error(err, req, res);
     }
   };
@@ -44,7 +45,7 @@ export default class AuthService {
       const result = await this.authHandler.getMe(req as AuthenticatedRequest);
       return res.status(200).json({ success: true, ...result });
     } catch (err: any) {
-      console.error(err);
+      logger.error({ err }, '[AuthService] Failed to resolve current user.');
       return error(err, req, res);
     }
   };
@@ -63,7 +64,7 @@ export default class AuthService {
 
       return res.status(200).json({ message: 'Recovery email sent' });
     } catch (err: any) {
-      console.error(err);
+      logger.error({ err }, '[AuthService] Forgot password failed.');
       return error(err, req, res);
     }
   };
@@ -78,7 +79,7 @@ export default class AuthService {
       });
       return res.status(200).json({ message: 'Password reset successful' });
     } catch (err: any) {
-      console.error(err);
+      logger.error({ err }, '[AuthService] Reset password failed.');
       return error(err, req, res);
     }
   };
@@ -94,7 +95,7 @@ export default class AuthService {
 
       return res.status(200).json(result);
     } catch (err: any) {
-      console.error(err);
+      logger.error({ err }, '[AuthService] Email verification failed.');
       return error(err, req, res);
     }
   };
@@ -114,7 +115,7 @@ export default class AuthService {
 
       return res.status(200).json({ success: true, message: 'Verification email sent', token: result.token });
     } catch (err: any) {
-      console.error(err);
+      logger.error({ err }, '[AuthService] Resend verification email failed.');
       return error(err, req, res);
     }
   };
@@ -124,7 +125,7 @@ export default class AuthService {
       const result = await this.authHandler.recaptchaVerify(req);
       return res.status(200).json(result);
     } catch (err: any) {
-      console.error(err);
+      logger.error({ err }, '[AuthService] Recaptcha verification failed.');
       return error(err, req, res);
     }
   };
@@ -141,7 +142,7 @@ export default class AuthService {
         // exists
       });
     } catch (err: any) {
-      console.error(err);
+      logger.error({ err }, '[AuthService] Check email failed.');
       return error(err, req, res);
     }
   };

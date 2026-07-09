@@ -310,7 +310,10 @@ export default class PaymentProcessingHandler {
       }
 
       if (!billingAccount?.plan?._id || !billingAccount?.payor?._id) {
-        logger.debug({ billingAccountId, planId: billingAccount?.plan?._id, payorId: billingAccount?.payor?._id }, '[PaymentProcessingHandler] Missing plan or payor on billing account');
+        logger.debug(
+          { billingAccountId, planId: billingAccount?.plan?._id, payorId: billingAccount?.payor?._id },
+          '[PaymentProcessingHandler] Missing plan or payor on billing account'
+        );
         // for now do nothing, dont throw an error. plan and payor should always be populated here, but for some reason
         // the service is seeing some accounts without them and throwing errors causing scheduled payments to fail.
         // throw new Error(`Missing plan or payor data for billing account ${billingAccountId}`);

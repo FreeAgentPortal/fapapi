@@ -6,6 +6,7 @@ import asyncHandler from '../../../middleware/asyncHandler';
 import { ClaimHandler } from '../handlers/claim/ClaimHandler';
 import { CRUDService } from '../../../utils/baseCRUD';
 import { ClaimCrudHandler } from '../handlers/claim/ClaimCrudHandler';
+import logger from '../../../utils/logger';
 
 export default class ClaimService extends CRUDService {
   constructor(private readonly actionHandler: ClaimHandler = new ClaimHandler()) {
@@ -24,7 +25,7 @@ export default class ClaimService extends CRUDService {
         profile: response.profile,
       });
     } catch (err) {
-      console.error(err);
+      logger.error({ err, type: req.query.type, slug: req.query.slug }, '[ClaimService] Failed to get claim.');
       return error(err, req, res);
     }
   });
@@ -42,7 +43,7 @@ export default class ClaimService extends CRUDService {
         success: true,
       });
     } catch (err) {
-      console.error(err);
+      logger.error({ err, claimId: req.params.id, action: req.body.action }, '[ClaimService] Failed to handle claim.');
       return error(err, req, res);
     }
   });

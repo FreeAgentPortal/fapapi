@@ -1,6 +1,7 @@
 import crypto from 'crypto';
 import { AuthenticatedRequest } from '../../../types/AuthenticatedRequest';
 import AuthActivityLog from '../model/AuthActivityLog';
+import logger from '../../../utils/logger';
 
 type SessionSource = 'header' | 'jwt';
 
@@ -67,10 +68,10 @@ export class AuthActivityTracker {
           setDefaultsOnInsert: true,
         }
       ).catch((err: any) => {
-        console.error('[AuthActivityTracker] Failed to record activity:', err);
+        logger.error({ err }, '[AuthActivityTracker] Failed to record activity.');
       });
     } catch (err) {
-      console.error('[AuthActivityTracker] Failed before activity write:', err);
+      logger.error({ err }, '[AuthActivityTracker] Failed before activity write.');
     }
   }
 

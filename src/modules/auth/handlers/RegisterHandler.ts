@@ -11,6 +11,7 @@ import slugify from 'slugify';
 import Notification from '../../notification/model/Notification';
 import { ErrorUtil } from '../../../middleware/ErrorUtil';
 import { ModelMap } from '../../../utils/ModelMap';
+import logger from '../../../utils/logger';
 
 type RegisterInput = {
   email: string;
@@ -92,7 +93,7 @@ export class RegisterHandler {
 
       return result;
     } catch (error: any) {
-      console.error(error);
+      logger.error({ err: error }, '[RegistrationHandler] Registration failed.');
       // Reset state after failed execution
       this.resetState();
       throw new Error(`Registration failed: ${error.message}`);
@@ -104,7 +105,7 @@ export class RegisterHandler {
    * @throws {Error} If the email is already registered.
    */
   private async createUser() {
-    console.info(`[RegistrationHander]: attempting to create user with email: ${this.data.email}`);
+    logger.debug({ email: this.data.email }, '[RegistrationHandler] Attempting to create user.');
 
     const existingUser = await this.modelMap['user'].findOne({ email: this.data.email });
     if (existingUser) {
@@ -151,7 +152,7 @@ export class RegisterHandler {
           this.customerCreated = true;
         }
       } catch (err) {
-        console.error(`[RegistrationHandler]: Failed to create profile for role ${role}:`, err);
+        logger.error({ err, role, userId: this.user?._id }, '[RegistrationHandler] Failed to create profile.');
         await this.cleanupOnFailure();
         throw new Error(`Failed to create ${role} profile`);
       }
@@ -169,7 +170,7 @@ export class RegisterHandler {
    * @param role - The role of the user for which the billing account is being created.
    */
   private async createBillingAccount(profileId: string, role: string) {
-    console.info(`[RegistrationHandler]: Creating billing account..`);
+    logger.debug({ profileId, role }, '[RegistrationHandler] Creating billing account.');
     const roleMeta = RoleRegistry[role];
     try {   
       this.billingAccount = await BillingAccount.create({ 
@@ -181,9 +182,9 @@ export class RegisterHandler {
         setupFeePaid: !roleMeta.requiresSetupFee, // if the role doesn't require a setup fee, mark it as paid
         payor: this.user._id,
       });
-      console.info(`[RegistrationHandler]: Billing account created for profile ${profileId} with role ${role}`);
+      logger.info({ profileId, role, billingAccountId: this.billingAccount._id }, '[RegistrationHandler] Billing account created.');
     } catch (error: any) {
-      console.error(`[RegistrationHandler]: Failed to create billing account for profile ${profileId} with role ${role}:`, error);
+      logger.error({ err: error, profileId, role }, '[RegistrationHandler] Failed to create billing account.');
       throw new Error(`Failed to create billing account: ${error.message}`);
     }
   }

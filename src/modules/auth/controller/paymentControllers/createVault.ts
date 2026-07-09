@@ -1,5 +1,6 @@
 import axios from "axios"; 
 import { UserType } from "../../model/User";
+import logger from "../../../../utils/logger";
 
 export default async (
   user: UserType,
@@ -47,7 +48,7 @@ export default async (
       ...data,
     };
   } catch (err: any) {
-    console.error(err);
+    logger.error({ err, userId: user._id, customerId: user.customerId }, "[createVault] Failed to create customer vault.");
     return {
       success: false,
       message: "Error Creating Customer",

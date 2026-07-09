@@ -59,7 +59,7 @@ export class ActivityHandler extends CRUDHandler<IActivity> {
 
     // Enrich activity with interaction data if user is authenticated
     if (currentUserId) {
-        logger.debug('[ActivityHandler] Enriching activity with interaction data');
+      logger.debug('[ActivityHandler] Enriching activity with interaction data');
       await this.enrichmentHandler.enrichWithInteractions([activity], currentUserId);
     }
 

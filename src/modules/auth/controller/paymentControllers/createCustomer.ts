@@ -1,5 +1,6 @@
 import axios from 'axios'; 
 import { UserType } from '../../model/User';
+import logger from '../../../../utils/logger';
 
 export default async (user: UserType) => {
   try {
@@ -26,7 +27,7 @@ export default async (user: UserType) => {
       ...data,
     };
   } catch (err: any) {
-    console.error(err.response?.data);
+    logger.error({ err, responseData: err.response?.data, userId: user._id }, '[createCustomer] Failed to create payment customer.');
     return {
       success: false,
       message: 'Error Creating Customer',

@@ -3,6 +3,7 @@ import { CRUDHandler, PaginationOptions } from '../../../utils/baseCRUD';
 import { ModelMap } from '../../../utils/ModelMap';
 import { default as Auth, UserType as AuthType } from '../model/User';
 import crypto from 'crypto';
+import logger from '../../../utils/logger';
 
 export class AdminAuthHandler extends CRUDHandler<AuthType> {
   modelMap: Record<string, any>;
@@ -45,7 +46,7 @@ export class AdminAuthHandler extends CRUDHandler<AuthType> {
     if (!doc) return;
 
     for (const [role, profileId] of Object.entries(doc.profileRefs)) {
-      console.info(`[AdminAuthHandler]: Cleaning up profile for role: ${role}, profileId: ${profileId}`);
+      logger.debug({ role, profileId, userId: doc._id }, '[AdminAuthHandler] Cleaning up profile after user delete.');
       const profile = await this.modelMap[role].findById(profileId);
       if (!profile) continue;
 

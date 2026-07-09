@@ -5,6 +5,7 @@ import { CRUDService } from '../../../utils/baseCRUD';
 import { AdminAuthHandler } from '../handlers/AdminAuthHandler';
 import error from '../../../middleware/error';
 import { eventBus } from '../../../lib/eventBus';
+import logger from '../../../utils/logger';
 
 export class AdminAuthService extends CRUDService {
   constructor() {
@@ -48,7 +49,7 @@ export class AdminAuthService extends CRUDService {
       }
       return res.status(200).json(result);
     } catch (err) {
-      console.error(err);
+      logger.error({ err, userId: req.params.id }, '[AdminAuthService] Failed to update password.');
       return error(err, req, res);
     }
   });

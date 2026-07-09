@@ -1,4 +1,5 @@
 import axios from 'axios';
+import logger from '../../../../utils/logger';
 
 export default async (id: string) => {
   try {
@@ -19,7 +20,7 @@ export default async (id: string) => {
       ...data,
     };
   } catch (err: any) {
-    console.error(err);
+    logger.error({ err, customerId: id }, '[removeCustomer] Failed to remove customer.');
     return {
       success: false,
       message: 'Error Removing Customer',
