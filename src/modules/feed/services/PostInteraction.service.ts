@@ -3,6 +3,7 @@ import { AuthenticatedRequest } from '../../../types/AuthenticatedRequest';
 import { PostInteractionHandler } from '../handlers/PostInteraction.handler';
 import asyncHandler from '../../../middleware/asyncHandler';
 import error from '../../../middleware/error';
+import logger from '../../../utils/logger';
 
 export class PostInteractionService {
   private handler: PostInteractionHandler;
@@ -34,7 +35,7 @@ export class PostInteractionService {
         payload: result.reaction,
       });
     } catch (err) {
-      console.error(err);
+      logger.error({ err, postId: req.params.postId }, '[PostInteractionService] Failed to add reaction.');
       return error(err, req, res);
     }
   });
@@ -63,7 +64,7 @@ export class PostInteractionService {
         message: 'Reaction removed',
       });
     } catch (err) {
-      console.error(err);
+      logger.error({ err, postId: req.params.postId }, '[PostInteractionService] Failed to remove reaction.');
       return error(err, req, res);
     }
   });
@@ -91,7 +92,7 @@ export class PostInteractionService {
         },
       });
     } catch (err) {
-      console.error(err);
+      logger.error({ err, postId: req.params.postId }, '[PostInteractionService] Failed to get current user reaction.');
       return error(err, req, res);
     }
   });
@@ -119,7 +120,7 @@ export class PostInteractionService {
         payload: { isNew },
       });
     } catch (err) {
-      console.error(err);
+      logger.error({ err, postId: req.params.postId }, '[PostInteractionService] Failed to record view.');
       return error(err, req, res);
     }
   });
@@ -147,7 +148,7 @@ export class PostInteractionService {
         payload: share,
       });
     } catch (err) {
-      console.error(err);
+      logger.error({ err, postId: req.params.postId }, '[PostInteractionService] Failed to record share.');
       return error(err, req, res);
     }
   });
@@ -174,7 +175,7 @@ export class PostInteractionService {
         },
       });
     } catch (err) {
-      console.error(err);
+      logger.error({ err, postId: req.params.postId }, '[PostInteractionService] Failed to get post reactions.');
       return error(err, req, res);
     }
   });
@@ -194,7 +195,7 @@ export class PostInteractionService {
         payload: breakdown,
       });
     } catch (err) {
-      console.error(err);
+      logger.error({ err, postId: req.params.postId }, '[PostInteractionService] Failed to get reaction breakdown.');
       return error(err, req, res);
     }
   });

@@ -8,7 +8,7 @@ import ConversationEventHandler from '../handler/Conversation.handler';
 export default class NConversationService {
   constructor(private readonly handler: ConversationEventHandler = new ConversationEventHandler()) {}
   public init() {
-    eventBus.subscribe('conversation.message', this.handler.messageSent);
-    eventBus.subscribe('conversation.started', this.handler.conversationStarted);
+    eventBus.subscribe('conversation.message', (e: any) => this.handler.messageSent(e));
+    eventBus.subscribe('conversation.started', (e: any) => this.handler.conversationStarted(e));
   }
 }

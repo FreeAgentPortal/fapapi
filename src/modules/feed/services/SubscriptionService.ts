@@ -6,6 +6,7 @@ import { AuthenticatedRequest } from '../../../types/AuthenticatedRequest';
 import asyncHandler from '../../../middleware/asyncHandler';
 import { Handler } from '../handlers/SubscriptionHandler';
 import { CRUDService } from '../../../utils/baseCRUD';
+import logger from '../../../utils/logger';
 
 export default class SubscriptionService extends CRUDService {
   constructor() {
@@ -25,7 +26,7 @@ export default class SubscriptionService extends CRUDService {
       await this.handler.toggle(req.body.subscriber, req.body.target);
       return res.status(201).json({ success: true });
     } catch (err) {
-      console.error(err);
+      logger.error({ err, subscriber: req.body.subscriber, target: req.body.target }, '[SubscriptionService] Failed to toggle subscription.');
       return error(err, req, res);
     }
   });

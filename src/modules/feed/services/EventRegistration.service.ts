@@ -5,6 +5,7 @@ import { CRUDService } from '../../../utils/baseCRUD';
 import { EventRegistrationHandler } from '../handlers/EventRegistration.handler';
 import { AuthenticatedRequest } from '../../../types/AuthenticatedRequest';
 import { RegistrationStatus } from '../model/EventRegistration.model';
+import logger from '../../../utils/logger';
 
 export default class EventRegistrationService extends CRUDService {
   protected handler: EventRegistrationHandler;
@@ -42,7 +43,7 @@ export default class EventRegistrationService extends CRUDService {
         payload: registration,
       });
     } catch (err: any) {
-      console.error(err);
+      logger.error({ err, eventId: req.params.eventId }, '[EventRegistrationService] Failed to register for event.');
       return res.status(400).json({ success: false, message: err.message || 'Registration failed' });
     }
   });
@@ -69,7 +70,7 @@ export default class EventRegistrationService extends CRUDService {
 
       return res.status(200).json({ success: true, payload: registration });
     } catch (err: any) {
-      console.error(err);
+      logger.error({ err, eventId: req.params.eventId }, '[EventRegistrationService] Failed to get current user registration.');
       return res.status(400).json({ success: false, message: err.message || 'Failed to fetch registration' });
     }
   });
@@ -100,7 +101,7 @@ export default class EventRegistrationService extends CRUDService {
         payload: registration,
       });
     } catch (err: any) {
-      console.error(err);
+      logger.error({ err, eventId: req.params.eventId }, '[EventRegistrationService] Failed to cancel registration.');
       return res.status(400).json({ success: false, message: err.message || 'Failed to cancel registration' });
     }
   });
@@ -122,7 +123,7 @@ export default class EventRegistrationService extends CRUDService {
         count: registrations.length,
       });
     } catch (err: any) {
-      console.error(err);
+      logger.error({ err, eventId: req.params.eventId, status: req.query.status }, '[EventRegistrationService] Failed to get event registrations.');
       return res.status(400).json({ success: false, message: err.message || 'Failed to fetch registrations' });
     }
   });
@@ -152,7 +153,7 @@ export default class EventRegistrationService extends CRUDService {
         payload: registration,
       });
     } catch (err: any) {
-      console.error(err);
+      logger.error({ err, athleteId: req.params.athleteId, status: req.body.status }, '[EventRegistrationService] Failed to update registration status.');
       return res.status(400).json({ success: false, message: err.message || 'Failed to update registration status' });
     }
   });
@@ -173,7 +174,7 @@ export default class EventRegistrationService extends CRUDService {
         payload: { count, status: status || 'all' },
       });
     } catch (err: any) {
-      console.error(err);
+      logger.error({ err, eventId: req.params.eventId, status: req.query.status }, '[EventRegistrationService] Failed to get registration count.');
       return res.status(400).json({ success: false, message: err.message || 'Failed to get registration count' });
     }
   });

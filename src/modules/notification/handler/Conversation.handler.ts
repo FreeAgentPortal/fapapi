@@ -8,6 +8,7 @@ import { IConversation } from '../../messaging/models/Conversation';
 import TeamModel from '../../profiles/team/model/TeamModel';
 import { AthleteModel } from '../../profiles/athlete/models/AthleteModel';
 import { AgentProfileModel } from '../../profiles/agent/model/AgentProfile';
+import logger from '../../../utils/logger';
 
 export default class ConversationEventHandler {
   async messageSent(event: { message: IMessage }) {
@@ -21,7 +22,6 @@ export default class ConversationEventHandler {
       this.findUserByProfile(message.sender.role, message.sender.profile),
       this.findUserByProfile(message.receiver.role, message.receiver.profile),
     ]);
-
     if (!receiverUser) {
       return;
     }

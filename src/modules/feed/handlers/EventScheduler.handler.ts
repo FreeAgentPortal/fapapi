@@ -2,6 +2,7 @@ import { ModelKey, ModelMap } from '../../../utils/ModelMap';
 import { EventModel } from '../model/Event.model';
 import { ActivityClient } from '../util/ActivityClient';
 import { mapEventCreated } from '../util/activityMapper';
+import logger from '../../../utils/logger';
 
 interface EventsToProcess {
   eventsToStart: any[];
@@ -31,7 +32,7 @@ export class EventSchedulerHandler {
 
       // Only log if there are events to process
       if (totalToProcess > 0) {
-        console.info(`[EventSchedulerHandler] Processing ${totalToProcess} scheduled events...`);
+        logger.info({ totalToProcess }, '[EventSchedulerHandler] Processing scheduled events.');
       }
 
       // Process events that should be marked as active (started)
@@ -39,10 +40,10 @@ export class EventSchedulerHandler {
         try {
           await this.markEventActive(event);
           successCount++;
-          console.info(`[EventSchedulerHandler] Marked event ${event._id} "${event.title}" as active`);
+          logger.info({ eventId: event._id, title: event.title }, '[EventSchedulerHandler] Marked event as active.');
         } catch (error) {
           errorCount++;
-          console.error(`[EventSchedulerHandler] Error marking event ${event._id} as active:`, error);
+          logger.error({ err: error, eventId: event._id }, '[EventSchedulerHandler] Error marking event as active.');
         }
       }
 
@@ -51,16 +52,14 @@ export class EventSchedulerHandler {
         try {
           await this.markEventCompleted(event);
           successCount++;
-          console.info(`[EventSchedulerHandler] Marked event ${event._id} "${event.title}" as completed`);
+          logger.info({ eventId: event._id, title: event.title }, '[EventSchedulerHandler] Marked event as completed.');
         } catch (error) {
           errorCount++;
-          console.error(`[EventSchedulerHandler] Error marking event ${event._id} as completed:`, error);
+          logger.error({ err: error, eventId: event._id }, '[EventSchedulerHandler] Error marking event as completed.');
         }
       }
 
       const totalProcessed = eventsToProcess.eventsToStart.length + eventsToProcess.eventsToComplete.length;
-
-      // console.info(`[EventSchedulerHandler] Processing completed. Success: ${successCount}, Errors: ${errorCount}, Skipped: ${skippedCount}, Total: ${totalProcessed}`);
 
       return {
         successCount,
@@ -69,7 +68,7 @@ export class EventSchedulerHandler {
         totalProcessed,
       };
     } catch (error) {
-      console.error('[EventSchedulerHandler] Error in processEvents:', error);
+      logger.error({ err: error }, '[EventSchedulerHandler] Error in processEvents.');
       return {
         successCount: 0,
         errorCount: 1,
@@ -104,7 +103,7 @@ export class EventSchedulerHandler {
 
       // Only log when events are found to reduce noise
       if (eventsToComplete.length > 0 || eventsToStart.length > 0) {
-        console.info(`[EventSchedulerHandler] Found ${eventsToComplete.length} events to complete and ${eventsToStart.length} events that have started`);
+        logger.info({ completeCount: eventsToComplete.length, startCount: eventsToStart.length }, '[EventSchedulerHandler] Found events to process.');
       }
 
       return {
@@ -112,7 +111,7 @@ export class EventSchedulerHandler {
         eventsToComplete,
       };
     } catch (error) {
-      console.error('[EventSchedulerHandler] Error fetching events:', error);
+      logger.error({ err: error }, '[EventSchedulerHandler] Error fetching events.');
       throw error;
     }
   }

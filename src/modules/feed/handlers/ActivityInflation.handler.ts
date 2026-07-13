@@ -1,5 +1,6 @@
 import mongoose from 'mongoose';
 import { IActivity } from '../model/Activity.model';
+import logger from '../../../utils/logger';
 
 /**
  * Handler for inflating activity objects and their associated profiles
@@ -32,7 +33,7 @@ export class ActivityInflationHandler {
         // Get the Mongoose model name from the collection name
         const modelName = this.getModelName(collection);
         if (!modelName) {
-          console.warn(`Unknown collection type: "${collection}", skipping inflation`);
+          logger.warn({ collection }, '[ActivityInflationHandler] Unknown collection type, skipping inflation.');
           continue;
         }
 
@@ -56,7 +57,7 @@ export class ActivityInflationHandler {
           }
         }
       } catch (error) {
-        console.error(`Failed to inflate objects from collection "${collection}":`, error);
+        logger.error({ err: error, collection }, '[ActivityInflationHandler] Failed to inflate objects from collection.');
         // Continue processing other collections even if one fails
       }
     }
@@ -98,7 +99,7 @@ export class ActivityInflationHandler {
         await this.inflateProfile(obj, profileType, profileId);
       }
     } catch (error) {
-      console.error(`Failed to determine profile for collection "${collection}":`, error);
+      logger.error({ err: error, collection }, '[ActivityInflationHandler] Failed to determine profile for collection.');
     }
   }
 
@@ -129,7 +130,7 @@ export class ActivityInflationHandler {
 
       const collectionName = collectionMap[profileType.toLowerCase()];
       if (!collectionName) {
-        console.warn(`Unknown profile type: "${profileType}"`);
+        logger.warn({ profileType }, '[ActivityInflationHandler] Unknown profile type.');
         return;
       }
 
@@ -155,7 +156,7 @@ export class ActivityInflationHandler {
         obj.profile = profile;
       }
     } catch (error) {
-      console.error(`Failed to inflate profile of type "${profileType}":`, error);
+      logger.error({ err: error, profileType, profileId }, '[ActivityInflationHandler] Failed to inflate profile.');
     }
   }
 

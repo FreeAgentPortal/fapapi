@@ -5,26 +5,39 @@ import BillingAccount from '../../../auth/model/BillingAccount';
 import { AthleteProfileHandler } from './AtheleteProfileHandler';
 import { CRUDHandler } from '../../../../utils/baseCRUD';
 import { BillingValidator } from '../../../../utils/billingValidation';
+import logger from '../../../../utils/logger';
 
 /**
  * Handles creation, retrieval, and modification of athlete profiles.
  */
 export class ProfileActionsHandler {
   async getProfile(data: any): Promise<IAthlete> {
+    logger.debug({ profileId: data.id }, 'getProfile: initiated');
+
     const crudHandler = new AthleteProfileHandler();
     const profile = await crudHandler.fetch(data.id);
-    if (!profile) throw new ErrorUtil('Unable to fetch Profile', 400);
+    if (!profile) {
+      logger.debug({ profileId: data.id }, 'getProfile: profile not found');
+      throw new ErrorUtil('Unable to fetch Profile', 400);
+    }
+    logger.debug({ profileId: profile._id }, 'getProfile: profile fetched');
 
-    const billing = await BillingAccount.findOne({ profileId: profile._id });
+    const billing = await BillingAccount.findOne({ profileId: profile._id }).populate('plan');
     if (!billing) {
+      logger.debug({ profileId: profile._id }, 'getProfile: billing account not found');
       throw new ErrorUtil('billing information not found', 400);
     }
+    logger.debug({ profileId: profile._id, billingId: billing._id }, 'getProfile: billing account found');
 
     // Use the comprehensive billing validator
-    const billingValidation = BillingValidator.validateBillingAccount(billing); 
+    const billingValidation = BillingValidator.validateBillingAccount(billing);
     const isAgentManaged = !!profile.agent?.profile && profile.agent?.status === 'active';
+    logger.debug(
+      { profileId: profile._id, isAgentManaged, billingNeedsUpdate: billingValidation.needsUpdate, billingSeverity: billingValidation.severity },
+      'getProfile: billing validation complete'
+    );
 
-    return { 
+    return {
       ...profile,
       needsBillingSetup: isAgentManaged ? false : billingValidation.needsUpdate,
       billingValidation: isAgentManaged
@@ -40,30 +53,45 @@ export class ProfileActionsHandler {
   }
 
   async populateFromEspn(playerid: string): Promise<IAthlete> {
+    logger.debug({ playerid }, 'populateFromEspn: initiated');
+
     const crudHandler = new AthleteProfileHandler();
     const profile = await crudHandler.fetch(playerid);
-    if (!profile) throw new ErrorUtil('Unable to fetch Profile', 400);
+    if (!profile) {
+      logger.debug({ playerid }, 'populateFromEspn: profile not found');
+      throw new ErrorUtil('Unable to fetch Profile', 400);
+    }
+    logger.debug({ profileId: profile._id, playerid }, 'populateFromEspn: profile fetched');
 
     // 1. Query ESPN API for player data
     try {
+      logger.debug({ playerid }, 'populateFromEspn: requesting ESPN API');
       const espnResponse = await fetch(`https://site.api.espn.com/apis/site/v2/sports/football/nfl/athletes/${playerid}`);
       if (!espnResponse.ok) {
+        logger.debug({ playerid, status: espnResponse.status }, 'populateFromEspn: ESPN API responded with error status');
         throw new ErrorUtil('Failed to fetch data from ESPN', 400);
       }
+      logger.debug({ playerid, status: espnResponse.status }, 'populateFromEspn: ESPN API response received');
+
       const espnData = await espnResponse.json();
+      logger.debug({ playerid, espnId: espnData?.id }, 'populateFromEspn: ESPN data parsed');
 
       // 2. Map ESPN data to profile fields
       const mappedProfile = mapAthleteData(espnData);
+      logger.debug({ playerid }, 'populateFromEspn: ESPN data mapped to profile shape');
 
       // 3. Only update fields that are not already set by the user
       const updatedProfile = mergeWithExistingData(profile, mappedProfile);
+      logger.debug({ playerid }, 'populateFromEspn: merged ESPN data with existing profile');
 
       // 4. Save profile with merged data
       await crudHandler.update(profile._id, updatedProfile);
+      logger.debug({ profileId: profile._id, playerid }, 'populateFromEspn: profile updated in database');
 
       // 5. Return updated profile
       return updatedProfile;
     } catch (err) {
+      logger.debug({ playerid, err }, 'populateFromEspn: error during ESPN population');
       throw new ErrorUtil('Failed to populate profile from ESPN', 400);
     }
   }

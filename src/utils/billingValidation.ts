@@ -34,10 +34,11 @@ export class BillingValidator {
     const recommendations: string[] = [];
     let severity: 'critical' | 'warning' | 'info' = 'info';
     const isActiveFreePlan = billing.status === 'active' && Number(billing.plan?.price) === 0;
-    // logger.debug({ status: billing.status, vaulted: billing.vaulted, planPrice: billing.plan?.price, isActiveFreePlan }, 'BillingValidator: validateBillingAccount called');
+    logger.debug({ status: billing.status, vaulted: billing.vaulted, planPrice: billing.plan?.price, isActiveFreePlan }, 'validateBillingAccount: called');
 
     // Primary check: Payment information not vaulted
     if (!billing.vaulted && !isActiveFreePlan) {
+      logger.debug({ vaulted: billing.vaulted, isActiveFreePlan }, 'validateBillingAccount: payment method not vaulted and not a free plan');
       reasons.push('Payment information not saved (not vaulted)');
       recommendations.push('Add payment method to vault for automatic billing');
       severity = 'critical';
@@ -45,6 +46,7 @@ export class BillingValidator {
 
     // Check if account is inactive or suspended
     if (billing.status === 'inactive' || billing.status === 'suspended') {
+      logger.debug({ status: billing.status }, 'validateBillingAccount: account is inactive or suspended');
       reasons.push(`Account status is ${billing.status}`);
       recommendations.push('Update payment information to reactivate account');
       severity = 'critical';
@@ -52,6 +54,7 @@ export class BillingValidator {
 
     // Check if explicitly marked as needing update
     if (billing.needsUpdate) {
+      logger.debug({}, 'validateBillingAccount: account flagged for manual update');
       reasons.push('Billing account flagged for manual update');
       recommendations.push('Review and update billing information');
       if (severity !== 'critical') severity = 'warning';
@@ -59,7 +62,10 @@ export class BillingValidator {
 
     // Check if next billing date has passed and account is not vaulted
     if (billing.nextBillingDate && billing.nextBillingDate < new Date() && !billing.vaulted && !isActiveFreePlan) {
-      // logger.debug({ nextBillingDate: billing.nextBillingDate, vaulted: billing.vaulted, isActiveFreePlan }, 'BillingValidator: next billing date passed without payment method');
+      logger.debug(
+        { nextBillingDate: billing.nextBillingDate, vaulted: billing.vaulted, isActiveFreePlan },
+        'validateBillingAccount: next billing date passed without payment method'
+      );
       reasons.push('Next billing date has passed without payment method on file');
       recommendations.push('Add payment method before next billing cycle');
       severity = 'critical';
@@ -84,17 +90,20 @@ export class BillingValidator {
 
     // Check if missing required processor information
     if (billing.vaulted && !billing.processor) {
+      logger.debug({}, 'validateBillingAccount: vaulted but processor information missing');
       reasons.push('Payment method vaulted but processor information missing');
       recommendations.push('Contact support to resolve payment processor configuration');
       if (severity !== 'critical') severity = 'warning';
     }
 
-    return {
+    const result = {
       needsUpdate: reasons.length > 0,
       reasons,
       severity,
       recommendations,
     };
+    logger.debug({ needsUpdate: result.needsUpdate, severity: result.severity, reasonCount: result.reasons.length }, 'validateBillingAccount: validation complete');
+    return result;
   }
 
   /**
@@ -103,7 +112,9 @@ export class BillingValidator {
    * @returns boolean indicating if billing needs update
    */
   static needsBillingUpdate(billing: BillingAccountType | null): boolean {
-    return this.validateBillingAccount(billing).needsUpdate;
+    const result = this.validateBillingAccount(billing).needsUpdate;
+    logger.debug({ needsUpdate: result }, 'needsBillingUpdate: result');
+    return result;
   }
 
   /**
@@ -112,7 +123,9 @@ export class BillingValidator {
    * @returns boolean indicating if payment method is saved
    */
   static isPaymentMethodSaved(billing: BillingAccountType | null): boolean {
-    return billing?.vaulted === true;
+    const result = billing?.vaulted === true;
+    logger.debug({ vaulted: billing?.vaulted, result }, 'isPaymentMethodSaved: result');
+    return result;
   }
 
   /**
@@ -121,9 +134,14 @@ export class BillingValidator {
    * @returns boolean indicating if account is in good standing
    */
   static isAccountInGoodStanding(billing: BillingAccountType | null): boolean {
-    if (!billing) return false;
+    if (!billing) {
+      logger.debug({}, 'isAccountInGoodStanding: no billing account — returning false');
+      return false;
+    }
     const isActiveFreePlan = billing.status === 'active' && Number(billing.plan?.price) === 0;
-    return billing.status === 'active' && (isActiveFreePlan || billing.vaulted === true) && !billing.needsUpdate;
+    const result = billing.status === 'active' && (isActiveFreePlan || billing.vaulted === true) && !billing.needsUpdate;
+    logger.debug({ status: billing.status, isActiveFreePlan, vaulted: billing.vaulted, needsUpdate: billing.needsUpdate, result }, 'isAccountInGoodStanding: result');
+    return result;
   }
 
   /**
@@ -132,20 +150,25 @@ export class BillingValidator {
    * @returns string message for display to user
    */
   static getBillingStatusMessage(billing: BillingAccountType | null): string {
+    logger.debug({}, 'getBillingStatusMessage: called');
     const validation = this.validateBillingAccount(billing);
 
     if (!validation.needsUpdate) {
+      logger.debug({}, 'getBillingStatusMessage: billing is up to date');
       return 'Your billing information is up to date.';
     }
 
     if (validation.severity === 'critical') {
+      logger.debug({ reason: validation.reasons[0] }, 'getBillingStatusMessage: critical severity');
       return `Action required: ${validation.reasons[0]}`;
     }
 
     if (validation.severity === 'warning') {
+      logger.debug({ reason: validation.reasons[0] }, 'getBillingStatusMessage: warning severity');
       return `Attention needed: ${validation.reasons[0]}`;
     }
 
+    logger.debug({ reason: validation.reasons[0] }, 'getBillingStatusMessage: info severity');
     return validation.reasons[0] || 'Please review your billing information.';
   }
 }
@@ -155,5 +178,6 @@ export class BillingValidator {
  * @deprecated Use BillingValidator.needsBillingUpdate() instead
  */
 export const checkBillingNeedsUpdate = (billing: BillingAccountType | null): boolean => {
+  logger.debug({}, 'checkBillingNeedsUpdate: called (legacy)');
   return BillingValidator.needsBillingUpdate(billing);
 };

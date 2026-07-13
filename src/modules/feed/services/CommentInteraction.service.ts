@@ -7,6 +7,7 @@ import asyncHandler from '../../../middleware/asyncHandler';
 import error from '../../../middleware/error';
 import { AdvFilters } from '../../../utils/advFilter/AdvFilters';
 import { ActivityModel } from '../model/Activity.model';
+import logger from '../../../utils/logger';
 
 export default class CommentInteractionService extends CRUDService {
   protected handler: CommentHandler;
@@ -56,7 +57,7 @@ export default class CommentInteractionService extends CRUDService {
         },
       });
     } catch (err) {
-      console.error(err);
+      logger.error({ err, postId: req.params.postId, query: req.query }, '[CommentInteractionService] Failed to get post comments.');
       return error(err, req, res);
     }
   };
@@ -117,7 +118,7 @@ export default class CommentInteractionService extends CRUDService {
         data: comment,
       });
     } catch (err) {
-      console.error('[CommentInteractionService] Error creating comment:', err);
+      logger.error({ err, postId: req.params.postId }, '[CommentInteractionService] Error creating comment.');
       return error(err, req, res);
     }
   });
@@ -162,7 +163,7 @@ export default class CommentInteractionService extends CRUDService {
         data: comment,
       });
     } catch (err) {
-      console.error('[CommentInteractionService] Error updating comment:', err);
+      logger.error({ err, commentId: req.params.commentId }, '[CommentInteractionService] Error updating comment.');
       return error(err, req, res);
     }
   });
@@ -202,7 +203,7 @@ export default class CommentInteractionService extends CRUDService {
         message: 'Comment deleted successfully',
       });
     } catch (err) {
-      console.error('[CommentInteractionService] Error deleting comment:', err);
+      logger.error({ err, postId: req.params.postId, commentId: req.params.commentId }, '[CommentInteractionService] Error deleting comment.');
       return error(err, req, res);
     }
   });
@@ -229,7 +230,7 @@ export default class CommentInteractionService extends CRUDService {
         data: comment,
       });
     } catch (err) {
-      console.error('[CommentInteractionService] Error getting comment:', err);
+      logger.error({ err, commentId: req.params.commentId }, '[CommentInteractionService] Error getting comment.');
       return error(err, req, res);
     }
   });
@@ -273,7 +274,7 @@ export default class CommentInteractionService extends CRUDService {
         message: 'Comment flagged for moderation',
       });
     } catch (err) {
-      console.error('[CommentInteractionService] Error flagging comment:', err);
+      logger.error({ err, commentId: req.params.commentId }, '[CommentInteractionService] Error flagging comment.');
       return error(err, req, res);
     }
   });

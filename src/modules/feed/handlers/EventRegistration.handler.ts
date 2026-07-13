@@ -2,6 +2,7 @@ import { CRUDHandler } from '../../../utils/baseCRUD';
 import { EventRegistrationDocument, EventRegistrationModel, RegistrationStatus } from '../model/EventRegistration.model';
 import { EventModel } from '../model/Event.model';
 import mongoose from 'mongoose';
+import logger from '../../../utils/logger';
 
 type ProfileType = 'athlete' | 'team' | 'agent' | 'scout' | 'media';
 
@@ -154,7 +155,7 @@ export class EventRegistrationHandler extends CRUDHandler<EventRegistrationDocum
 
         const collectionName = collectionMap[collection];
         if (!collectionName) {
-          console.warn(`Unknown profile collection: "${collection}"`);
+          logger.warn({ collection }, '[EventRegistrationHandler] Unknown profile collection.');
           continue;
         }
 
@@ -185,7 +186,7 @@ export class EventRegistrationHandler extends CRUDHandler<EventRegistrationDocum
           }
         }
       } catch (error) {
-        console.error(`Failed to inflate profiles from collection "${collection}":`, error);
+        logger.error({ err: error, collection }, '[EventRegistrationHandler] Failed to inflate profiles from collection.');
       }
     }
   }

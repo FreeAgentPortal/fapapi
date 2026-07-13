@@ -5,6 +5,7 @@ import { AdvFilters } from '../../../utils/advFilter/AdvFilters';
 import { AuthenticatedRequest } from '../../../types/AuthenticatedRequest';
 import asyncHandler from '../../../middleware/asyncHandler';
 import { NewsFeedHandler, PaginationOptions } from '../handlers/NewsFeedHandler';
+import logger from '../../../utils/logger';
 
 export default class FeedService {
   constructor(private readonly handler: NewsFeedHandler = new NewsFeedHandler()) {}
@@ -30,7 +31,7 @@ export default class FeedService {
         },
       });
     } catch (err: any) {
-      console.error(err);
+      logger.error({ err, query: req.query }, '[FeedService] Failed to fetch articles.');
       return error(err, req, res);
     }
   };

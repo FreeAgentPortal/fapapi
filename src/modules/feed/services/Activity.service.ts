@@ -4,6 +4,7 @@ import { AdvFilters } from '../../../utils/advFilter/AdvFilters';
 import { CRUDService } from '../../../utils/baseCRUD';
 import { ActivityHandler } from '../handlers/Activity.handler';
 import error from '../../../middleware/error';
+import logger from '../../../utils/logger';
 
 export class ActivityService extends CRUDService {
   constructor() {
@@ -59,7 +60,7 @@ export class ActivityService extends CRUDService {
         },
       });
     } catch (err) {
-      console.error(err);
+      logger.error({ err, query: req.query }, '[ActivityService] Failed to get activities.');
       return error(err, req, res);
     }
   };
@@ -77,7 +78,7 @@ export class ActivityService extends CRUDService {
         payload: activity,
       });
     } catch (err) {
-      console.error(err);
+      logger.error({ err, activityId: req.params.id }, '[ActivityService] Failed to get activity.');
       return error(err, req, res);
     }
   };

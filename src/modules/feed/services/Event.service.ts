@@ -7,6 +7,7 @@ import error from '../../../middleware/error';
 import { ActivityClient } from '../util/ActivityClient';
 import { EventDocument } from '../model/Event.model';
 import { mapEventCreated } from '../util/activityMapper';
+import logger from '../../../utils/logger';
 
 export class EventService extends CRUDService {
   constructor() {
@@ -19,7 +20,7 @@ export class EventService extends CRUDService {
       const stats = await this.handler.getEventStatistics(teamId);
       res.json(stats);
     } catch (err) {
-      console.error(err);
+      logger.error({ err, teamId: req.params.teamId }, '[EventService] Failed to get event stats by team.');
       error(err, req, res);
     }
   });
@@ -43,7 +44,7 @@ export class EventService extends CRUDService {
         );
       }
     } catch (error) {
-      console.error('[EventService]: Error publishing activity:', error);
+      logger.error({ err: error, eventId: doc._id }, '[EventService] Error publishing activity.');
     }
   }
 }

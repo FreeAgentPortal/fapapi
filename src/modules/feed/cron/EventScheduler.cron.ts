@@ -1,5 +1,6 @@
 import cron from 'node-cron';
 import { EventSchedulerHandler } from '../handlers/EventScheduler.handler';
+import logger from '../../../utils/logger';
 
 export class EventSchedulerCron {
   private static isRunning = false;
@@ -10,14 +11,14 @@ export class EventSchedulerCron {
    * Runs every 5 minutes to check for events that need status updates
    */
   public static init(): void {
-    console.info('[EventScheduler] Initializing event scheduler cron job(s)...');
+    logger.info('[EventScheduler] Initializing event scheduler cron job(s)...');
 
     // Schedule to run every 5 minutes
     cron.schedule(
       '*/5 * * * *', // Every 5 minutes
       async () => {
         if (EventSchedulerCron.isRunning) {
-          console.info('[EventScheduler] Previous job still running, skipping...');
+          logger.warn('[EventScheduler] Previous job still running, skipping...');
           return;
         }
 
@@ -30,10 +31,10 @@ export class EventSchedulerCron {
 
           // Only log if there were events processed or errors occurred
           if (result.totalProcessed > 0 || result.errorCount > 0) {
-            console.info('[EventScheduler] Event processing completed:', result);
+            logger.info({ result }, '[EventScheduler] Event processing completed.');
           }
         } catch (error) {
-          console.error('[EventScheduler] Error in scheduled event processing:', error);
+          logger.error({ err: error }, '[EventScheduler] Error in scheduled event processing.');
         } finally {
           EventSchedulerCron.isRunning = false;
         }
@@ -44,7 +45,7 @@ export class EventSchedulerCron {
       }
     );
 
-    console.info('[EventScheduler] Event scheduler cron job initialized');
+    logger.info('[EventScheduler] Event scheduler cron job initialized.');
   }
   /**
    * Get status of the cron job
