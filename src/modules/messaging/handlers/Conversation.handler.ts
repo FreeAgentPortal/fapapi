@@ -173,6 +173,35 @@ export class ConversationHandler {
     }).populate('participants.team', 'name logos');
   }
 
+  async getUnreadConversationCount(profileId: string, role: ConversationRole): Promise<number> {
+    const unreadConversationIds = await MessageModel.distinct('conversation', {
+      'receiver.profile': profileId,
+      'receiver.role': role,
+      read: false,
+      status: 'active',
+    });
+
+    if (unreadConversationIds.length === 0) {
+      return 0;
+    }
+
+    const participantQuery =
+      role === 'team'
+        ? { 'participants.team': profileId }
+        : role === 'agent'
+          ? { 'participants.agent': profileId }
+          : {
+              'participants.athlete': profileId,
+              'participants.agent': { $exists: false },
+            };
+
+    return await ConversationModel.countDocuments({
+      _id: { $in: unreadConversationIds },
+      ...participantQuery,
+      status: { $nin: ['deleted', 'hidden'] },
+    });
+  }
+
   async getConversation(conversationId: string): Promise<IConversation> {
     logger.debug({ conversationId }, 'getConversation: initiated');
 

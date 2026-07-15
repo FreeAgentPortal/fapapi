@@ -78,6 +78,26 @@ export class ConversationService extends CRUDService {
     }
   });
 
+  public getUnreadConversationCount = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+    try {
+      const role = req.query.role;
+      if (role !== 'team' && role !== 'athlete' && role !== 'agent') {
+        return res.status(400).json({ message: 'role must be team, athlete, or agent' });
+      }
+
+      const profileId = req.user.profileRefs[role];
+      if (!profileId) {
+        return res.status(403).json({ message: `Authenticated user does not have a ${role} profile.` });
+      }
+
+      const unreadConversationCount = await this.conversationHandler.getUnreadConversationCount(profileId, role);
+      return res.status(200).json({ success: true, payload: { count: unreadConversationCount } });
+    } catch (err) {
+      console.error(err);
+      return error(err, req, res);
+    }
+  });
+
   public getConversation = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
     try {
       const { conversationId } = req.params;

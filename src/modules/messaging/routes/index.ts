@@ -13,6 +13,7 @@ router.use('/admin/message', messageRoutes);
 router.use('/admin', adminRoutes);
 router.use('/unread-alerts', unreadAlertsRoutes);
 
+router.route('/count').get(service.getUnreadConversationCount);
 router.route('/').get(service.getConversations).post(service.startConversation);
 
 router.route('/:conversationId/messages').post(service.sendMessage).get(service.getConversation);
