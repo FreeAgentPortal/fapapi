@@ -76,6 +76,16 @@ export class AgentRosterService {
     }
   });
 
+  public getMyInvitationCount = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+    try {
+      const pendingInviteCount = await this.handler.getAthleteInvitationCount(this.requireProfileRef(req, 'athlete'));
+      return res.status(200).json({ success: true, payload: { pendingInviteCount } });
+    } catch (err) {
+      console.error(err);
+      return error(err, req, res);
+    }
+  });
+
   public respondToInvitation = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
     try {
       const result = await this.handler.respondToInvitation(this.requireProfileRef(req, 'athlete'), req.params.invitationId, req.body.action);

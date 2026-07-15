@@ -26,6 +26,7 @@ router.route('/roster').get(rosterService.getRoster);
 router.route('/roster/seats').get(rosterService.getSeatSummary);
 router.route('/roster/invitations').post(rosterService.inviteAthlete);
 router.route('/roster/invitations/:assignmentId').delete(rosterService.removeAthlete);
+router.route('/roster/invitations/me/count').get(rosterService.getMyInvitationCount);
 router.route('/roster/invitations/me').get(rosterService.getMyInvitations);
 router.route('/roster/invitations/:invitationId/respond').post(rosterService.respondToInvitation);
 router.route('/roster/representation/me').delete(rosterService.removeMyAgent);

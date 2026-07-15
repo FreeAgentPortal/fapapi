@@ -72,6 +72,13 @@ export class AgentRosterHandler {
       .sort({ createdAt: -1 });
   }
 
+  async getAthleteInvitationCount(athleteProfileId: string): Promise<number> {
+    return await AgentAthleteAssignmentModel.countDocuments({
+      athleteProfile: athleteProfileId,
+      status: 'pending',
+    });
+  }
+
   async respondToInvitation(athleteProfileId: string, invitationId: string, action: 'accept' | 'decline') {
     if (!['accept', 'decline'].includes(action)) {
       throw new ErrorUtil('Invitation action must be accept or decline.', 400);
