@@ -9,6 +9,13 @@ import logger from '../../../utils/logger';
 
 type ConversationRole = 'team' | 'athlete' | 'agent';
 
+type ConversationListMessage = Pick<IMessage, 'receiver' | 'read' | 'status'>;
+
+type ConversationListItem = Record<string, any> & {
+  lastMessage?: ConversationListMessage | null;
+  hasUnreadMessages: boolean;
+};
+
 export class ConversationHandler {
   async startConversation(teamId: string, athleteId: string, userId: string, initialMessage: string) {
     logger.debug({ teamId, athleteId, userId }, 'startConversation: initiated');
@@ -141,36 +148,61 @@ export class ConversationHandler {
     return message;
   }
 
-  async getConversationsForUser(userId: string, profileId: string, role: ConversationRole): Promise<IConversation[]> {
+  async getConversationsForUser(userId: string, profileId: string, role: ConversationRole): Promise<ConversationListItem[]> {
     logger.debug({ userId, profileId, role }, 'getConversationsForUser: initiated');
+
+    let conversations: Record<string, any>[];
 
     if (role === 'team') {
       logger.debug({ profileId }, 'getConversationsForUser: querying as team');
-      return ConversationModel.find({
+      conversations = await ConversationModel.find({
         'participants.team': profileId,
         // Exclude deleted conversations, and hidden conversations
         $and: [{ status: { $ne: 'deleted' } }, { status: { $ne: 'hidden' } }],
       })
         .populate('participants.athlete', 'fullName profileImageUrl')
-        .populate('participants.agent', 'displayName agencyName email contactNumber');
-    }
-
-    if (role === 'agent') {
+        .populate('participants.agent', 'displayName agencyName email contactNumber')
+        .populate('lastMessage')
+        .lean();
+    } else if (role === 'agent') {
       logger.debug({ profileId }, 'getConversationsForUser: querying as agent');
-      return ConversationModel.find({
+      conversations = await ConversationModel.find({
         'participants.agent': profileId,
         $and: [{ status: { $ne: 'deleted' } }, { status: { $ne: 'hidden' } }],
       })
         .populate('participants.team', 'name logos')
-        .populate('participants.athlete', 'fullName profileImageUrl');
+        .populate('participants.athlete', 'fullName profileImageUrl')
+        .populate('lastMessage')
+        .lean();
+    } else {
+      logger.debug({ profileId }, 'getConversationsForUser: querying as athlete (no agent)');
+      conversations = await ConversationModel.find({
+        'participants.athlete': profileId,
+        'participants.agent': { $exists: false },
+        $and: [{ status: { $ne: 'deleted' } }, { status: { $ne: 'hidden' } }],
+      })
+        .populate('participants.team', 'name logos')
+        .populate('lastMessage')
+        .lean();
     }
 
-    logger.debug({ profileId }, 'getConversationsForUser: querying as athlete (no agent)');
-    return ConversationModel.find({
-      'participants.athlete': profileId,
-      'participants.agent': { $exists: false },
-      $and: [{ status: { $ne: 'deleted' } }, { status: { $ne: 'hidden' } }],
-    }).populate('participants.team', 'name logos');
+    await this.inflateSenderProfiles(conversations);
+
+    return conversations.map((conversation) => {
+      const lastMessage = conversation.lastMessage as ConversationListMessage | null | undefined;
+      const hasUnreadMessages = Boolean(
+        lastMessage &&
+        lastMessage.status === 'active' &&
+        !lastMessage.read &&
+        lastMessage.receiver.role === role &&
+        lastMessage.receiver.profile.toString() === profileId.toString()
+      );
+
+      return {
+        ...conversation,
+        hasUnreadMessages,
+      };
+    });
   }
 
   async getUnreadConversationCount(profileId: string, role: ConversationRole): Promise<number> {
@@ -243,6 +275,66 @@ export class ConversationHandler {
     };
   }
 
+  /**
+   * Batch-inflates lastMessage.sender for a list of conversations.
+   * Attaches { _id, name } to sender.senderProfile for each conversation
+   * that has a populated lastMessage with a resolvable sender role.
+   */
+  private async inflateSenderProfiles(conversations: Record<string, any>[]): Promise<void> {
+    // Collect sender IDs grouped by role
+    const sendersByRole = new Map<string, Set<string>>();
+
+    for (const conv of conversations) {
+      const sender = conv.lastMessage?.sender;
+      if (!sender?.profile || !sender?.role) continue;
+
+      if (!sendersByRole.has(sender.role)) {
+        sendersByRole.set(sender.role, new Set());
+      }
+      sendersByRole.get(sender.role)!.add(sender.profile.toString());
+    }
+
+    // Batch fetch names per role and build a keyed lookup map
+    const profileNameMap = new Map<string, string>();
+
+    for (const [role, ids] of sendersByRole) {
+      const idArray = Array.from(ids);
+
+      try {
+        if (role === 'athlete') {
+          const profiles = await AthleteModel.find({ _id: { $in: idArray } }, { _id: 1, fullName: 1 }).lean();
+          for (const p of profiles as any[]) {
+            profileNameMap.set(`athlete:${p._id.toString()}`, p.fullName ?? null);
+          }
+        } else if (role === 'team') {
+          const profiles = await TeamModel.find({ _id: { $in: idArray } }, { _id: 1, name: 1 }).lean();
+          for (const p of profiles as any[]) {
+            profileNameMap.set(`team:${p._id.toString()}`, p.name ?? null);
+          }
+        } else if (role === 'agent') {
+          const profiles = await AgentProfileModel.find({ _id: { $in: idArray } }, { _id: 1, displayName: 1, agencyName: 1 }).lean();
+          for (const p of profiles as any[]) {
+            profileNameMap.set(`agent:${p._id.toString()}`, p.displayName || p.agencyName || null);
+          }
+        }
+      } catch (error) {
+        logger.error({ err: error, role }, '[ConversationHandler] Failed to inflate sender profiles for role.');
+      }
+    }
+
+    // Attach resolved name to each sender
+    for (const conv of conversations) {
+      const sender = conv.lastMessage?.sender;
+      if (!sender?.profile || !sender?.role) continue;
+
+      const key = `${sender.role}:${sender.profile.toString()}`;
+      const name = profileNameMap.get(key);
+      if (name !== undefined) {
+        sender.senderProfile = { _id: sender.profile, name };
+      }
+    }
+  }
+
   private assertAuthorizedSender(conversation: IConversation, senderProfileId: string, senderRole: ConversationRole, hasActiveAgent: boolean): void {
     logger.debug({ conversationId: conversation._id, senderProfileId, senderRole }, 'assertAuthorizedSender: checking authorization');
 
@@ -264,7 +356,7 @@ export class ConversationHandler {
       }
       logger.debug({ senderProfileId }, 'assertAuthorizedSender: athlete authorized');
       return;
-    } 
+    }
 
     if (hasActiveAgent) {
       if (!conversation.participants.agent || conversation.participants.agent.toString() !== senderProfileId.toString()) {
