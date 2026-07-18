@@ -238,7 +238,7 @@ export class ConversationHandler {
     logger.debug({ conversationId }, 'getConversation: initiated');
 
     const conversation = await ConversationModel.findById(conversationId)
-      .populate('participants.athlete', 'fullName profileImageUrl')
+      .populate('participants.athlete', 'fullName profileImageUrl agent')
       .populate('participants.team', 'name logos')
       .populate('participants.agent', 'displayName agencyName email contactNumber')
       .populate('messages');
