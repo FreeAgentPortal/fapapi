@@ -49,7 +49,10 @@ export class AuthMiddleware {
       if (service) {
         const serviceName = Array.isArray(service) ? service[0] : service;
         const Model = ModelMap[serviceName as keyof typeof ModelMap] || {};
-        const profile = await Model.findOne({ $or: [{ user: req.user._id }, { userId: req.user._id }] });
+        const profile = await Model.findOne({
+          $or: [{ user: req.user._id }, { userId: req.user._id }, { 'linkedUsers.user': req.user._id }, { 'linkedUsers.userId': req.user._id }],
+        });
+        console.log('profile found:', profile);
         if (!profile) {
           logger.debug({ service }, '[AuthMiddleware] No profile found for service.');
           return res.status(403).json({ message: `No profile found for service ${service}` });
@@ -59,14 +62,15 @@ export class AuthMiddleware {
         req.user.roles = profile.roles || [];
         // push the roles onto the permissions array for large role based access control
         req.user.permissions.push(...(req.user.roles || []));
+        console.log(`we got here`);
       } else {
         req.user.permissions = req.user.permissions || [];
       }
-
+      console.log(`we got here 2`);
       try {
         AuthActivityTracker.trackJwtActivity(req, token);
       } catch (err: any) {
-        logger.error('[AuthMiddleware] Activity tracking failed:', err); 
+        logger.error('[AuthMiddleware] Activity tracking failed:', err);
       }
 
       next();
