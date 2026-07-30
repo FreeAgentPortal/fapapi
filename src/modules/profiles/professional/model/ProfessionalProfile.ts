@@ -3,6 +3,7 @@ import mongoose, { Document, Schema } from 'mongoose';
 export interface IProfessionalProfile extends Document {
   _id: mongoose.Types.ObjectId;
   user: mongoose.Types.ObjectId;
+  isActive: boolean;
   displayName?: string;
   headline?: string;
   bio?: string;
@@ -50,6 +51,7 @@ const SocialLinksSchema = new Schema(
 const ProfessionalProfileSchema = new Schema<IProfessionalProfile>(
   {
     user: { type: Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
+    isActive: { type: Boolean, default: true },
     displayName: { type: String },
     headline: { type: String },
     bio: { type: String },
