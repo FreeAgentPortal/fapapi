@@ -5,7 +5,10 @@ export interface IProfessionalProfile extends Document {
   user: mongoose.Types.ObjectId;
   isActive: boolean;
   displayName?: string;
+  avatarUrl?: string;
   headline?: string;
+  email?: string;
+  contactNumber?: string;
   bio?: string;
   location?: {
     city?: string;
@@ -53,7 +56,10 @@ const ProfessionalProfileSchema = new Schema<IProfessionalProfile>(
     user: { type: Schema.Types.ObjectId, ref: 'User', required: true, unique: true },
     isActive: { type: Boolean, default: true },
     displayName: { type: String },
+    avatarUrl: { type: String },
     headline: { type: String },
+    email: { type: String },
+    contactNumber: { type: String },
     bio: { type: String },
     location: { type: LocationSchema },
     desiredRoles: { type: [String], default: [] },

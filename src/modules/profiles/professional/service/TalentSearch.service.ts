@@ -21,15 +21,7 @@ export default class TalentSearchService {
     const teamId = user?.profileRefs?.team;
     const userId = user?._id;
 
-    if (
-      !user ||
-      user.isActive === false ||
-      !Array.isArray(user.role) ||
-     
-      !teamId ||
-      !userId ||
-      !mongoose.Types.ObjectId.isValid(String(teamId))
-    ) {
+    if (!user || user.isActive === false || !Array.isArray(user.role) || !teamId || !userId || !mongoose.Types.ObjectId.isValid(String(teamId))) {
       console.log('Authorization failed for user:', user);
       console.trace();
       throw new ErrorUtil('Only active team users can search professional profiles', 403);
@@ -108,13 +100,7 @@ export default class TalentSearchService {
       pipeline.push(
         {
           $match: {
-            $or: [
-              { displayName: regexCondition },
-              { headline: regexCondition },
-              { bio: regexCondition },
-              { desiredRoles: regexCondition },
-              { industries: regexCondition },
-            ],
+            $or: [{ displayName: regexCondition }, { headline: regexCondition }, { bio: regexCondition }, { desiredRoles: regexCondition }, { industries: regexCondition }],
           },
         },
         {
@@ -146,6 +132,8 @@ export default class TalentSearchService {
             $project: {
               _id: 1,
               user: 1,
+              email: 1,
+              contactNumber: 1,
               userId: '$user',
               profileType: { $literal: 'professional' },
               isActive: { $literal: true },
@@ -158,9 +146,10 @@ export default class TalentSearchService {
               experienceLevel: 1,
               openToRelocation: 1,
               openToRemote: 1,
+              socialLinks: 1,
               jobSearchStatus: 1,
               visibility: 1,
-              avatarUrl: { $ifNull: ['$_owner.profileImageUrl', null] },
+              avatarUrl: 1,
               createdAt: 1,
               updatedAt: 1,
             },
