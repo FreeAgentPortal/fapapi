@@ -14,7 +14,7 @@ export class ProfileActionsHandler {
     const profile = await crudHandler.fetch(data.id);
     if (!profile) throw new ErrorUtil('Unable to fetch Profile', 400);
 
-    const billing = await BillingAccount.findOne({ profileId: profile._id });
+    const billing = await BillingAccount.findOne({ profileId: profile._id }).populate('plan').lean();
     if (!billing) {
       throw new ErrorUtil('billing information not found', 400);
     }
