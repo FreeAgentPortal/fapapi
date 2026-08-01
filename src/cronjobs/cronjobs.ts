@@ -4,9 +4,11 @@ import { PaymentSchedulerCron } from '../modules/payment/cron/PaymentScheduler.c
 import { EventSchedulerCron } from '../modules/feed/cron/EventScheduler.cron';
 import { UnreadMessageAlertScheduler } from '../modules/messaging/cron/UnreadMessageAlertScheduler.cron';
 import { JobSchedulerCron } from '../modules/jobs/cron/JobScheduler.cron';
+import { ManagedAthleteOutboxCron } from '../modules/profiles/agent/cron/ManagedAthleteOutbox.cron';
 
 export const cronJobs = async () => {
   EventSchedulerCron.init();
+  ManagedAthleteOutboxCron.init();
   // only init if not in development mode
   if (process.env.NODE_ENV === 'development') {
     console.warn('[CronJobs] Skipping cron job initialization in development mode');

@@ -16,6 +16,16 @@ interface AthleteRepresentationInviteEvent {
   message?: string;
 }
 
+interface ManagedAthleteNotificationRequestedEvent {
+  outboxId: string;
+  notificationType: 'agent.athlete-profile.updated' | 'agent.athlete-resume.updated';
+  userTo: string;
+  userFrom: string;
+  entityId: string;
+  message: string;
+  description: string;
+}
+
 export default class AthleteEventHandler {
   private modelMap: Record<ModelKey, Model<any>> = ModelMap;
 
@@ -152,6 +162,18 @@ export default class AthleteEventHandler {
     } catch (error) {
       console.error(`[Notification]: Error recording representation invite notification for athlete ${event.athleteProfileId}:`, error);
     }
+  };
+
+  managedAthleteUpdated = async (event: ManagedAthleteNotificationRequestedEvent) => {
+    await Notification.insertNotification(
+      event.userTo as any,
+      event.userFrom as any,
+      event.description,
+      event.message,
+      event.notificationType,
+      event.entityId as any,
+      event.outboxId
+    );
   };
 
   athleteViewRecorded = async (event: any) => {

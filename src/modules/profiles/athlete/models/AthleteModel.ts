@@ -5,6 +5,7 @@ export interface IAthlete extends Document {
   espnid?: string; // ESPN ID, optional for querying espn athlete data
   userId: mongoose.Types.ObjectId;
   fullName: string;
+  sport?: string;
   contactNumber?: string;
   email?: string;
   birthPlace?: {
@@ -70,6 +71,7 @@ const AthleteSchema = new Schema<IAthlete>(
     },
     espnid: { type: String, unique: true, sparse: true }, // ESPN ID for querying athlete data
     fullName: { type: String, required: true },
+    sport: { type: String, trim: true, lowercase: true, default: 'football' },
     contactNumber: { type: String },
     email: { type: String, lowercase: true, trim: true },
     birthPlace: {
@@ -80,7 +82,7 @@ const AthleteSchema = new Schema<IAthlete>(
     birthdate: { type: Date },
     measurements: {
       type: Map,
-      of: String || Number,
+      of: Schema.Types.Mixed,
       default: {},
     },
     agent: {
@@ -108,7 +110,7 @@ const AthleteSchema = new Schema<IAthlete>(
       pick: { type: Number, min: 1 },
       team: { type: String }, // Team name or ID
     },
-    graduationYear: { type: Number, min: 1900, max: new Date().getFullYear() },
+    graduationYear: { type: Number, min: 1900, max: new Date().getFullYear() + 10 },
     bio: { type: String, maxlength: 500 }, // Short bio or description
     experienceYears: { type: Number, min: 0, default: 0 },
     metrics: {
