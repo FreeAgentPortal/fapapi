@@ -4,21 +4,14 @@ import mongoose from 'mongoose';
 import { AuthMiddleware } from '../../../../middleware/AuthMiddleware';
 import TeamModel from '../../team/model/TeamModel';
 import { ProfessionalProfileModel } from '../model/ProfessionalProfile';
-import {
-  createTalentSearchRateLimiter,
-  TALENT_SEARCH_RATE_LIMIT,
-} from '../route/talentSearchRateLimiter';
+import { createTalentSearchRateLimiter, TALENT_SEARCH_RATE_LIMIT } from '../route/talentSearchRateLimiter';
 import TalentSearchService from '../service/TalentSearch.service';
-import {
-  buildFlexibleTextPattern,
-  parseTalentSearchQuery,
-} from '../utils/talentSearchQuery';
+import { buildFlexibleTextPattern, parseTalentSearchQuery } from '../utils/talentSearchQuery';
 
 describe('professional talent search query parsing', () => {
   it('parses allowlisted AND and OR filters while discarding eligibility hints', () => {
     const parsed = parseTalentSearchQuery({
-      filterOptions:
-        'isActive;false|visibility;{"$in":"private"}|jobSearchStatus;closed|experienceLevel;mid|desiredRoles;{"$in":"analytics,scout"}|location.city;York',
+      filterOptions: 'isActive;false|visibility;{"$in":"private"}|jobSearchStatus;closed|experienceLevel;mid|desiredRoles;{"$in":"analytics,scout"}|location.city;York',
       includeOptions: 'industries;{"$in":["analytics_data","football_operations"]}|openToRemote;true',
       keyword: '  football operations  ',
       pageNumber: '2',
@@ -26,15 +19,8 @@ describe('professional talent search query parsing', () => {
     });
 
     expect(parsed).toEqual({
-      andFilters: [
-        { experienceLevel: 'mid' },
-        { desiredRoles: { $in: ['analytics', 'scout'] } },
-        { 'location.city': { $regex: 'York', $options: 'i' } },
-      ],
-      includeFilters: [
-        { industries: { $in: ['analytics_data', 'football_operations'] } },
-        { openToRemote: true },
-      ],
+      andFilters: [{ experienceLevel: 'mid' }, { desiredRoles: { $in: ['analytics', 'scout'] } }, { 'location.city': { $regex: 'York', $options: 'i' } }],
+      includeFilters: [{ industries: { $in: ['analytics_data', 'football_operations'] } }, { openToRemote: true }],
       keyword: 'football operations',
       keywordPattern: 'football[\\s_-]+operations',
       page: 2,
@@ -54,17 +40,13 @@ describe('professional talent search query parsing', () => {
   });
 
   it('escapes regex metacharacters and keeps slug separators flexible', () => {
-    expect(buildFlexibleTextPattern('C++ football_operations')).toBe(
-      'C\\+\\+[\\s_-]+football[\\s_-]+operations'
-    );
+    expect(buildFlexibleTextPattern('C++ football_operations')).toBe('C\\+\\+[\\s_-]+football[\\s_-]+operations');
 
     const parsed = parseTalentSearchQuery({
       filterOptions: 'location.state;New (York).*',
     });
 
-    expect(parsed.andFilters).toEqual([
-      { 'location.state': { $regex: 'New \\(York\\)\\.\\*', $options: 'i' } },
-    ]);
+    expect(parsed.andFilters).toEqual([{ 'location.state': { $regex: 'New \\(York\\)\\.\\*', $options: 'i' } }]);
   });
 
   it.each([
@@ -165,17 +147,15 @@ describe('professional talent search authorization and aggregation', () => {
       isActive: { $literal: true },
       desiredRoles: { $ifNull: ['$desiredRoles', []] },
       industries: { $ifNull: ['$industries', []] },
-      avatarUrl: { $ifNull: ['$_owner.profileImageUrl', null] },
+      avatarUrl: { $ifNull: ['$avatarUrl', '$_owner.profileImageUrl', null] },
+      socialLinks: 1,
     });
-    expect(facet.entries[2].$project).not.toHaveProperty('socialLinks');
     expect(facet.entries[2].$project).not.toHaveProperty('_owner');
     expect(facet.entries[2].$project).not.toHaveProperty('_searchScore');
   });
 
   it('returns stable recency ordering and accurate empty/out-of-range metadata', async () => {
-    const aggregate = jest
-      .spyOn(ProfessionalProfileModel, 'aggregate')
-      .mockResolvedValue([{ entries: [], metadata: [{ totalCount: 21 }] }] as any);
+    const aggregate = jest.spyOn(ProfessionalProfileModel, 'aggregate').mockResolvedValue([{ entries: [], metadata: [{ totalCount: 21 }] }] as any);
     const options = parseTalentSearchQuery({ pageNumber: '3', limit: '10' });
 
     await expect(service.search(options)).resolves.toEqual({
@@ -195,10 +175,7 @@ describe('professional talent search authorization and aggregation', () => {
 });
 
 describe('professional talent search rate limiting and legacy list authorization', () => {
-  const request = (
-    port: number,
-    userId: string
-  ): Promise<{ status: number; headers: http.IncomingHttpHeaders; body: any }> =>
+  const request = (port: number, userId: string): Promise<{ status: number; headers: http.IncomingHttpHeaders; body: any }> =>
     new Promise((resolve, reject) => {
       const req = http.request(
         {
@@ -263,9 +240,7 @@ describe('professional talent search rate limiting and legacy list authorization
 
       await expect(request(address.port, 'team-user-2')).resolves.toMatchObject({ status: 200 });
     } finally {
-      await new Promise<void>((resolve, reject) =>
-        server.close((error) => (error ? reject(error) : resolve()))
-      );
+      await new Promise<void>((resolve, reject) => server.close((error) => (error ? reject(error) : resolve())));
     }
   });
 
