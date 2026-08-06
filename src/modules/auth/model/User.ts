@@ -37,6 +37,8 @@ export interface UserType extends mongoose.Document {
   emailVerificationToken: string | undefined | null;
   emailVerificationExpires: Date | undefined | null;
   profileRefs: Record<string, string | null>;
+  // frontend-only display/feature preferences (theme, layout, dismissed tours, etc.)
+  uiPreferences: Record<string, any>;
   getSignedJwtToken: () => string;
   getResetPasswordToken: () => string;
   matchPassword: (enteredPassword: string) => boolean;
@@ -118,6 +120,10 @@ const UserSchema = new mongoose.Schema(
       select: false, // do not return this field by default
     },
     notificationSettings: {
+      type: Object,
+      default: {},
+    },
+    uiPreferences: {
       type: Object,
       default: {},
     },
