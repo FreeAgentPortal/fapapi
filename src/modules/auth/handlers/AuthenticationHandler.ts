@@ -92,6 +92,7 @@ export class AuthenticationHandler {
         profileImageUrl: foundUser.profileImageUrl,
         acceptedPolicies: foundUser.acceptedPolicies || {},
         notificationSettings: foundUser.notificationSettings || {},
+        uiPreferences: foundUser.uiPreferences || {},
       },
     };
   }
