@@ -12,8 +12,12 @@ export class ReportHandler extends CRUDHandler<ISearchReport> {
         path: 'searchPreference',
         select: '_id name description ageRange positions performanceMetrics',
       })
+      // .populate({
+      //   path: 'results',
+      //   select: '_id fullName birthdate positions profileImageUrl diamondRating',
+      // })
       .populate({
-        path: 'results',
+        path: 'scoredResults.athlete',
         select: '_id fullName birthdate positions profileImageUrl diamondRating',
       })
       .lean();

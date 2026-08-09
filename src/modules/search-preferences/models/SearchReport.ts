@@ -1,10 +1,16 @@
 import mongoose, { Schema, Document, Types } from 'mongoose';
 
+export interface IScoredSearchResult {
+  athlete: Types.ObjectId;
+  matchScore: number;
+}
+
 export interface ISearchReport extends Document {
   _id: Types.ObjectId;
   searchPreference: Types.ObjectId; // Reference to the search preference
   // results can be an empty array if no athletes match the search criteria
   results: Types.ObjectId[]; // Array of athlete IDs that match the search
+  scoredResults: IScoredSearchResult[]; // Athlete references with their generated match scores
   generatedAt: Date; // When the report was generated
   reportId: string; // Unique identifier for the report
   ownerId: Types.ObjectId; // Reference to the resource owner (team/scout/agent etc.)
@@ -14,10 +20,19 @@ export interface ISearchReport extends Document {
   updatedAt: Date;
 }
 
+const ScoredSearchResultSchema = new Schema<IScoredSearchResult>(
+  {
+    athlete: { type: Schema.Types.ObjectId, ref: 'AthleteProfile', required: true },
+    matchScore: { type: Number, required: true, min: 0, max: 100 },
+  },
+  { _id: false }
+);
+
 const SearchReportSchema = new Schema<ISearchReport>(
   {
     searchPreference: { type: Schema.Types.ObjectId, ref: 'SearchPreferences', required: true },
     results: [{ type: Schema.Types.ObjectId, ref: 'AthleteProfile' }],
+    scoredResults: { type: [ScoredSearchResultSchema], default: [] },
     generatedAt: { type: Date, default: Date.now },
     reportId: { type: String, required: true, unique: true },
     ownerId: { type: Schema.Types.ObjectId, required: true },
