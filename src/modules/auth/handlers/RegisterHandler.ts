@@ -141,7 +141,7 @@ export class RegisterHandler {
     for (const role of this.data.roles) { 
       const creator = ProfileCreationFactory.getProfileCreator(role);
       if (!creator) continue; 
-      const profileData = this.data.profileData?.[role] ?? {}; 
+      const profileData = this.data.profileData?.[role] ?? this.data; 
       try {
         const profile = await creator.createProfile(this.user._id, profileData);
         this.profileRefs[role] = profile.profileId;
