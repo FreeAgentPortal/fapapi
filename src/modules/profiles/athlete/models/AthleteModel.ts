@@ -33,7 +33,7 @@ export interface IAthlete extends Document {
     {
       name: string;
       abbreviation: string;
-    }
+    },
   ];
   agent?: {
     name?: string;
@@ -49,6 +49,8 @@ export interface IAthlete extends Document {
   bio?: string;
   highSchool?: string;
   awards?: string[];
+  sport?: string; // e.g., "basketball", "football", etc.
+  league?: string; // e.g., "NBA", "NFL", etc.
   strengths?: string;
   weaknesses?: string;
   experienceYears?: number; // Years of playing experience
@@ -68,6 +70,8 @@ const AthleteSchema = new Schema<IAthlete>(
       ref: 'User',
       index: true,
     },
+    sport: { type: String },
+    league: { type: String },
     espnid: { type: String, unique: true, sparse: true }, // ESPN ID for querying athlete data
     fullName: { type: String, required: true },
     contactNumber: { type: String },
