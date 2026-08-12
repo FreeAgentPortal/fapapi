@@ -24,8 +24,13 @@ export class ScoutService extends CRUDService {
     try {
       const result = await this.actionsHandler.handleScoutReportSubmission(req.body, req.params.id as string);
 
-      // emit an event for notifications
-      eventBus.publish('scout.report.submitted', result.data);
+      // Notification processing is intentionally fire-and-forget so it does
+      // not affect the report approval request.
+      if (result.data?.isApproved === true) {
+        void eventBus.publish('scout.report.submitted', result.data).catch((eventError) => {
+          console.error('[ScoutService] Failed to publish approved scout report notification:', eventError);
+        });
+      }
 
       return res.status(200).json({
         success: true,
