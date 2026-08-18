@@ -21,7 +21,7 @@ export default class TalentSearchService {
     const teamId = user?.profileRefs?.team;
     const userId = user?._id;
 
-    if (!user || user.isActive === false || !Array.isArray(user.role) || !user.role.includes('team') || !teamId || !userId || !mongoose.Types.ObjectId.isValid(String(teamId))) {
+    if (!user || user.isActive === false || !teamId || !userId || !mongoose.Types.ObjectId.isValid(String(teamId))) {
       console.log('Authorization failed for user:', user);
       console.trace();
       throw new ErrorUtil('Only active team users can search professional profiles', 403);
