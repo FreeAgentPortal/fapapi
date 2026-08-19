@@ -1,5 +1,6 @@
 import mongoose, { Types } from 'mongoose';
 import { ObjectId } from 'mongoose';
+import type { ReceiptRevenueCategory } from '../utils/subscriptionRevenue';
 
 /**
  * @description Receipt interface for transaction records
@@ -18,6 +19,7 @@ export interface ReceiptType extends mongoose.Document {
   amount: number;
   currency: string;
   description?: string; // Optional description of what the payment was for
+  revenueCategory?: ReceiptRevenueCategory;
 
   // Plan information snapshot (optional - not all transactions are plan-related)
   planInfo?: {
@@ -45,6 +47,14 @@ export interface ReceiptType extends mongoose.Document {
   failure: {
     reason: string;
     code: string;
+  };
+
+  reconciliation?: {
+    source: 'stripe_recovery';
+    stripeChargeId: string;
+    stripePaymentIntentId?: string;
+    recoveredBy: ObjectId;
+    recoveredAt: Date;
   };
 
   // Audit
@@ -99,6 +109,11 @@ const ReceiptSchema = new mongoose.Schema(
       type: String,
       required: false,
     },
+    revenueCategory: {
+      type: String,
+      enum: ['subscription', 'subscription_proration', 'setup_fee', 'other'],
+      required: false,
+    },
 
     // Plan snapshot (optional)
     planInfo: {
@@ -149,6 +164,26 @@ const ReceiptSchema = new mongoose.Schema(
       },
     },
 
+    reconciliation: {
+      source: {
+        type: String,
+        enum: ['stripe_recovery'],
+      },
+      stripeChargeId: {
+        type: String,
+      },
+      stripePaymentIntentId: {
+        type: String,
+      },
+      recoveredBy: {
+        type: Types.ObjectId,
+        ref: 'User',
+      },
+      recoveredAt: {
+        type: Date,
+      },
+    },
+
     // Transaction date
     transactionDate: {
       type: Date,
@@ -167,6 +202,8 @@ ReceiptSchema.index({ transactionDate: -1 });
 ReceiptSchema.index({ billingAccountId: 1 });
 ReceiptSchema.index({ processorTransactionId: 1 });
 ReceiptSchema.index({ status: 1 });
+ReceiptSchema.index({ revenueCategory: 1, transactionDate: -1 });
+ReceiptSchema.index({ 'reconciliation.stripeChargeId': 1 }, { unique: true, sparse: true });
 ReceiptSchema.index({ description: 'text' }); // Text index for searching descriptions
 
 const Receipt = mongoose.model<ReceiptType>('Receipt', ReceiptSchema);

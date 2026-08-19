@@ -6,12 +6,14 @@ import PaymentProcessor from '../classes/PaymentProcess';
 import { eventBus } from '../../../lib/eventBus';
 import { applyBillingPlanSnapshot, calculatePlanCycleAmount } from '../utils/billingPlanUtils';
 import logger from '../../../utils/logger';
+import type { ReceiptRevenueCategory } from '../utils/subscriptionRevenue';
 
 type BillingChargeOptions = {
   updateBillingDate?: boolean;
   description?: string;
   failureMutationMode?: 'standard' | 'none';
   planOverride?: any;
+  revenueCategory?: ReceiptRevenueCategory;
 };
 
 export default class PaymentProcessingHandler {
@@ -251,12 +253,14 @@ export default class PaymentProcessingHandler {
     profileId: string,
     amount?: number,
     updateBillingDate: boolean = true,
-    description?: string
+    description?: string,
+    revenueCategory?: ReceiptRevenueCategory
   ): Promise<{ success: boolean; message: string; receipt?: ReceiptType }> {
     return this.processBillingCharge(profileId, amount, {
       updateBillingDate,
       description,
       failureMutationMode: 'standard',
+      revenueCategory: revenueCategory ?? (updateBillingDate ? 'subscription' : 'other'),
     });
   }
 
@@ -271,6 +275,7 @@ export default class PaymentProcessingHandler {
       description,
       failureMutationMode: 'none',
       planOverride,
+      revenueCategory: 'subscription_proration',
     });
   }
 
@@ -282,6 +287,7 @@ export default class PaymentProcessingHandler {
     const updateBillingDate = options.updateBillingDate ?? true;
     const failureMutationMode = options.failureMutationMode ?? 'standard';
     const description = options.description;
+    const revenueCategory = options.revenueCategory ?? (updateBillingDate ? 'subscription' : 'other');
 
     try {
       console.info(`[PaymentProcessingHandler] Processing payment for billing account ${billingAccountId}...`);
@@ -385,7 +391,14 @@ export default class PaymentProcessingHandler {
 
         // Create success receipt for zero-amount payment
         const receiptDescription = description || (amount !== undefined && !updateBillingDate ? 'One-time payment covered by credits' : undefined);
-        const receipt = await this.createSuccessReceipt(billingAccount, mockPaymentResult, calculatedAmount, plan, receiptDescription);
+        const receipt = await this.createSuccessReceipt(
+          billingAccount,
+          mockPaymentResult,
+          calculatedAmount,
+          plan,
+          receiptDescription,
+          revenueCategory
+        );
 
         // Update next billing date only for subscription payments
         if (updateBillingDate) {
@@ -406,18 +419,28 @@ export default class PaymentProcessingHandler {
         };
       }
 
-      // add the amount to processorData
-      processorData.amount = calculatedAmount;
-
       console.info(`[PaymentProcessingHandler] Processing payment of $${calculatedAmount} for billing account ${billingAccountId} using token ${processorData.tokenId}`);
 
       // processor is expected to handle the information passed into it
-      const paymentResult = (await this.processor?.processPayment(processorData)) as any;
+      const paymentResult = (await this.processor?.processPayment({
+        ...processorData,
+        amount: calculatedAmount,
+        billingAccountId: String(billingAccount._id),
+        revenueCategory,
+        description,
+      })) as any;
 
       if (paymentResult.success) {
         // Payment successful - create success receipt
         const receiptDescription = description || (amount !== undefined && !updateBillingDate ? 'One-time payment processed successfully' : undefined); // Use default subscription description
-        const receipt = await this.createSuccessReceipt(billingAccount, paymentResult, calculatedAmount, plan, receiptDescription);
+        const receipt = await this.createSuccessReceipt(
+          billingAccount,
+          paymentResult,
+          calculatedAmount,
+          plan,
+          receiptDescription,
+          revenueCategory
+        );
 
         // Update next billing date only for subscription payments
         if (updateBillingDate) {
@@ -439,7 +462,14 @@ export default class PaymentProcessingHandler {
       } else {
         // Payment failed - create failure receipt
         const receiptDescription = description || (amount !== undefined && !updateBillingDate ? 'One-time payment failed' : undefined); // Use default subscription description
-        const receipt = await this.createFailureReceipt(billingAccount, paymentResult, calculatedAmount, plan, receiptDescription);
+        const receipt = await this.createFailureReceipt(
+          billingAccount,
+          paymentResult,
+          calculatedAmount,
+          plan,
+          receiptDescription,
+          revenueCategory
+        );
 
         if (failureMutationMode === 'standard') {
           // Mark account as needing update
@@ -464,7 +494,13 @@ export default class PaymentProcessingHandler {
         const billingAccount = await BillingAccount.findById(billingAccountId).populate('plan').populate('payor');
         if (billingAccount) {
           const receiptDescription = description || (amount !== undefined && !updateBillingDate ? 'One-time payment processing error' : 'Subscription payment processing error');
-          await this.createErrorReceipt(billingAccount, error.message, receiptDescription);
+          await this.createErrorReceipt(
+            billingAccount,
+            error.message,
+            billingAccount.plan as any,
+            receiptDescription,
+            revenueCategory
+          );
 
           if (failureMutationMode === 'standard') {
             await BillingAccount.findByIdAndUpdate(billingAccountId, { needsUpdate: true });
@@ -478,7 +514,14 @@ export default class PaymentProcessingHandler {
     }
   }
 
-  private static async createSuccessReceipt(billingAccount: BillingAccountType, paymentResult: any, amount: number, plan: any, description?: string): Promise<ReceiptType> {
+  private static async createSuccessReceipt(
+    billingAccount: BillingAccountType,
+    paymentResult: any,
+    amount: number,
+    plan: any,
+    description: string | undefined,
+    revenueCategory: ReceiptRevenueCategory
+  ): Promise<ReceiptType> {
     const receipt = new Receipt({
       transactionId: `TXN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       billingAccountId: billingAccount._id,
@@ -488,6 +531,7 @@ export default class PaymentProcessingHandler {
       amount: amount,
       currency: 'USD',
       description: description || (plan ? `${billingAccount.isYearly ? 'Annual' : 'Monthly'} subscription payment for ${plan.name}` : 'Payment processed successfully'),
+      revenueCategory,
       planInfo: plan
         ? {
             planId: plan._id,
@@ -521,7 +565,14 @@ export default class PaymentProcessingHandler {
     return receipt;
   }
 
-  private static async createFailureReceipt(billingAccount: BillingAccountType, paymentResult: any, amount: number, plan: any, description?: string): Promise<ReceiptType> {
+  private static async createFailureReceipt(
+    billingAccount: BillingAccountType,
+    paymentResult: any,
+    amount: number,
+    plan: any,
+    description: string | undefined,
+    revenueCategory: ReceiptRevenueCategory
+  ): Promise<ReceiptType> {
     const receipt = new Receipt({
       transactionId: `TXN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       billingAccountId: billingAccount._id,
@@ -531,6 +582,7 @@ export default class PaymentProcessingHandler {
       amount: amount,
       currency: 'USD',
       description: description || (plan ? `Failed ${billingAccount.isYearly ? 'annual' : 'monthly'} subscription payment for ${plan.name}` : 'Payment processing failed'),
+      revenueCategory,
       planInfo: plan
         ? {
             planId: plan._id,
@@ -568,7 +620,13 @@ export default class PaymentProcessingHandler {
     return receipt;
   }
 
-  private static async createErrorReceipt(billingAccount: BillingAccountType, errorMessage: string, description?: string): Promise<ReceiptType> {
+  private static async createErrorReceipt(
+    billingAccount: BillingAccountType,
+    errorMessage: string,
+    plan: any,
+    description: string | undefined,
+    revenueCategory: ReceiptRevenueCategory
+  ): Promise<ReceiptType> {
     const receipt = new Receipt({
       transactionId: `TXN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       billingAccountId: billingAccount._id,
@@ -578,6 +636,15 @@ export default class PaymentProcessingHandler {
       amount: 0,
       currency: 'USD',
       description: description || 'Payment processing error occurred',
+      revenueCategory,
+      planInfo: plan
+        ? {
+            planId: plan._id,
+            planName: plan.name,
+            planPrice: parseFloat(plan.price),
+            billingCycle: billingAccount.isYearly ? 'yearly' : 'monthly',
+          }
+        : undefined,
       processor: {
         name: await this.processor?.getProcessorName(),
         transactionId: 'ERROR',

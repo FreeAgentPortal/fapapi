@@ -224,7 +224,13 @@ export class BillingHandler {
 
         if (!billing.setupFeePaid && roleMeta.requiresSetupFee) {
           logger.debug({ billingId: String(billing._id) }, '[BillingHandler] Processing initial setup fee');
-          const paymentResults = await PaymentProcessingHandler.processPaymentForProfile(billing._id as any, roleMeta.setupFeeAmount, false, 'Account setup fee');
+          const paymentResults = await PaymentProcessingHandler.processPaymentForProfile(
+            billing._id as any,
+            roleMeta.setupFeeAmount,
+            false,
+            'Account setup fee',
+            'setup_fee'
+          );
           this.logUpdateVault(operationId, 'setup_fee_result', paymentResults);
           if (paymentResults.success === false) {
             console.info(`[BillingHandler] - Initial setup fee payment failed: ${paymentResults.message}`);
@@ -359,7 +365,7 @@ export class BillingHandler {
           billing._id.toString(),
           chargedAmountCents,
           targetPlan,
-          `Prorated upgrade charge for ${targetPlan.name}`
+          `Prorated subscription upgrade charge for ${targetPlan.name}`
         )) as any;
 
         if (!chargeResult.success) {
