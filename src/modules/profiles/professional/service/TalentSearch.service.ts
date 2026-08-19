@@ -22,8 +22,6 @@ export default class TalentSearchService {
     const userId = user?._id;
 
     if (!user || user.isActive === false || !teamId || !userId || !mongoose.Types.ObjectId.isValid(String(teamId))) {
-      console.log('Authorization failed for user:', user);
-      console.trace();
       throw new ErrorUtil('Only active team users can search professional profiles', 403);
     }
 
@@ -34,8 +32,6 @@ export default class TalentSearchService {
     });
 
     if (!team) {
-      console.log('Team not found or user not linked to team:', { teamId, userId });
-      console.trace();
       throw new ErrorUtil('Only active team users can search professional profiles', 403);
     }
 

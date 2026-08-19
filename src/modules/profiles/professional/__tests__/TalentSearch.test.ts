@@ -93,12 +93,16 @@ describe('professional talent search authorization and aggregation', () => {
     });
   });
 
-  it('does not allow a team service header or profile reference to replace the team role', async () => {
-    const exists = jest.spyOn(TeamModel, 'exists');
+  it('authorizes based on team membership alone since the role claim is not populated', async () => {
+    const exists = jest.spyOn(TeamModel, 'exists').mockResolvedValue({ _id: teamId } as any);
     const user = { ...teamUser(), role: ['professional'] };
 
-    await expect(service.authorizeTeam(user)).rejects.toMatchObject({ statusCode: 403 });
-    expect(exists).not.toHaveBeenCalled();
+    await expect(service.authorizeTeam(user)).resolves.toBe(teamId.toString());
+    expect(exists).toHaveBeenCalledWith({
+      _id: teamId.toString(),
+      isActive: { $ne: false },
+      'linkedUsers.user': userId,
+    });
   });
 
   it('rejects inactive users and inactive or unlinked teams', async () => {
