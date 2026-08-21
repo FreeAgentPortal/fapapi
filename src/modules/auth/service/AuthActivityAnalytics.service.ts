@@ -26,16 +26,52 @@ export class AuthActivityAnalyticsService {
   public recent = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
     try {
       const days = this.parseDays(req.query.days);
-      const limit = this.parseLimit(req.query.limit);
-      const payload = await this.handler.getRecent(days, limit);
+      const page = this.parsePage(req.query.pageNumber);
+      const limit = this.parseLimit(req.query.pageLimit ?? req.query.limit);
+      const [payload, totalCount] = await Promise.all([
+        this.handler.getRecent(days, limit, page),
+        this.handler.getRecentCount(days),
+      ]);
+      const pages = Math.ceil(totalCount / limit);
 
       return res.status(200).json({
         success: true,
         payload,
         metadata: {
           days,
+          page,
           limit,
-          count: payload.length,
+          pages,
+          totalCount,
+          prevPage: page > 1 ? page - 1 : null,
+          nextPage: page < pages ? page + 1 : null,
+        },
+      });
+    } catch (err) {
+      return error(err, req, res);
+    }
+  });
+
+  public userActivity = asyncHandler(async (req: Request, res: Response): Promise<Response> => {
+    try {
+      const days = this.parseDays(req.query.days);
+      const page = this.parsePage(req.query.pageNumber);
+      const limit = this.parseLimit(req.query.pageLimit ?? req.query.limit);
+      const result = await this.handler.getUserActivity(req.params.userId, days, page, limit);
+      const { totalCount, ...payload } = result;
+      const pages = Math.ceil(totalCount / limit);
+
+      return res.status(200).json({
+        success: true,
+        payload,
+        metadata: {
+          days,
+          page,
+          limit,
+          pages,
+          totalCount,
+          prevPage: page > 1 ? page - 1 : null,
+          nextPage: page < pages ? page + 1 : null,
         },
       });
     } catch (err) {
@@ -71,5 +107,20 @@ export class AuthActivityAnalyticsService {
     }
 
     return limit;
+  }
+
+  private parsePage(value: unknown): number {
+    if (value === undefined) {
+      return 1;
+    }
+
+    const rawValue = Array.isArray(value) ? value[0] : value;
+    const page = Number(rawValue);
+
+    if (!Number.isInteger(page) || page < 1) {
+      throw new ErrorUtil('pageNumber must be a positive integer', 400);
+    }
+
+    return page;
   }
 }
