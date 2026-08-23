@@ -6,31 +6,11 @@ export class AthleteProfileAnalysisHandler {
   private modelMap: Record<ModelKey, any> = ModelMap;
   /**
    * Get athlete profiles that are incomplete
-   * Based on missing: profileImageUrl, metrics, measurements, and resume
+   * Based on missing: profileImageUrl, metrics, and measurements
    */
   public static async getIncompleteAthleteProfiles(): Promise<IAthlete[]> {
     try {
-      // Use aggregation to check for missing fields including resume
       const incompleteProfiles = await AthleteModel.aggregate([
-        {
-          $lookup: {
-            from: 'resumeprofiles', // MongoDB collection name (plural, lowercase)
-            let: { athleteId: '$_id' }, // Pass athlete ID as variable
-            pipeline: [
-              {
-                $match: {
-                  $expr: {
-                    $and: [
-                      { $eq: ['$owner.kind', 'AthleteProfile'] }, // Must be AthleteProfile type
-                      { $eq: ['$owner.ref', '$$athleteId'] }, // Must match the athlete ID
-                    ],
-                  },
-                },
-              },
-            ],
-            as: 'resumeData',
-          },
-        },
         {
           $lookup: {
             from: 'users', // Populate userId
@@ -79,8 +59,6 @@ export class AthleteProfileAnalysisHandler {
               { measurements: { $exists: false } },
               { measurements: null },
               { $expr: { $eq: [{ $size: { $objectToArray: '$measurements' } }, 0] } },
-              // Missing resume (empty array)
-              { $expr: { $eq: [{ $size: '$resumeData' }, 0] } },
             ],
           },
         },
@@ -187,7 +165,6 @@ export class AthleteProfileAnalysisHandler {
       profileImage: number;
       metrics: number;
       measurements: number;
-      resume: number;
     };
   }> {
     try {
@@ -201,10 +178,6 @@ export class AthleteProfileAnalysisHandler {
 
       const missingMeasurements = incompleteProfiles.filter((a) => !a.measurements || Object.keys(a.measurements).length === 0).length;
 
-      // Count missing resume from the already retrieved data (resumeData is included in the aggregation)
-      // Note: getIncompleteAthleteProfiles() already includes resumeData lookup, so we can check it directly
-      const missingResumeCount = incompleteProfiles.filter((a: any) => !a.resumeData || a.resumeData.length === 0).length;
-
       const completionRate = totalAthletes > 0 ? ((totalAthletes - incompleteProfiles.length) / totalAthletes) * 100 : 100;
 
       return {
@@ -215,7 +188,6 @@ export class AthleteProfileAnalysisHandler {
           profileImage: missingProfileImage,
           metrics: missingMetrics,
           measurements: missingMeasurements,
-          resume: missingResumeCount,
         },
       };
     } catch (error) {
@@ -236,31 +208,11 @@ export class AthleteProfileAnalysisHandler {
     pages: number;
   }> {
     try {
-      // Use aggregation to check for missing fields including resume
       const aggregationPipeline = [
         {
           $match: {
             isActive: true,
             createdAt: { $lt: new Date(Date.now() - 24 * 60 * 60 * 1000) },
-          },
-        },
-        {
-          $lookup: {
-            from: 'resumeprofiles', // MongoDB collection name (plural, lowercase)
-            let: { athleteId: '$_id' }, // Pass athlete ID as variable
-            pipeline: [
-              {
-                $match: {
-                  $expr: {
-                    $and: [
-                      { $eq: ['$owner.kind', 'AthleteProfile'] }, // Must be AthleteProfile type
-                      { $eq: ['$owner.ref', '$$athleteId'] }, // Must match the athlete ID
-                    ],
-                  },
-                },
-              },
-            ],
-            as: 'resumeData',
           },
         },
         {
@@ -276,8 +228,6 @@ export class AthleteProfileAnalysisHandler {
               { measurements: { $exists: false } },
               { measurements: null },
               { $expr: { $eq: [{ $size: { $objectToArray: '$measurements' } }, 0] } },
-              // Missing resume (empty array)
-              { $expr: { $eq: [{ $size: '$resumeData' }, 0] } },
             ],
           },
         },
@@ -303,11 +253,6 @@ export class AthleteProfileAnalysisHandler {
           $unwind: {
             path: '$userId',
             preserveNullAndEmptyArrays: true,
-          },
-        },
-        {
-          $project: {
-            resumeData: 0, // Remove the resume data from results to keep it clean
           },
         },
       ];

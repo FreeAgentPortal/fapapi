@@ -1,6 +1,6 @@
 # Athlete Profile Completion Scheduler
 
-This system provides automated reminders for athlete profiles to encourage them to complete their profiles by filling in key metrics such as profile images, measurements, metrics, and resumes.
+This system provides automated reminders for athlete profiles to encourage them to complete their profiles by filling in key fields such as profile images, measurements, and metrics.
 
 ## Overview
 
@@ -14,7 +14,7 @@ The athlete profile completion scheduler consists of several components:
 ## Features
 
 - **Automated Daily Alerts**: Runs every day at 9:00 AM (America/Los_Angeles timezone)
-- **Profile Completion Analysis**: Checks for missing profileImageUrl, metrics, measurements, and resume
+- **Profile Completion Analysis**: Checks for missing profileImageUrl, metrics, and measurements
 - **Smart Alert Frequency**: Avoids spamming users by checking for recent alerts (7-day cooldown)
 - **User Notifications**: Sends in-app notifications when profiles are incomplete
 - **Manual Triggers**: Admin endpoints to manually trigger alerts
@@ -29,7 +29,6 @@ The system works with the existing `AthleteProfile` model and checks these key f
   profileImageUrl: string,    // Required for visual profile
   metrics: Map<string, number>,        // Performance metrics (40-yard dash, etc.)
   measurements: Map<string, string>,   // Physical measurements (height, weight)
-  // Resume is checked via ResumeProfile model with owner reference
 }
 ```
 
@@ -51,7 +50,7 @@ The system queries for athlete profiles that are incomplete based on:
 
 - `isActive: true` (only active athletes)
 - `createdAt` is older than 24 hours (give new users time to complete)
-- Missing at least one key field: `profileImageUrl`, `metrics`, `measurements`, or `resume`
+- Missing at least one key field: `profileImageUrl`, `metrics`, or `measurements`
 
 ### 3. Alert Generation
 
@@ -98,8 +97,7 @@ Response:
       "missingFields": {
         "profileImage": 25,
         "metrics": 30,
-        "measurements": 20,
-        "resume": 35
+        "measurements": 20
       }
     }
   }
@@ -179,7 +177,6 @@ The system checks for these required fields:
 1. **Profile Image** (`profileImageUrl`): Must be a non-empty string
 2. **Metrics** (`metrics`): Must be a non-empty Map/object with performance data
 3. **Measurements** (`measurements`): Must be a non-empty Map/object with physical measurements
-4. **Resume**: Must have at least one experience entry in ResumeProfile
 
 ## Event System
 
@@ -271,7 +268,7 @@ The system provides comprehensive logging:
 1. **Notification System**: Uses existing `Notification.insertNotification()`
 2. **Event Bus**: Integrates with `eventBus.publish()`
 3. **Authentication**: Uses existing `AuthMiddleware`
-4. **Database**: Works with existing `AthleteModel` and `ResumeProfile`
+4. **Database**: Works with the existing `AthleteModel`
 5. **Cron Jobs**: Integrates with existing `cronjobs.ts`
 
 ### Future Integrations

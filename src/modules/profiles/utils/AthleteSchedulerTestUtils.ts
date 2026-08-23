@@ -74,7 +74,6 @@ export class AthleteSchedulerTestUtils {
       console.info(`- Profile Images: ${statistics.missingFields.profileImage}`);
       console.info(`- Metrics: ${statistics.missingFields.metrics}`);
       console.info(`- Measurements: ${statistics.missingFields.measurements}`);
-      console.info(`- Resumes: ${statistics.missingFields.resume}`);
 
       return { status, statistics };
     } catch (error) {
@@ -129,7 +128,7 @@ export class AthleteSchedulerTestUtils {
       });
 
       console.info(`✅ Created test athlete: ${athlete._id}`);
-      console.info('Missing fields: Profile Image, Metrics, Measurements, Resume');
+      console.info('Missing fields: Profile Image, Metrics, Measurements');
 
       return athlete;
     } catch (error) {

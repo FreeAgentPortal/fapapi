@@ -6,6 +6,8 @@ import { AdminProfileHandler } from '../handlers/AdminProfile.handler';
 import AdminModel from '../model/AdminModel';
 import error from '../../../../middleware/error';
 import { RolesConfig } from '../../../../utils/RolesConfig';
+import asyncHandler from '../../../../middleware/asyncHandler';
+import { AgentManagementReportHandler } from '../handlers/AgentManagementReport.handler';
 
 type AdminProfileInput = {
   user: string;
@@ -34,4 +36,18 @@ export default class AdminService extends CRUDService {
 
     return await profile.save();
   }
+
+  public getAgentManagementReport = asyncHandler(async (req: Request & AuthenticatedRequest, res: Response): Promise<Response> => {
+    try {
+      const report = await new AgentManagementReportHandler().generateReport();
+
+      return res.status(200).json({
+        message: 'Agent management report retrieved',
+        success: true,
+        payload: report,
+      });
+    } catch (err) {
+      return error(err, req, res);
+    }
+  });
 }
