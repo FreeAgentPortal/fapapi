@@ -105,11 +105,40 @@ class DevTool {
   async customTask(): Promise<void> {
     console.info('🛠️  Running custom task...');
     try {
+      await this.backfillProfessionalDisplayNames();
     } catch (error) {
       console.info('❌ Error in custom task:', error);
     }
 
     console.info('\n✅ Custom task completed');
+  }
+
+  /**
+   * Backfill ProfessionalProfile.displayName from the linked User's fullName where missing
+   */
+  async backfillProfessionalDisplayNames(): Promise<void> {
+    console.info('🛠️  Backfilling ProfessionalProfile displayName...');
+
+    const profiles = await this.modelMap['professional']
+      .find({
+        $or: [{ displayName: { $exists: false } }, { displayName: null }, { displayName: '' }],
+      })
+      .populate('user');
+
+    let updatedCount = 0;
+    for (const profile of profiles) {
+      const fullName = profile.user?.fullName;
+      if (!fullName) {
+        console.info(`⚠️  Skipping profile ${profile._id}, no fullName found on user`);
+        continue;
+      }
+
+      profile.displayName = fullName;
+      await profile.save();
+      updatedCount++;
+    }
+
+    console.info(`✅ Updated ${updatedCount} of ${profiles.length} professional profile(s)`);
   }
 
   /**

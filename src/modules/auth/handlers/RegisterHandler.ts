@@ -137,17 +137,18 @@ export class RegisterHandler {
    * @description Creates profiles for the user based on their roles. Each role has a specific profile creator that handles the profile creation logic.
    * @throws {Error} If any profile creation fails, it will clean up the user and any created profiles.
    */
-  private async createProfiles() { 
-    for (const role of this.data.roles) { 
+  private async createProfiles() {
+    for (const role of this.data.roles) {
       const creator = ProfileCreationFactory.getProfileCreator(role);
-      if (!creator) continue; 
-      const profileData = this.data.profileData?.[role] ?? this.data; 
+      if (!creator) continue;
+      // merge in the user's computed fullName so profile creators can default displayName from it
+      const profileData = { fullName: this.user.fullName, ...(this.data.profileData?.[role] ?? this.data) };
       try {
         const profile = await creator.createProfile(this.user._id, profileData);
         this.profileRefs[role] = profile.profileId;
 
         const roleMeta = RoleRegistry[role];
-        if (roleMeta?.isBillable && !this.customerCreated) { 
+        if (roleMeta?.isBillable && !this.customerCreated) {
           await this.createBillingAccount(profile.profileId, role);
           this.customerCreated = true;
         }
@@ -172,11 +173,11 @@ export class RegisterHandler {
   private async createBillingAccount(profileId: string, role: string) {
     logger.debug({ profileId, role }, '[RegistrationHandler] Creating billing account.');
     const roleMeta = RoleRegistry[role];
-    try {   
-      this.billingAccount = await BillingAccount.create({ 
+    try {
+      this.billingAccount = await BillingAccount.create({
         profileId,
         profileType: role,
-        email: this.data.email,  
+        email: this.data.email,
         status: 'active',
         vaulted: false,
         setupFeePaid: !roleMeta.requiresSetupFee, // if the role doesn't require a setup fee, mark it as paid
