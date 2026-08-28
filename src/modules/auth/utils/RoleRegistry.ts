@@ -1,14 +1,38 @@
 // utils/RoleRegistry.ts
 
+export type BillingRenewalAnchor =
+  | { type: 'rolling-days'; days: number }
+  | { type: 'rolling-years'; years: number }
+  | { type: 'calendar-month'; day: number };
+
+export type SubscriptionStartPolicy = {
+  chargeTiming: 'immediate' | 'deferred';
+  amount: 'full' | 'prorated';
+  renewalAnchor: {
+    monthly: BillingRenewalAnchor;
+    yearly: BillingRenewalAnchor;
+  };
+};
+
 export type RoleMetadata = {
   isBillable: boolean;
   billingScope: 'profile' | 'shared' | 'none';
   displayName: string;
   trial?: boolean;
-  setupFeeAmount?: number; // one-time fee in cents
+  setupFeeAmountCents?: number;
   // boolean to indicate whether or not the role should pay the setup fee
   requiresSetupFee?: boolean;
   trialLength?: number; // in days
+  subscriptionStart?: SubscriptionStartPolicy;
+};
+
+const deferredCalendarBilling: SubscriptionStartPolicy = {
+  chargeTiming: 'deferred',
+  amount: 'full',
+  renewalAnchor: {
+    monthly: { type: 'calendar-month', day: 1 },
+    yearly: { type: 'calendar-month', day: 1 },
+  },
 };
 
 export const RoleRegistry: Record<string, RoleMetadata> = {
@@ -19,6 +43,7 @@ export const RoleRegistry: Record<string, RoleMetadata> = {
     trial: true,
     trialLength: 0,
     requiresSetupFee: false,
+    subscriptionStart: deferredCalendarBilling,
   },
   athlete: {
     isBillable: true,
@@ -27,7 +52,11 @@ export const RoleRegistry: Record<string, RoleMetadata> = {
     trial: true,
     trialLength: 0,
     requiresSetupFee: true,
-    setupFeeAmount: 0, // $0 — creates a receipt; set to e.g. 5000 to charge $50
+    setupFeeAmountCents: 0, // $0 — creates a receipt; set to e.g. 5000 to charge $50
+    subscriptionStart: {
+      ...deferredCalendarBilling,
+      amount: 'prorated',
+    },
   },
   professional: {
     isBillable: true,
@@ -36,6 +65,14 @@ export const RoleRegistry: Record<string, RoleMetadata> = {
     trial: true,
     trialLength: 0,
     requiresSetupFee: false,
+    subscriptionStart: {
+      chargeTiming: 'immediate',
+      amount: 'full',
+      renewalAnchor: {
+        monthly: { type: 'rolling-days', days: 30 },
+        yearly: { type: 'rolling-years', years: 1 },
+      },
+    },
   },
   agent: {
     isBillable: true,
@@ -44,6 +81,7 @@ export const RoleRegistry: Record<string, RoleMetadata> = {
     trial: true,
     trialLength: 0,
     requiresSetupFee: false,
+    subscriptionStart: deferredCalendarBilling,
   },
   admin: {
     isBillable: false,

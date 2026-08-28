@@ -57,7 +57,7 @@ const Schema = new mongoose.Schema(
     },
     yearlyDiscount: {
       type: Number,
-      default: 0.1,
+      default: 10,
     },
     isActive: { type: Boolean, default: true },
     mostPopular: { type: Boolean, default: false },

@@ -15,6 +15,8 @@ export interface BillingAccountType extends mongoose.Document {
   processor?: string;
   credits?: number;
   setupFeePaid?: boolean;
+  initialSubscriptionChargeStatus?: 'pending' | 'processing' | 'paid' | 'failed' | 'deferred' | 'not_required';
+  subscriptionStartedAt?: Date;
   createdAt: Date;
   updatedAt: Date;
   vaulted: Boolean;
@@ -66,7 +68,13 @@ const Schema = new mongoose.Schema(
     },
     nextBillingDate: {
       type: Date,
-      default: Date.now(),
+    },
+    initialSubscriptionChargeStatus: {
+      type: String,
+      enum: ['pending', 'processing', 'paid', 'failed', 'deferred', 'not_required'],
+    },
+    subscriptionStartedAt: {
+      type: Date,
     },
     vaultId: {
       type: String,

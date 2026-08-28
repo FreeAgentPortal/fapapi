@@ -16,6 +16,8 @@ import {
   BillingPlanChangeType,
   BillingPlanSnapshot,
   buildBillingPlanSnapshot,
+  calculateInitialBillingDate,
+  calculateInitialSubscriptionChargeInCents,
   calculatePlanCycleAmount,
   ScheduledBillingPlanChange,
 } from '../utils/billingPlanUtils';
@@ -72,6 +74,7 @@ export class BillingHandler {
       if (!processor) {
         throw new ErrorUtil('No payment processor is configured', 500);
       }
+      const processorName = processor.getProcessorName();
 
       const selectedPlanId = this.resolveSelectedPlanId(req.body, billing.plan);
       this.logUpdateVault(operationId, 'plan_id_resolved', {
@@ -98,9 +101,20 @@ export class BillingHandler {
         isActive: plan.isActive,
       });
 
+      const previousPlanId = this.extractPlanId(billing.plan);
+      const roleMeta = RoleRegistry[billing.profileType];
+      if (!roleMeta?.subscriptionStart) {
+        throw new ErrorUtil(`Billing policy is not configured for ${billing.profileType} accounts`, 500);
+      }
+
+      const subscriptionStartPolicy = roleMeta.subscriptionStart;
       const billingIsYearly = billingCycle === 'yearly';
       const billingSnapshot = this.buildPlanSnapshot(plan, billing.profileType, billingIsYearly);
-      const isFree = plan?.price === (0 as any);
+      const isFree = Number(plan?.price ?? 0) <= 0;
+      const isInitialPlanActivation = !previousPlanId;
+      const isRetryableInitialCharge = ['pending', 'failed'].includes(billing.initialSubscriptionChargeStatus ?? '');
+      const shouldInitializeSubscription = isInitialPlanActivation || isRetryableInitialCharge;
+      const activationDate = new Date();
       this.logUpdateVault(operationId, 'plan_characteristics', {
         resolvedEntitlements: billingSnapshot.entitlements,
         isFree,
@@ -155,14 +169,13 @@ export class BillingHandler {
           billing.paymentProcessorData = {};
         }
 
-        const name = processor.getProcessorName();
-        billing.paymentProcessorData[name] = {
+        billing.paymentProcessorData[processorName] = {
           ...vaultResponse.data,
         };
         billing.markModified('paymentProcessorData');
 
         this.logUpdateVault(operationId, 'paid_plan_branch_complete', {
-          processorName: name,
+          processorName,
           billingAfterVault: this.summarizeBilling(billing),
         });
       } else {
@@ -190,16 +203,25 @@ export class BillingHandler {
 
       applyBillingPlanSnapshot(billing, billingSnapshot);
       billing.scheduledPlanChange = undefined;
+      billing.processor = processorName;
 
       if (isFree) {
         billing.nextBillingDate = undefined;
         billing.status = 'active';
         billing.needsUpdate = false;
+        if (isInitialPlanActivation) {
+          billing.initialSubscriptionChargeStatus = 'not_required';
+        }
         this.logUpdateVault(operationId, 'free_plan_billing_fields_applied', {
           billingAfterAssignment: this.summarizeBilling(billing),
         });
       } else {
-        if (!billing.needsUpdate) {
+        if (shouldInitializeSubscription) {
+          billing.nextBillingDate = calculateInitialBillingDate(subscriptionStartPolicy, billingIsYearly, activationDate);
+          if (isInitialPlanActivation) {
+            billing.initialSubscriptionChargeStatus = subscriptionStartPolicy.chargeTiming === 'immediate' ? 'pending' : 'deferred';
+          }
+        } else if (!billing.needsUpdate) {
           if (!billing.nextBillingDate || !moment(billing.nextBillingDate).isAfter(moment())) {
             const nextMonth = moment().add(1, 'month').startOf('month');
             billing.nextBillingDate = nextMonth.toDate();
@@ -216,30 +238,89 @@ export class BillingHandler {
           billingAfterSave: this.summarizeBilling(billing),
         });
 
-        const roleMeta = RoleRegistry[req.user.profileRefs[0] ?? 'athlete'];
         this.logUpdateVault(operationId, 'setup_fee_check', {
           roleMeta,
           setupFeePaid: billing.setupFeePaid,
         });
 
         if (!billing.setupFeePaid && roleMeta.requiresSetupFee) {
+          if (!Number.isInteger(roleMeta.setupFeeAmountCents) || (roleMeta.setupFeeAmountCents as number) < 0) {
+            throw new ErrorUtil(`Setup fee is not configured correctly for ${billing.profileType} accounts`, 500);
+          }
+
           logger.debug({ billingId: String(billing._id) }, '[BillingHandler] Processing initial setup fee');
           const paymentResults = await PaymentProcessingHandler.processPaymentForProfile(
             billing._id as any,
-            roleMeta.setupFeeAmount,
+            roleMeta.setupFeeAmountCents,
             false,
             'Account setup fee',
             'setup_fee'
           );
           this.logUpdateVault(operationId, 'setup_fee_result', paymentResults);
           if (paymentResults.success === false) {
-            console.info(`[BillingHandler] - Initial setup fee payment failed: ${paymentResults.message}`);
+            billing.setupFeePaid = false;
+            await billing.save();
+            throw new ErrorUtil(`Initial setup fee payment failed: ${paymentResults.message}`, 400);
           }
           billing.setupFeePaid = true;
         }
+
+        const shouldChargeInitialSubscription =
+          subscriptionStartPolicy.chargeTiming === 'immediate' &&
+          ['pending', 'failed'].includes(billing.initialSubscriptionChargeStatus ?? '');
+
+        if (shouldChargeInitialSubscription) {
+          const chargeClaim = await BillingAccount.findOneAndUpdate(
+            {
+              _id: billing._id,
+              initialSubscriptionChargeStatus: { $in: ['pending', 'failed'] },
+            },
+            {
+              $set: { initialSubscriptionChargeStatus: 'processing' },
+            },
+            { new: true }
+          );
+
+          if (!chargeClaim) {
+            const latestBilling = await BillingAccount.findById(billing._id).select('initialSubscriptionChargeStatus');
+            if (latestBilling?.initialSubscriptionChargeStatus !== 'paid') {
+              throw new ErrorUtil('Initial subscription payment is already processing', 409);
+            }
+          } else {
+            const nextBillingDate = billing.nextBillingDate as Date;
+            const chargeAmountInCents = calculateInitialSubscriptionChargeInCents(
+              plan,
+              billingIsYearly,
+              subscriptionStartPolicy,
+              activationDate,
+              nextBillingDate
+            );
+            const paymentResults = await PaymentProcessingHandler.processInitialSubscriptionCharge(
+              billing._id.toString(),
+              chargeAmountInCents,
+              nextBillingDate,
+              `${billingIsYearly ? 'Annual' : 'Monthly'} subscription activation payment for ${plan.name}`
+            );
+
+            this.logUpdateVault(operationId, 'initial_subscription_result', paymentResults);
+
+            if (!paymentResults.success) {
+              billing.initialSubscriptionChargeStatus = 'failed';
+              billing.status = 'suspended';
+              billing.needsUpdate = true;
+              await billing.save();
+              throw new ErrorUtil(`Initial subscription payment failed: ${paymentResults.message}`, 400);
+            }
+
+            billing.initialSubscriptionChargeStatus = 'paid';
+            billing.subscriptionStartedAt = activationDate;
+            billing.nextBillingDate = nextBillingDate;
+            billing.status = 'active';
+            billing.needsUpdate = false;
+          }
+        }
       }
 
-      billing.processor = processor.getProcessorName();
       this.logUpdateVault(operationId, 'pre_final_save', {
         processorName: billing.processor,
         billingBeforeFinalSave: this.summarizeBilling(billing),
@@ -560,6 +641,8 @@ export class BillingHandler {
       nextBillingDate: billing.nextBillingDate,
       isYearly: billing.isYearly,
       setupFeePaid: billing.setupFeePaid,
+      initialSubscriptionChargeStatus: billing.initialSubscriptionChargeStatus,
+      subscriptionStartedAt: billing.subscriptionStartedAt,
       entitlements: billing.entitlements,
       scheduledPlanChange: billing.scheduledPlanChange
         ? {

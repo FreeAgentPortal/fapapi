@@ -4,12 +4,14 @@ import PaymentProcessorFactory from '../factory/PaymentProcessorFactory';
 import PlanSchema from '../../auth/model/PlanSchema';
 import PaymentProcessor from '../classes/PaymentProcess';
 import { eventBus } from '../../../lib/eventBus';
-import { applyBillingPlanSnapshot, calculatePlanCycleAmount } from '../utils/billingPlanUtils';
+import { applyBillingPlanSnapshot, calculateInitialBillingDate, calculatePlanCycleAmount } from '../utils/billingPlanUtils';
 import logger from '../../../utils/logger';
 import type { ReceiptRevenueCategory } from '../utils/subscriptionRevenue';
+import { RoleRegistry } from '../../auth/utils/RoleRegistry';
 
 type BillingChargeOptions = {
   updateBillingDate?: boolean;
+  nextBillingDate?: Date;
   description?: string;
   failureMutationMode?: 'standard' | 'none';
   planOverride?: any;
@@ -279,6 +281,21 @@ export default class PaymentProcessingHandler {
     });
   }
 
+  public static async processInitialSubscriptionCharge(
+    billingAccountId: string,
+    amountInCents: number,
+    nextBillingDate: Date,
+    description: string
+  ): Promise<{ success: boolean; message: string; receipt?: ReceiptType }> {
+    return this.processBillingCharge(billingAccountId, amountInCents, {
+      updateBillingDate: true,
+      nextBillingDate,
+      description,
+      failureMutationMode: 'standard',
+      revenueCategory: 'subscription',
+    });
+  }
+
   private static async processBillingCharge(
     billingAccountId: string,
     amount?: number,
@@ -355,12 +372,7 @@ export default class PaymentProcessingHandler {
         if (!billingAccount.plan) {
           throw new Error(`No plan associated with billing account for profile ${billingAccountId}`);
         }
-        // Calculate amount based on plan and billing cycle
-        calculatedAmount = parseFloat(plan.price);
-        // Apply yearly discount if applicable
-        if (billingAccount.isYearly && plan.yearlyDiscount) {
-          calculatedAmount = calculatedAmount * 12 * (1 - plan.yearlyDiscount / 100);
-        }
+        calculatedAmount = calculatePlanCycleAmount(plan, Boolean(billingAccount.isYearly));
         // finally, subtract any credits
         if (billingAccount.credits && billingAccount.credits > 0) {
           const originalAmount = calculatedAmount;
@@ -402,7 +414,7 @@ export default class PaymentProcessingHandler {
 
         // Update next billing date only for subscription payments
         if (updateBillingDate) {
-          await this.updateNextBillingDate(billingAccount);
+          await this.updateNextBillingDate(billingAccount, options.nextBillingDate);
         } else {
           // For immediate payments, just update status but not billing date
           await BillingAccount.findByIdAndUpdate(billingAccount._id, {
@@ -444,7 +456,7 @@ export default class PaymentProcessingHandler {
 
         // Update next billing date only for subscription payments
         if (updateBillingDate) {
-          await this.updateNextBillingDate(billingAccount);
+          await this.updateNextBillingDate(billingAccount, options.nextBillingDate);
         } else {
           // For immediate payments, just update status but not billing date
           await BillingAccount.findByIdAndUpdate(billingAccount._id, {
@@ -667,20 +679,27 @@ export default class PaymentProcessingHandler {
     return receipt;
   }
 
-  private static async updateNextBillingDate(billingAccount: BillingAccountType): Promise<void> {
-    const nextMonth = new Date();
+  private static async updateNextBillingDate(billingAccount: BillingAccountType, explicitNextBillingDate?: Date): Promise<void> {
+    const rolePolicy = RoleRegistry[billingAccount.profileType]?.subscriptionStart;
+    const nextMonth = explicitNextBillingDate
+      ? new Date(explicitNextBillingDate)
+      : rolePolicy
+        ? calculateInitialBillingDate(rolePolicy, Boolean(billingAccount.isYearly))
+        : new Date();
 
-    if (billingAccount.isYearly) {
+    if (!explicitNextBillingDate && !rolePolicy && billingAccount.isYearly) {
       // Set to next year, same month
       nextMonth.setFullYear(nextMonth.getFullYear() + 1);
-    } else {
+    } else if (!explicitNextBillingDate && !rolePolicy) {
       // Set to first day of next month
       nextMonth.setMonth(nextMonth.getMonth() + 1);
     }
 
-    // Set to first day of the month
-    nextMonth.setDate(1);
-    nextMonth.setHours(0, 0, 0, 0);
+    if (!explicitNextBillingDate && !rolePolicy) {
+      // Scheduled subscriptions retain the existing calendar-month renewal behavior.
+      nextMonth.setDate(1);
+      nextMonth.setHours(0, 0, 0, 0);
+    }
 
     await BillingAccount.findByIdAndUpdate(billingAccount._id, {
       nextBillingDate: nextMonth,

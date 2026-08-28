@@ -1,4 +1,6 @@
 import { PlanEntitlements } from '../../auth/model/PlanSchema';
+import type { BillingRenewalAnchor, SubscriptionStartPolicy } from '../../auth/utils/RoleRegistry';
+import moment from 'moment';
 
 export type BillingPlanChangeType = 'upgrade' | 'downgrade' | 'lateral';
 
@@ -44,8 +46,48 @@ export function calculatePlanCycleAmount(plan: any, isYearly: boolean): number {
     return baseMonthlyAmount;
   }
 
-  const yearlyDiscount = Number(plan?.yearlyDiscount ?? 0);
-  return baseMonthlyAmount * 12 * (1 - yearlyDiscount / 100);
+  const configuredDiscount = Number(plan?.yearlyDiscount ?? 0);
+  const yearlyDiscountPercent = configuredDiscount > 0 && configuredDiscount < 1 ? configuredDiscount * 100 : configuredDiscount;
+  return baseMonthlyAmount * 12 * (1 - yearlyDiscountPercent / 100);
+}
+
+export function calculateInitialBillingDate(policy: SubscriptionStartPolicy, isYearly: boolean, activationDate: Date = new Date()): Date {
+  const anchor = policy.renewalAnchor[isYearly ? 'yearly' : 'monthly'];
+  return applyRenewalAnchor(anchor, activationDate);
+}
+
+export function calculateInitialSubscriptionChargeInCents(
+  plan: any,
+  isYearly: boolean,
+  policy: SubscriptionStartPolicy,
+  activationDate: Date,
+  nextBillingDate: Date
+): number {
+  const fullCycleAmountInCents = Math.round(calculatePlanCycleAmount(plan, isYearly) * 100);
+  if (policy.amount === 'full') {
+    return fullCycleAmountInCents;
+  }
+
+  const cycleEnd = moment(nextBillingDate);
+  const cycleStart = moment(nextBillingDate).subtract(1, isYearly ? 'year' : 'month');
+  const totalCycleMs = Math.max(cycleEnd.diff(cycleStart), 1);
+  const remainingCycleMs = Math.max(cycleEnd.diff(moment(activationDate)), 0);
+  const remainingRatio = Math.min(1, remainingCycleMs / totalCycleMs);
+
+  return Math.round(fullCycleAmountInCents * remainingRatio);
+}
+
+function applyRenewalAnchor(anchor: BillingRenewalAnchor, activationDate: Date): Date {
+  if (anchor.type === 'rolling-days') {
+    return moment(activationDate).add(anchor.days, 'days').toDate();
+  }
+
+  if (anchor.type === 'rolling-years') {
+    return moment(activationDate).add(anchor.years, 'years').toDate();
+  }
+
+  const nextMonth = moment(activationDate).add(1, 'month').startOf('month');
+  return nextMonth.date(Math.min(Math.max(anchor.day, 1), nextMonth.daysInMonth())).toDate();
 }
 
 function normalizeFeatures(features: any): any[] {
