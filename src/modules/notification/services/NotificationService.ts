@@ -11,6 +11,7 @@ import NSupportService from './NSupportService';
 import NTeamsEventService from './NTeamsEvent.service';
 import NUserService from './NUserService';
 import SearchReportEventService from './SearchReportEvent.service';
+import NProfileViewEventsService from './NProfileViewEvents.service';
 
 export default class NotificationService {
   constructor(
@@ -23,7 +24,8 @@ export default class NotificationService {
     private readonly nscoutService: NScoutService = new NScoutService(),
     private readonly nteamsEventService: NTeamsEventService = new NTeamsEventService(),
     private readonly nathleteEventService: NAthleteEventsService = new NAthleteEventsService(),
-    private readonly nbillingEventService: NBillingEventsService = new NBillingEventsService()
+    private readonly nbillingEventService: NBillingEventsService = new NBillingEventsService(),
+    private readonly nprofileViewEventsService: NProfileViewEventsService = new NProfileViewEventsService()
   ) {}
   public init() {
     EmailService.init('sendgrid');
@@ -38,5 +40,6 @@ export default class NotificationService {
     this.nteamsEventService.init();
     this.nathleteEventService.init();
     this.nbillingEventService.init();
+    this.nprofileViewEventsService.init();
   }
 }

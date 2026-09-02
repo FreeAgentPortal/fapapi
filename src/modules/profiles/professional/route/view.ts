@@ -1,3 +1,3 @@
 import { createProfileViewRouter } from '../../analytics/routes/createProfileViewRouter';
 
-export default createProfileViewRouter('athlete');
+export default createProfileViewRouter('professional');

@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 import { ErrorUtil } from '../../../../middleware/ErrorUtil';
 import { ConversationModel } from '../../../messaging/models/Conversation';
 import { MessageModel } from '../../../messaging/models/Message';
-import { AthleteViewModel } from '../../athlete/models/AthleteViewModel';
+import { ProfileViewModel } from '../../analytics/model/ProfileViewModel';
 import { AthleteModel } from '../../athlete/models/AthleteModel';
 import { AgentAthleteAssignmentModel } from '../model/AgentAthleteAssignment';
 import { AgentSeatManager } from '../utils/AgentSeatManager';
@@ -129,27 +129,35 @@ export class AgentDashboardHandler {
     }
 
     const startDate = this.getStartDate(days);
-    const [totalViews, uniqueViewerIds, topViewedRaw] = await Promise.all([
-      AthleteViewModel.countDocuments({
-        athleteId: { $in: athleteIds },
+    const [totalViews, uniqueViewerRows, topViewedRaw] = await Promise.all([
+      ProfileViewModel.countDocuments({
+        subjectType: 'athlete',
+        subjectProfileId: { $in: athleteIds },
         createdAt: { $gte: startDate },
       }),
-      AthleteViewModel.distinct('viewerId', {
-        athleteId: { $in: athleteIds },
-        createdAt: { $gte: startDate },
-      }),
-      AthleteViewModel.aggregate([
+      ProfileViewModel.aggregate([
         {
           $match: {
-            athleteId: { $in: athleteIds },
+            subjectType: 'athlete',
+            subjectProfileId: { $in: athleteIds },
+            createdAt: { $gte: startDate },
+          },
+        },
+        { $group: { _id: { viewerType: '$viewerType', viewerProfileId: '$viewerProfileId' } } },
+      ]),
+      ProfileViewModel.aggregate([
+        {
+          $match: {
+            subjectType: 'athlete',
+            subjectProfileId: { $in: athleteIds },
             createdAt: { $gte: startDate },
           },
         },
         {
           $group: {
-            _id: '$athleteId',
+            _id: '$subjectProfileId',
             totalViews: { $sum: 1 },
-            uniqueViewers: { $addToSet: '$viewerId' },
+            uniqueViewers: { $addToSet: { viewerType: '$viewerType', viewerProfileId: '$viewerProfileId' } },
           },
         },
         {
@@ -176,7 +184,7 @@ export class AgentDashboardHandler {
       days,
       summary: {
         totalViews,
-        uniqueViewers: uniqueViewerIds.length,
+        uniqueViewers: uniqueViewerRows.length,
       },
       highlights: {
         topViewedAthletes: topViewedRaw.map((entry: any) => {
