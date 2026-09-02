@@ -56,6 +56,38 @@ export function calculateInitialBillingDate(policy: SubscriptionStartPolicy, isY
   return applyRenewalAnchor(anchor, activationDate);
 }
 
+export function calculateNextRenewalBillingDate(
+  policy: SubscriptionStartPolicy,
+  isYearly: boolean,
+  currentBillingDate: Date,
+  processedAt: Date = new Date()
+): Date {
+  const processedMoment = moment(processedAt);
+  let nextBillingMoment = moment(currentBillingDate);
+
+  if (!nextBillingMoment.isValid()) {
+    nextBillingMoment = processedMoment.clone();
+  }
+
+  const advanceOneCycle = (billingMoment: moment.Moment): moment.Moment => {
+    if (isYearly) {
+      return billingMoment.clone().add(1, 'year');
+    }
+
+    return moment(applyRenewalAnchor(policy.renewalAnchor.monthly, billingMoment.toDate()));
+  };
+
+  nextBillingMoment = advanceOneCycle(nextBillingMoment);
+
+  // Preserve the stored billing anchor while ensuring an overdue account cannot
+  // remain due immediately after a successful renewal payment.
+  while (!nextBillingMoment.isAfter(processedMoment)) {
+    nextBillingMoment = advanceOneCycle(nextBillingMoment);
+  }
+
+  return nextBillingMoment.toDate();
+}
+
 export function calculateInitialSubscriptionChargeInCents(
   plan: any,
   isYearly: boolean,

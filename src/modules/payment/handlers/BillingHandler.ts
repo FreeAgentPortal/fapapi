@@ -18,6 +18,7 @@ import {
   buildBillingPlanSnapshot,
   calculateInitialBillingDate,
   calculateInitialSubscriptionChargeInCents,
+  calculateNextRenewalBillingDate,
   calculatePlanCycleAmount,
   ScheduledBillingPlanChange,
 } from '../utils/billingPlanUtils';
@@ -223,8 +224,12 @@ export class BillingHandler {
           }
         } else if (!billing.needsUpdate) {
           if (!billing.nextBillingDate || !moment(billing.nextBillingDate).isAfter(moment())) {
-            const nextMonth = moment().add(1, 'month').startOf('month');
-            billing.nextBillingDate = nextMonth.toDate();
+            billing.nextBillingDate = calculateNextRenewalBillingDate(
+              subscriptionStartPolicy,
+              billingIsYearly,
+              billing.nextBillingDate ?? activationDate,
+              activationDate
+            );
           }
         }
         billing.status = 'active';
@@ -860,6 +865,14 @@ export class BillingHandler {
     const nextBillingMoment = moment(billing.nextBillingDate);
     if (nextBillingMoment.isValid() && nextBillingMoment.isAfter(moment())) {
       return nextBillingMoment.toDate();
+    }
+
+    const rolePolicy = RoleRegistry[billing.profileType]?.subscriptionStart;
+    if (rolePolicy) {
+      const now = new Date();
+      const renewalBase = billing.nextBillingDate && nextBillingMoment.isValid() ? nextBillingMoment.toDate() : now;
+      billing.nextBillingDate = calculateNextRenewalBillingDate(rolePolicy, Boolean(billing.isYearly), renewalBase, now);
+      return billing.nextBillingDate;
     }
 
     const fallbackNextBillingDate = moment().add(1, 'month').startOf('month');

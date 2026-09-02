@@ -4,7 +4,7 @@ import PaymentProcessorFactory from '../factory/PaymentProcessorFactory';
 import PlanSchema from '../../auth/model/PlanSchema';
 import PaymentProcessor from '../classes/PaymentProcess';
 import { eventBus } from '../../../lib/eventBus';
-import { applyBillingPlanSnapshot, calculateInitialBillingDate, calculatePlanCycleAmount } from '../utils/billingPlanUtils';
+import { applyBillingPlanSnapshot, calculateNextRenewalBillingDate, calculatePlanCycleAmount } from '../utils/billingPlanUtils';
 import logger from '../../../utils/logger';
 import type { ReceiptRevenueCategory } from '../utils/subscriptionRevenue';
 import { RoleRegistry } from '../../auth/utils/RoleRegistry';
@@ -681,32 +681,36 @@ export default class PaymentProcessingHandler {
 
   private static async updateNextBillingDate(billingAccount: BillingAccountType, explicitNextBillingDate?: Date): Promise<void> {
     const rolePolicy = RoleRegistry[billingAccount.profileType]?.subscriptionStart;
-    const nextMonth = explicitNextBillingDate
-      ? new Date(explicitNextBillingDate)
-      : rolePolicy
-        ? calculateInitialBillingDate(rolePolicy, Boolean(billingAccount.isYearly))
-        : new Date();
+    let nextBillingDate: Date;
 
-    if (!explicitNextBillingDate && !rolePolicy && billingAccount.isYearly) {
-      // Set to next year, same month
-      nextMonth.setFullYear(nextMonth.getFullYear() + 1);
-    } else if (!explicitNextBillingDate && !rolePolicy) {
-      // Set to first day of next month
-      nextMonth.setMonth(nextMonth.getMonth() + 1);
-    }
+    if (explicitNextBillingDate) {
+      nextBillingDate = new Date(explicitNextBillingDate);
+    } else if (rolePolicy) {
+      nextBillingDate = calculateNextRenewalBillingDate(
+        rolePolicy,
+        Boolean(billingAccount.isYearly),
+        billingAccount.nextBillingDate ?? new Date()
+      );
+    } else {
+      nextBillingDate = new Date();
 
-    if (!explicitNextBillingDate && !rolePolicy) {
-      // Scheduled subscriptions retain the existing calendar-month renewal behavior.
-      nextMonth.setDate(1);
-      nextMonth.setHours(0, 0, 0, 0);
+      if (billingAccount.isYearly) {
+        nextBillingDate.setFullYear(nextBillingDate.getFullYear() + 1);
+      } else {
+        nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
+      }
+
+      // Preserve legacy calendar-month behavior for unregistered profile types.
+      nextBillingDate.setDate(1);
+      nextBillingDate.setHours(0, 0, 0, 0);
     }
 
     await BillingAccount.findByIdAndUpdate(billingAccount._id, {
-      nextBillingDate: nextMonth,
+      nextBillingDate,
       status: 'active', // Ensure status is active after successful payment
       needsUpdate: false, // Clear needsUpdate flag, if its been set after a successful payment
     });
 
-    console.info(`[PaymentProcessingHandler] Updated next billing date for ${billingAccount._id} to ${nextMonth.toISOString()}`);
+    console.info(`[PaymentProcessingHandler] Updated next billing date for ${billingAccount._id} to ${nextBillingDate.toISOString()}`);
   }
 }
