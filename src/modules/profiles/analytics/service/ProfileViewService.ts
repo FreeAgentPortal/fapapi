@@ -42,6 +42,7 @@ export class ProfileViewService {
         },
       });
     } catch (err) {
+      console.log(err);
       return error(err, req, res);
     }
   });

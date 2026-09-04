@@ -63,6 +63,7 @@ const ProfileViewSchema = new Schema<IProfileView>(
 ProfileViewSchema.index({ createdAt: 1 }, { expireAfterSeconds: 90 * 24 * 60 * 60 });
 ProfileViewSchema.index({ subjectType: 1, subjectProfileId: 1, createdAt: -1 });
 ProfileViewSchema.index({ subjectType: 1, subjectProfileId: 1, viewerType: 1, createdAt: -1 });
+ProfileViewSchema.index({ viewerType: 1, createdAt: -1, subjectType: 1 });
 ProfileViewSchema.index(
   {
     subjectType: 1,
