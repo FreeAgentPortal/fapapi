@@ -22,6 +22,7 @@ describe('InterestHandler expression validation and limits', () => {
       _id: teamId,
       isActive: true,
       openToTryouts: true,
+      isActivelyRecruiting: true,
       linkedUsers: [{ user: userId }],
     } as any);
     jest.spyOn(BillingAccount, 'findOne').mockReturnValue({
