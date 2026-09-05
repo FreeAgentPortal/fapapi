@@ -103,6 +103,11 @@ const Schema = new mongoose.Schema(
         min: 0,
         default: null,
       },
+      teamInterestsPerMonth: {
+        type: Number,
+        min: 0,
+        default: null,
+      },
     },
     scheduledPlanChange: {
       plan: {
@@ -117,6 +122,11 @@ const Schema = new mongoose.Schema(
       ],
       entitlements: {
         agentSeats: {
+          type: Number,
+          min: 0,
+          default: null,
+        },
+        teamInterestsPerMonth: {
           type: Number,
           min: 0,
           default: null,

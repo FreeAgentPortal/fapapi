@@ -3,6 +3,7 @@ export interface EmailPayload {
   to: string;
   subject: string;
   html?: string;
+  text?: string;
   from?: string;
   data?: Record<string, any>; // Optional data for templating
   templateId?: string; // Optional template ID for provider-specific templates

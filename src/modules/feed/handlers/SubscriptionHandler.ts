@@ -21,6 +21,10 @@ export class Handler extends CRUDHandler<ISubscription> {
    * @Description - toggles a subscription between two profiles.
    */
   async toggle(subscriber: RoleRef, target: RoleRef): Promise<{ subscribed: boolean }> {
+    const validRoles = ['athlete', 'team', 'scout', 'agent'];
+    if (!target || !validRoles.includes(target.role) || !mongoose.Types.ObjectId.isValid(target.profileId as any)) {
+      throw new ErrorUtil('A valid subscription target is required.', 400);
+    }
     const existing = await Subscription.findOne({ 'subscriber.profileId': subscriber.profileId, 'target.profileId': target.profileId });
     if (existing) {
       await Subscription.deleteOne({ _id: existing._id });

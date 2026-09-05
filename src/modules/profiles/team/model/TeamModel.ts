@@ -21,6 +21,7 @@ export interface ITeamProfile extends Document {
   color: string; // e.g., "#AA0000" for team color
   alternateColor?: string; // e.g., "#FFFFFF" for alternate color
   isActive?: boolean; // Whether the team is currently active
+  isActivelyRecruiting?: boolean; // Whether the team is actively recruiting new athletes
   isAllStar?: boolean; // Whether the team is an All-Star team
   logoUrl?: string; // URL for the team's logo
   logos?: [{ href: string; alt: string; width: number; height: number }]; // Array of logo objects with href and alt text
@@ -32,7 +33,7 @@ export interface ITeamProfile extends Document {
     {
       title: string;
       description: string;
-    }
+    },
   ];
   linkedUsers: TeamMember[]; // References to users with access
   alertsEnabled: boolean;
@@ -89,6 +90,7 @@ const TeamProfileSchema: Schema = new Schema<ITeamProfile>(
       default: null, // Optional field
     },
     openToTryouts: { type: Boolean, default: true }, // Whether the team is open to new athletes
+    isActivelyRecruiting: { type: Boolean, default: true }, // Whether the team is actively recruiting new athletes
     slug: {
       type: String,
       unique: true,

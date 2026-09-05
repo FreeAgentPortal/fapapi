@@ -22,6 +22,7 @@ export function buildBillingPlanSnapshot(plan: any, entitlements: PlanEntitlemen
     features: normalizeFeatures(plan?.features),
     entitlements: {
       agentSeats: entitlements?.agentSeats ?? null,
+      teamInterestsPerMonth: entitlements?.teamInterestsPerMonth ?? null,
     },
     isYearly,
   };
@@ -32,6 +33,7 @@ export function applyBillingPlanSnapshot(billing: any, snapshot: BillingPlanSnap
   billing.features = normalizeFeatures(snapshot.features);
   billing.entitlements = {
     agentSeats: snapshot.entitlements?.agentSeats ?? null,
+    teamInterestsPerMonth: snapshot.entitlements?.teamInterestsPerMonth ?? null,
   };
   billing.isYearly = Boolean(snapshot.isYearly);
 }

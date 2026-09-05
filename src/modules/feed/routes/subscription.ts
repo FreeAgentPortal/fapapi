@@ -6,7 +6,7 @@ const router = express.Router();
 
 const service = new SubscriptionService();
 
-router.route('/toggle').post(service.subscribe);
+router.route('/toggle').post(AuthMiddleware.protect, service.subscribe);
 
 router.route('/').get(service.getResources);
 router.route('/:id').get(service.getResource);

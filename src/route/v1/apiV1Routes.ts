@@ -14,6 +14,7 @@ import profileRoutes from '../../modules/profiles/routes/index';
 import scoutRoutes from '../../modules/scout/routes/index';
 import messagingRoutes from '../../modules/messaging/routes/index';
 import jobsRoutes from '../../modules/jobs/routes/index';
+import interestRoutes from '../../modules/interests/routes/index';
 
 const router = express.Router();
 
@@ -29,6 +30,7 @@ router.use('/user', userRoutes);
 router.use('/scout', scoutRoutes);
 router.use('/messaging', messagingRoutes);
 router.use('/jobs', jobsRoutes);
+router.use('/interests', interestRoutes);
 
 // TODO: Remove these when the new profile routes are fully integrated
 router.use('/admin', adminRoutes);

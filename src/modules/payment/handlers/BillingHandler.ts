@@ -906,9 +906,16 @@ export class BillingHandler {
     }
   }
 
-  private resolveBillingEntitlements(plan: any, profileType: string): { agentSeats: number | null } {
+  private resolveBillingEntitlements(
+    plan: any,
+    profileType: string
+  ): { agentSeats: number | null; teamInterestsPerMonth: number } {
+    const configuredInterestLimit = plan?.entitlements?.teamInterestsPerMonth;
+    const teamInterestsPerMonth =
+      Number.isInteger(configuredInterestLimit) && configuredInterestLimit >= 0 ? configuredInterestLimit : 0;
+
     if (profileType !== 'agent') {
-      return { agentSeats: null };
+      return { agentSeats: null, teamInterestsPerMonth };
     }
 
     const agentSeats = plan?.entitlements?.agentSeats;
@@ -916,7 +923,7 @@ export class BillingHandler {
       throw new ErrorUtil('Selected agent plan is missing a valid seat entitlement', 400);
     }
 
-    return { agentSeats };
+    return { agentSeats, teamInterestsPerMonth };
   }
 
   /**
