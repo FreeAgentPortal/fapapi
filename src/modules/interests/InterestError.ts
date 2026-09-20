@@ -5,7 +5,8 @@ export type InterestErrorCode =
   | 'INTEREST_LIMIT_REACHED'
   | 'TEAM_NOT_ELIGIBLE'
   | 'INTEREST_COOLDOWN'
-  | 'INTEREST_FORBIDDEN';
+  | 'INTEREST_FORBIDDEN'
+  | 'INTEREST_INVALID_QUERY';
 
 export class InterestError extends ErrorUtil {
   constructor(
@@ -17,4 +18,3 @@ export class InterestError extends ErrorUtil {
     super(message, statusCode);
   }
 }
-

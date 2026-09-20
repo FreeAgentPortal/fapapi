@@ -6,9 +6,22 @@ import { AuthenticatedRequest } from '../../../types/AuthenticatedRequest';
 import logger from '../../../utils/logger';
 import { InterestError } from '../InterestError';
 import { InterestHandler } from '../handlers/InterestHandler';
+import { InterestReportHandler } from '../handlers/InterestReportHandler';
 
 export class InterestService {
-  constructor(private readonly handler: InterestHandler = new InterestHandler()) {}
+  constructor(
+    private readonly handler: InterestHandler = new InterestHandler(),
+    private readonly reportHandler: InterestReportHandler = new InterestReportHandler()
+  ) {}
+
+  public getReport = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+    try {
+      const payload = await this.reportHandler.generateReport(this.parseReportDays(req.query.days));
+      return res.status(200).json({ success: true, payload });
+    } catch (err) {
+      return this.handleError(err, req, res);
+    }
+  });
 
   public getQuota = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
     try {
@@ -150,6 +163,18 @@ export class InterestService {
     const page = Math.max(1, Number.parseInt(String(req.query.page || '1'), 10) || 1);
     const limit = Math.min(100, Math.max(1, Number.parseInt(String(req.query.limit || '20'), 10) || 20));
     return { page, limit };
+  }
+
+  private parseReportDays(raw: unknown): number {
+    if (raw === undefined) return 30;
+    if (typeof raw !== 'string' || !/^\d+$/.test(raw)) {
+      throw new InterestError('INTEREST_INVALID_QUERY', 'days must be an integer between 1 and 90.', 400);
+    }
+    const days = Number(raw);
+    if (!Number.isSafeInteger(days) || days < 1 || days > 90) {
+      throw new InterestError('INTEREST_INVALID_QUERY', 'days must be an integer between 1 and 90.', 400);
+    }
+    return days;
   }
 
   private handleError(err: unknown, req: AuthenticatedRequest, res: Response): Response {

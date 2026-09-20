@@ -55,5 +55,6 @@ const AthleteTeamInterestSchema = new Schema<IAthleteTeamInterest>(
 AthleteTeamInterestSchema.index({ athleteProfile: 1, teamProfile: 1 }, { unique: true });
 AthleteTeamInterestSchema.index({ athleteProfile: 1, lastExpressedAt: -1 });
 AthleteTeamInterestSchema.index({ teamProfile: 1, status: 1, lastExpressedAt: -1 });
+AthleteTeamInterestSchema.index({ 'expressions.expressedAt': 1 });
 
 export const AthleteTeamInterestModel = mongoose.model<IAthleteTeamInterest>('AthleteTeamInterest', AthleteTeamInterestSchema);
