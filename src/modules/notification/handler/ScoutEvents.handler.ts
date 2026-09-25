@@ -1,6 +1,5 @@
 import { Model } from 'mongoose';
 import { ErrorUtil } from '../../../middleware/ErrorUtil';
-import { EmailService } from '../email/EmailService';
 import Notification from '../model/Notification';
 import { ModelMap } from '../../../utils/ModelMap';
 
@@ -24,7 +23,7 @@ export default class ScoutEventsHandler {
     );
 
     // next alert the scout who submitted the report that their report was successfully submitted
-    const scoutProfile = await this.modelMap['scout_profile'].findById({ user: event.scoutId });
+    const scoutProfile = await this.modelMap['scout_profile'].findById(event.scoutId);
     if (scoutProfile) {
       await Notification.insertNotification(
         scoutProfile._id,

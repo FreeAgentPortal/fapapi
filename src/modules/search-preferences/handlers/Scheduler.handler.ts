@@ -3,6 +3,13 @@ import { eventBus } from '../../../lib/eventBus';
 import { AthleteModel, IAthlete } from '../../profiles/athlete/models/AthleteModel';
 import SearchReport, { ISearchReport } from '../models/SearchReport';
 
+type PerformanceMetricRange = { min?: number; max?: number };
+
+interface AthleteSearchResult {
+  athlete: IAthlete;
+  matchScore: number;
+}
+
 export class SchedulerHandler {
   /**
    * Generate a report for a specific search preference
@@ -14,13 +21,17 @@ export class SchedulerHandler {
       // console.info(`[Scheduler] Generating report for search preference: ${searchPreference.name} (ID: ${searchPreference._id})`);
 
       // Mock report data for now - replace with actual search logic
-      const athletes = await this.performSearch(searchPreference);
-      if (!athletes || athletes.length === 0) {
+      const searchResults = await this.performSearch(searchPreference);
+      if (!searchResults || searchResults.length === 0) {
         // console.warn(`[Scheduler] No athletes found for search preference: ${searchPreference.name}`);
       }
       const reportData = {
         searchPreference: searchPreference._id as any,
-        results: athletes.map((a) => a._id),
+        results: searchResults.map(({ athlete }) => athlete._id),
+        scoredResults: searchResults.map(({ athlete, matchScore }) => ({
+          athlete: athlete._id,
+          matchScore,
+        })),
         generatedAt: new Date(),
         reportId: `report_${searchPreference._id}_${searchPreference.name.replace(/\s+/g, '_')}_${Date.now()}`,
         ownerId: searchPreference.ownerId,
@@ -51,7 +62,7 @@ export class SchedulerHandler {
   /**
    * Perform the actual search based on search preferences
    */
-  private static async performSearch(searchPreference: ISearchPreferences): Promise<IAthlete[]> {
+  private static async performSearch(searchPreference: ISearchPreferences): Promise<AthleteSearchResult[]> {
     // console.info(`[Scheduler] Performing search with preferences:`, {
     //   positions: searchPreference.positions,
     //   ageRange: searchPreference.ageRange,
@@ -61,6 +72,7 @@ export class SchedulerHandler {
 
     // Build the match conditions
     const matchConditions: any[] = [];
+    let performanceMetricCriteria: [string, PerformanceMetricRange][] = [];
 
     // Filter by positions if specified
     if (searchPreference.positions && searchPreference.positions.length > 0) {
@@ -101,34 +113,34 @@ export class SchedulerHandler {
       const performanceMetrics = searchPreference.performanceMetrics;
 
       // Convert to entries array regardless of whether it's a Map or object
-      let metricsEntries: [string, { min?: number; max?: number }][] = [];
-
       if (performanceMetrics instanceof Map) {
-        metricsEntries = Array.from(performanceMetrics.entries());
+        performanceMetricCriteria = Array.from(performanceMetrics.entries());
       } else if (typeof performanceMetrics === 'object' && performanceMetrics !== null) {
-        metricsEntries = Object.entries(performanceMetrics);
+        performanceMetricCriteria = Object.entries(performanceMetrics);
       }
 
-      for (const [metricName, metricRange] of metricsEntries) {
-        if (metricRange && typeof metricRange === 'object' && (metricRange.min !== undefined || metricRange.max !== undefined)) {
-          const metricKey = `metrics.${metricName}`;
+      performanceMetricCriteria = performanceMetricCriteria.filter(
+        ([, metricRange]) => metricRange && typeof metricRange === 'object' && (metricRange.min !== undefined || metricRange.max !== undefined)
+      );
 
-          // Build conditions for this specific metric
-          const metricRangeCondition: any = {};
+      for (const [metricName, metricRange] of performanceMetricCriteria) {
+        const metricKey = `metrics.${metricName}`;
 
-          if (metricRange.min !== undefined) {
-            metricRangeCondition.$gte = metricRange.min;
-          }
+        // Build conditions for this specific metric
+        const metricRangeCondition: any = {};
 
-          if (metricRange.max !== undefined) {
-            metricRangeCondition.$lte = metricRange.max;
-          }
-
-          // Add condition for this metric
-          const metricCondition: any = {};
-          metricCondition[metricKey] = metricRangeCondition;
-          performanceConditions.push(metricCondition);
+        if (metricRange.min !== undefined) {
+          metricRangeCondition.$gte = metricRange.min;
         }
+
+        if (metricRange.max !== undefined) {
+          metricRangeCondition.$lte = metricRange.max;
+        }
+
+        // Add condition for this metric
+        const metricCondition: any = {};
+        metricCondition[metricKey] = metricRangeCondition;
+        performanceConditions.push(metricCondition);
       }
 
       // Add all performance metric conditions
@@ -141,33 +153,58 @@ export class SchedulerHandler {
     // Build the aggregation pipeline
     const pipeline: any[] = [];
 
-    // Add match stage if we have conditions
-    if (matchConditions.length > 0) {
-      pipeline.push({
-        $match: {
-          // only isActive athletes
-          isActive: true,
-          $and: matchConditions,
-        },
-      });
-    }
+    // Only include active athletes, along with any requested search filters.
+    pipeline.push({
+      $match: {
+        isActive: true,
+        ...(matchConditions.length > 0 && { $and: matchConditions }),
+      },
+    });
 
-    // Add limit if specified
+    // Ranked athletes appear first from highest to lowest rating. Creation date
+    // and ID provide deterministic ordering for athletes with the same rating.
+    pipeline.push({ $sort: { diamondRating: -1, createdAt: -1, _id: 1 } });
+
+    // Limit only after ranking so the report contains the highest-rated matches.
     if (searchPreference.numberOfResults && searchPreference.numberOfResults > 0) {
       pipeline.push({ $limit: searchPreference.numberOfResults });
     }
 
-    // Sort by creation date (newest first) to get consistent results
-    pipeline.push({ $sort: { createdAt: -1 } });
-
-
     try {
       const results = await AthleteModel.aggregate(pipeline);
-      return results;
+      return results.map((athlete) => ({
+        athlete,
+        matchScore: this.calculateMatchScore(athlete, performanceMetricCriteria),
+      }));
     } catch (error) {
       console.error(`[Scheduler] Error executing search query:`, error);
       throw new Error(`Failed to perform athlete search: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+  }
+
+  /**
+   * Calculate the percentage of requested performance metrics an athlete matches.
+   * Position and age are hard filters and are not included in this score.
+   */
+  private static calculateMatchScore(athlete: IAthlete, criteria: [string, PerformanceMetricRange][]): number {
+    if (criteria.length === 0) {
+      return 100;
+    }
+
+    const matchedCriteria = criteria.reduce((total, [metricName, range]) => {
+      const metricValue = athlete.metrics instanceof Map ? athlete.metrics.get(metricName) : (athlete.metrics as any)?.[metricName];
+
+      if (typeof metricValue !== 'number') {
+        return total;
+      }
+
+      const meetsMinimum = range.min === undefined || metricValue >= range.min;
+      const meetsMaximum = range.max === undefined || metricValue <= range.max;
+
+      return meetsMinimum && meetsMaximum ? total + 1 : total;
+    }, 0);
+
+    return Math.round((matchedCriteria / criteria.length) * 100);
   }
 
   /**

@@ -1,4 +1,7 @@
+import mongoose from 'mongoose';
+import { ErrorUtil } from '../../../middleware/ErrorUtil';
 import AuthActivityLog from '../model/AuthActivityLog';
+import User from '../model/User';
 
 export class AuthActivityAnalyticsHandler {
   public async getSummary(days: number): Promise<any> {
@@ -114,7 +117,7 @@ export class AuthActivityAnalyticsHandler {
     };
   }
 
-  public async getRecent(days: number, limit: number): Promise<any[]> {
+  public async getRecent(days: number, limit: number, page = 1): Promise<any[]> {
     const startDate = this.getStartDate(days);
 
     return await AuthActivityLog.aggregate([
@@ -146,6 +149,9 @@ export class AuthActivityAnalyticsHandler {
         $sort: {
           lastSeenAt: -1,
         },
+      },
+      {
+        $skip: (page - 1) * limit,
       },
       {
         $limit: limit,
@@ -187,12 +193,137 @@ export class AuthActivityAnalyticsHandler {
           lastPath: 1,
           lastMethod: 1,
           lastServiceName: 1,
-          requestCount: 1,
+          approximateRequestCount: '$requestCount',
           activityBuckets: 1,
           activeSessions: { $size: '$sessionHashes' },
         },
       },
     ]);
+  }
+
+  public async getRecentCount(days: number): Promise<number> {
+    const startDate = this.getStartDate(days);
+    const result = await AuthActivityLog.aggregate([
+      {
+        $match: {
+          lastSeenAt: { $gte: startDate },
+        },
+      },
+      {
+        $group: {
+          _id: '$userId',
+        },
+      },
+      {
+        $count: 'totalCount',
+      },
+    ]);
+
+    return result[0]?.totalCount || 0;
+  }
+
+  public async getUserActivity(userId: string, days: number, page: number, limit: number): Promise<any> {
+    if (!mongoose.isValidObjectId(userId)) {
+      throw new ErrorUtil('Invalid user id', 400);
+    }
+
+    const user = await User.findById(userId)
+      .select('_id firstName lastName fullName email profileImageUrl role isActive lastSignedIn')
+      .lean();
+
+    if (!user) {
+      throw new ErrorUtil('User not found', 404);
+    }
+
+    const startDate = this.getStartDate(days);
+    const objectId = new mongoose.Types.ObjectId(userId);
+    const [activityResult] = await AuthActivityLog.aggregate([
+      {
+        $match: {
+          userId: objectId,
+          lastSeenAt: { $gte: startDate },
+        },
+      },
+      {
+        $sort: {
+          lastSeenAt: -1,
+          _id: -1,
+        },
+      },
+      {
+        $facet: {
+          summary: [
+            {
+              $group: {
+                _id: null,
+                firstSeenAt: { $min: '$firstSeenAt' },
+                lastSeenAt: { $max: '$lastSeenAt' },
+                activityBuckets: { $sum: 1 },
+                approximateRequestCount: { $sum: '$requestCount' },
+                sessionHashes: { $addToSet: '$sessionHash' },
+              },
+            },
+            {
+              $project: {
+                _id: 0,
+                firstSeenAt: 1,
+                lastSeenAt: 1,
+                activityBuckets: 1,
+                approximateRequestCount: 1,
+                activeSessions: { $size: '$sessionHashes' },
+              },
+            },
+          ],
+          entries: [
+            {
+              $skip: (page - 1) * limit,
+            },
+            {
+              $limit: limit,
+            },
+            {
+              $project: {
+                _id: 1,
+                bucketStart: 1,
+                firstSeenAt: 1,
+                lastSeenAt: 1,
+                approximateRequestCount: '$requestCount',
+                lastPath: 1,
+                lastMethod: 1,
+                lastServiceName: 1,
+                sessionSource: 1,
+                ipAddress: 1,
+                userAgent: 1,
+                roles: 1,
+              },
+            },
+          ],
+          metadata: [
+            {
+              $count: 'totalCount',
+            },
+          ],
+        },
+      },
+    ]);
+
+    return {
+      user,
+      range: {
+        days,
+        startDate,
+        endDate: new Date(),
+      },
+      summary: activityResult?.summary?.[0] || {
+        firstSeenAt: null,
+        lastSeenAt: null,
+        activityBuckets: 0,
+        approximateRequestCount: 0,
+        activeSessions: 0,
+      },
+      entries: activityResult?.entries || [],
+      totalCount: activityResult?.metadata?.[0]?.totalCount || 0,
+    };
   }
 
   private getStartDate(days: number, endDate = new Date()): Date {

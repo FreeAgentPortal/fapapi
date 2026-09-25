@@ -4,14 +4,18 @@ import PaymentProcessorFactory from '../factory/PaymentProcessorFactory';
 import PlanSchema from '../../auth/model/PlanSchema';
 import PaymentProcessor from '../classes/PaymentProcess';
 import { eventBus } from '../../../lib/eventBus';
-import { applyBillingPlanSnapshot, calculatePlanCycleAmount } from '../utils/billingPlanUtils';
+import { applyBillingPlanSnapshot, calculateNextRenewalBillingDate, calculatePlanCycleAmount } from '../utils/billingPlanUtils';
 import logger from '../../../utils/logger';
+import type { ReceiptRevenueCategory } from '../utils/subscriptionRevenue';
+import { RoleRegistry } from '../../auth/utils/RoleRegistry';
 
 type BillingChargeOptions = {
   updateBillingDate?: boolean;
+  nextBillingDate?: Date;
   description?: string;
   failureMutationMode?: 'standard' | 'none';
   planOverride?: any;
+  revenueCategory?: ReceiptRevenueCategory;
 };
 
 export default class PaymentProcessingHandler {
@@ -251,12 +255,14 @@ export default class PaymentProcessingHandler {
     profileId: string,
     amount?: number,
     updateBillingDate: boolean = true,
-    description?: string
+    description?: string,
+    revenueCategory?: ReceiptRevenueCategory
   ): Promise<{ success: boolean; message: string; receipt?: ReceiptType }> {
     return this.processBillingCharge(profileId, amount, {
       updateBillingDate,
       description,
       failureMutationMode: 'standard',
+      revenueCategory: revenueCategory ?? (updateBillingDate ? 'subscription' : 'other'),
     });
   }
 
@@ -271,6 +277,22 @@ export default class PaymentProcessingHandler {
       description,
       failureMutationMode: 'none',
       planOverride,
+      revenueCategory: 'subscription_proration',
+    });
+  }
+
+  public static async processInitialSubscriptionCharge(
+    billingAccountId: string,
+    amountInCents: number,
+    nextBillingDate: Date,
+    description: string
+  ): Promise<{ success: boolean; message: string; receipt?: ReceiptType }> {
+    return this.processBillingCharge(billingAccountId, amountInCents, {
+      updateBillingDate: true,
+      nextBillingDate,
+      description,
+      failureMutationMode: 'standard',
+      revenueCategory: 'subscription',
     });
   }
 
@@ -282,6 +304,7 @@ export default class PaymentProcessingHandler {
     const updateBillingDate = options.updateBillingDate ?? true;
     const failureMutationMode = options.failureMutationMode ?? 'standard';
     const description = options.description;
+    const revenueCategory = options.revenueCategory ?? (updateBillingDate ? 'subscription' : 'other');
 
     try {
       console.info(`[PaymentProcessingHandler] Processing payment for billing account ${billingAccountId}...`);
@@ -349,12 +372,7 @@ export default class PaymentProcessingHandler {
         if (!billingAccount.plan) {
           throw new Error(`No plan associated with billing account for profile ${billingAccountId}`);
         }
-        // Calculate amount based on plan and billing cycle
-        calculatedAmount = parseFloat(plan.price);
-        // Apply yearly discount if applicable
-        if (billingAccount.isYearly && plan.yearlyDiscount) {
-          calculatedAmount = calculatedAmount * 12 * (1 - plan.yearlyDiscount / 100);
-        }
+        calculatedAmount = calculatePlanCycleAmount(plan, Boolean(billingAccount.isYearly));
         // finally, subtract any credits
         if (billingAccount.credits && billingAccount.credits > 0) {
           const originalAmount = calculatedAmount;
@@ -385,11 +403,18 @@ export default class PaymentProcessingHandler {
 
         // Create success receipt for zero-amount payment
         const receiptDescription = description || (amount !== undefined && !updateBillingDate ? 'One-time payment covered by credits' : undefined);
-        const receipt = await this.createSuccessReceipt(billingAccount, mockPaymentResult, calculatedAmount, plan, receiptDescription);
+        const receipt = await this.createSuccessReceipt(
+          billingAccount,
+          mockPaymentResult,
+          calculatedAmount,
+          plan,
+          receiptDescription,
+          revenueCategory
+        );
 
         // Update next billing date only for subscription payments
         if (updateBillingDate) {
-          await this.updateNextBillingDate(billingAccount);
+          await this.updateNextBillingDate(billingAccount, options.nextBillingDate);
         } else {
           // For immediate payments, just update status but not billing date
           await BillingAccount.findByIdAndUpdate(billingAccount._id, {
@@ -406,22 +431,32 @@ export default class PaymentProcessingHandler {
         };
       }
 
-      // add the amount to processorData
-      processorData.amount = calculatedAmount;
-
       console.info(`[PaymentProcessingHandler] Processing payment of $${calculatedAmount} for billing account ${billingAccountId} using token ${processorData.tokenId}`);
 
       // processor is expected to handle the information passed into it
-      const paymentResult = (await this.processor?.processPayment(processorData)) as any;
+      const paymentResult = (await this.processor?.processPayment({
+        ...processorData,
+        amount: calculatedAmount,
+        billingAccountId: String(billingAccount._id),
+        revenueCategory,
+        description,
+      })) as any;
 
       if (paymentResult.success) {
         // Payment successful - create success receipt
         const receiptDescription = description || (amount !== undefined && !updateBillingDate ? 'One-time payment processed successfully' : undefined); // Use default subscription description
-        const receipt = await this.createSuccessReceipt(billingAccount, paymentResult, calculatedAmount, plan, receiptDescription);
+        const receipt = await this.createSuccessReceipt(
+          billingAccount,
+          paymentResult,
+          calculatedAmount,
+          plan,
+          receiptDescription,
+          revenueCategory
+        );
 
         // Update next billing date only for subscription payments
         if (updateBillingDate) {
-          await this.updateNextBillingDate(billingAccount);
+          await this.updateNextBillingDate(billingAccount, options.nextBillingDate);
         } else {
           // For immediate payments, just update status but not billing date
           await BillingAccount.findByIdAndUpdate(billingAccount._id, {
@@ -439,7 +474,14 @@ export default class PaymentProcessingHandler {
       } else {
         // Payment failed - create failure receipt
         const receiptDescription = description || (amount !== undefined && !updateBillingDate ? 'One-time payment failed' : undefined); // Use default subscription description
-        const receipt = await this.createFailureReceipt(billingAccount, paymentResult, calculatedAmount, plan, receiptDescription);
+        const receipt = await this.createFailureReceipt(
+          billingAccount,
+          paymentResult,
+          calculatedAmount,
+          plan,
+          receiptDescription,
+          revenueCategory
+        );
 
         if (failureMutationMode === 'standard') {
           // Mark account as needing update
@@ -464,7 +506,13 @@ export default class PaymentProcessingHandler {
         const billingAccount = await BillingAccount.findById(billingAccountId).populate('plan').populate('payor');
         if (billingAccount) {
           const receiptDescription = description || (amount !== undefined && !updateBillingDate ? 'One-time payment processing error' : 'Subscription payment processing error');
-          await this.createErrorReceipt(billingAccount, error.message, receiptDescription);
+          await this.createErrorReceipt(
+            billingAccount,
+            error.message,
+            billingAccount.plan as any,
+            receiptDescription,
+            revenueCategory
+          );
 
           if (failureMutationMode === 'standard') {
             await BillingAccount.findByIdAndUpdate(billingAccountId, { needsUpdate: true });
@@ -478,7 +526,14 @@ export default class PaymentProcessingHandler {
     }
   }
 
-  private static async createSuccessReceipt(billingAccount: BillingAccountType, paymentResult: any, amount: number, plan: any, description?: string): Promise<ReceiptType> {
+  private static async createSuccessReceipt(
+    billingAccount: BillingAccountType,
+    paymentResult: any,
+    amount: number,
+    plan: any,
+    description: string | undefined,
+    revenueCategory: ReceiptRevenueCategory
+  ): Promise<ReceiptType> {
     const receipt = new Receipt({
       transactionId: `TXN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       billingAccountId: billingAccount._id,
@@ -488,6 +543,7 @@ export default class PaymentProcessingHandler {
       amount: amount,
       currency: 'USD',
       description: description || (plan ? `${billingAccount.isYearly ? 'Annual' : 'Monthly'} subscription payment for ${plan.name}` : 'Payment processed successfully'),
+      revenueCategory,
       planInfo: plan
         ? {
             planId: plan._id,
@@ -521,7 +577,14 @@ export default class PaymentProcessingHandler {
     return receipt;
   }
 
-  private static async createFailureReceipt(billingAccount: BillingAccountType, paymentResult: any, amount: number, plan: any, description?: string): Promise<ReceiptType> {
+  private static async createFailureReceipt(
+    billingAccount: BillingAccountType,
+    paymentResult: any,
+    amount: number,
+    plan: any,
+    description: string | undefined,
+    revenueCategory: ReceiptRevenueCategory
+  ): Promise<ReceiptType> {
     const receipt = new Receipt({
       transactionId: `TXN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       billingAccountId: billingAccount._id,
@@ -531,6 +594,7 @@ export default class PaymentProcessingHandler {
       amount: amount,
       currency: 'USD',
       description: description || (plan ? `Failed ${billingAccount.isYearly ? 'annual' : 'monthly'} subscription payment for ${plan.name}` : 'Payment processing failed'),
+      revenueCategory,
       planInfo: plan
         ? {
             planId: plan._id,
@@ -568,7 +632,13 @@ export default class PaymentProcessingHandler {
     return receipt;
   }
 
-  private static async createErrorReceipt(billingAccount: BillingAccountType, errorMessage: string, description?: string): Promise<ReceiptType> {
+  private static async createErrorReceipt(
+    billingAccount: BillingAccountType,
+    errorMessage: string,
+    plan: any,
+    description: string | undefined,
+    revenueCategory: ReceiptRevenueCategory
+  ): Promise<ReceiptType> {
     const receipt = new Receipt({
       transactionId: `TXN_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
       billingAccountId: billingAccount._id,
@@ -578,6 +648,15 @@ export default class PaymentProcessingHandler {
       amount: 0,
       currency: 'USD',
       description: description || 'Payment processing error occurred',
+      revenueCategory,
+      planInfo: plan
+        ? {
+            planId: plan._id,
+            planName: plan.name,
+            planPrice: parseFloat(plan.price),
+            billingCycle: billingAccount.isYearly ? 'yearly' : 'monthly',
+          }
+        : undefined,
       processor: {
         name: await this.processor?.getProcessorName(),
         transactionId: 'ERROR',
@@ -600,27 +679,38 @@ export default class PaymentProcessingHandler {
     return receipt;
   }
 
-  private static async updateNextBillingDate(billingAccount: BillingAccountType): Promise<void> {
-    const nextMonth = new Date();
+  private static async updateNextBillingDate(billingAccount: BillingAccountType, explicitNextBillingDate?: Date): Promise<void> {
+    const rolePolicy = RoleRegistry[billingAccount.profileType]?.subscriptionStart;
+    let nextBillingDate: Date;
 
-    if (billingAccount.isYearly) {
-      // Set to next year, same month
-      nextMonth.setFullYear(nextMonth.getFullYear() + 1);
+    if (explicitNextBillingDate) {
+      nextBillingDate = new Date(explicitNextBillingDate);
+    } else if (rolePolicy) {
+      nextBillingDate = calculateNextRenewalBillingDate(
+        rolePolicy,
+        Boolean(billingAccount.isYearly),
+        billingAccount.nextBillingDate ?? new Date()
+      );
     } else {
-      // Set to first day of next month
-      nextMonth.setMonth(nextMonth.getMonth() + 1);
+      nextBillingDate = new Date();
+
+      if (billingAccount.isYearly) {
+        nextBillingDate.setFullYear(nextBillingDate.getFullYear() + 1);
+      } else {
+        nextBillingDate.setMonth(nextBillingDate.getMonth() + 1);
+      }
+
+      // Preserve legacy calendar-month behavior for unregistered profile types.
+      nextBillingDate.setDate(1);
+      nextBillingDate.setHours(0, 0, 0, 0);
     }
 
-    // Set to first day of the month
-    nextMonth.setDate(1);
-    nextMonth.setHours(0, 0, 0, 0);
-
     await BillingAccount.findByIdAndUpdate(billingAccount._id, {
-      nextBillingDate: nextMonth,
+      nextBillingDate,
       status: 'active', // Ensure status is active after successful payment
       needsUpdate: false, // Clear needsUpdate flag, if its been set after a successful payment
     });
 
-    console.info(`[PaymentProcessingHandler] Updated next billing date for ${billingAccount._id} to ${nextMonth.toISOString()}`);
+    console.info(`[PaymentProcessingHandler] Updated next billing date for ${billingAccount._id} to ${nextBillingDate.toISOString()}`);
   }
 }

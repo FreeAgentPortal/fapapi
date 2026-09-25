@@ -4,6 +4,7 @@ import { RolesConfig } from '../../../../utils/RolesConfig';
 import ProfessionalService from '../service/Professional.service';
 import TalentSearchHandler from '../handlers/TalentSearch.handler';
 import talentSearchRateLimiter from './talentSearchRateLimiter';
+import viewRoutes from './view';
 
 const router = express.Router();
 
@@ -16,6 +17,7 @@ router.route('/health').get((req, res) => {
   });
 });
 
+router.use('/views', viewRoutes);
 router.use(AuthMiddleware.protect);
 router.use('/profile', require('./profileRoutes').default);
 

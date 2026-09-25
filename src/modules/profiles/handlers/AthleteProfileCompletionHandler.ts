@@ -1,7 +1,6 @@
 import { IAthlete } from '../athlete/models/AthleteModel';
 import { eventBus } from '../../../lib/eventBus';
 import Notification from '../../notification/model/Notification';
-import { ResumeProfile } from '../resume/models/ResumeProfile';
 
 export interface ProfileCompletionStatus {
   isComplete: boolean;
@@ -71,26 +70,8 @@ export class AthleteProfileCompletionHandler {
       criticalFieldsMissing.push('measurements');
     }
 
-    // Check for resume (check if athlete has a resume profile)
-    try {
-      const resume = await ResumeProfile.findOne({
-        'owner.kind': 'AthleteProfile',
-        'owner.ref': athlete._id,
-      });
-
-      if (!resume || resume.experiences.length === 0) {
-        missingFields.push('Resume/Experience');
-        criticalFieldsMissing.push('resume');
-      }
-    } catch (error) {
-      console.warn(`[AthleteProfileCompletion] Could not check resume for athlete ${athlete._id}:`, error);
-      // Don't fail the whole process if resume check fails
-      missingFields.push('Resume/Experience');
-      criticalFieldsMissing.push('resume');
-    }
-
     // Calculate completion percentage
-    const totalFields = 4; // profileImageUrl, metrics, measurements, resume
+    const totalFields = 3; // profileImageUrl, metrics, measurements
     const completedFields = totalFields - criticalFieldsMissing.length;
     const completionPercentage = Math.round((completedFields / totalFields) * 100);
 
@@ -186,10 +167,6 @@ export class AthleteProfileCompletionHandler {
 
     if (completionStatus.criticalFieldsMissing.includes('measurements')) {
       recommendations.push('Include physical measurements (height, weight) for better position matching');
-    }
-
-    if (completionStatus.criticalFieldsMissing.includes('resume')) {
-      recommendations.push('Create a sports resume with your experience, achievements, and education');
     }
 
     // Determine priority based on completion percentage

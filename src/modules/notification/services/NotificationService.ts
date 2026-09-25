@@ -6,10 +6,13 @@ import NAuthService from './NAuthService';
 import NBillingEventsService from './NBillingEvents.service';
 import NClaimService from './NClaimService';
 import NConversationService from './NConversationService';
+import NScoutService from './NScoutService';
 import NSupportService from './NSupportService';
 import NTeamsEventService from './NTeamsEvent.service';
 import NUserService from './NUserService';
 import SearchReportEventService from './SearchReportEvent.service';
+import NProfileViewEventsService from './NProfileViewEvents.service';
+import NInterestService from './NInterestService';
 
 export default class NotificationService {
   constructor(
@@ -19,9 +22,12 @@ export default class NotificationService {
     private readonly searchReportEventService: SearchReportEventService = new SearchReportEventService(),
     private readonly nuserService: NUserService = new NUserService(),
     private readonly nconversationService: NConversationService = new NConversationService(),
+    private readonly nscoutService: NScoutService = new NScoutService(),
     private readonly nteamsEventService: NTeamsEventService = new NTeamsEventService(),
     private readonly nathleteEventService: NAthleteEventsService = new NAthleteEventsService(),
-    private readonly nbillingEventService: NBillingEventsService = new NBillingEventsService()
+    private readonly nbillingEventService: NBillingEventsService = new NBillingEventsService(),
+    private readonly nprofileViewEventsService: NProfileViewEventsService = new NProfileViewEventsService(),
+    private readonly ninterestService: NInterestService = new NInterestService()
   ) {}
   public init() {
     EmailService.init('sendgrid');
@@ -32,8 +38,11 @@ export default class NotificationService {
     this.searchReportEventService.init();
     this.nuserService.init();
     this.nconversationService.init();
+    this.nscoutService.init();
     this.nteamsEventService.init();
     this.nathleteEventService.init();
     this.nbillingEventService.init();
+    this.nprofileViewEventsService.init();
+    this.ninterestService.init();
   }
 }

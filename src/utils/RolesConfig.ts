@@ -78,6 +78,7 @@ export class RolesConfig {
       'analytics.users',
       'analytics.performance',
       'analytics.business',
+      'analytics.profileViews',
     ],
 
     developer: [

@@ -6,6 +6,8 @@ export class ProfessionalProfileCreator implements ProfileCreator {
     const ProfessionalProfile = mongoose.model('ProfessionalProfile');
     const profile = await ProfessionalProfile.create({
       user: userId,
+      displayName: profileData.fullName || profileData.displayName,
+      contactNumber: profileData.phoneNumber,
       ...profileData,
     });
 

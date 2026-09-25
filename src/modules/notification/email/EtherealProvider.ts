@@ -15,12 +15,13 @@ export class EtherealProvider implements EmailProvider {
     });
   }
 
-  async sendEmail({ to, subject, html, from }: EmailPayload): Promise<void> {
+  async sendEmail({ to, subject, html, text, from }: EmailPayload): Promise<void> {
     const info = await this.transporter.sendMail({
       from: from || 'no-reply@freeagentportal.dev',
       to,
       subject,
       html,
+      text,
     });
     console.info('📧 Ethereal preview URL:', nodemailer.getTestMessageUrl(info));
   }

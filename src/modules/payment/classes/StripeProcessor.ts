@@ -30,6 +30,9 @@ class StripeProcessing extends PaymentProcessor {
     return this.vaultTransaction({
       customer_vault_id: details.customer.id,
       amount: details.amount,
+      billing_account_id: details.billingAccountId,
+      revenue_category: details.revenueCategory,
+      description: details.description,
     });
   }
 
@@ -356,6 +359,9 @@ class StripeProcessing extends PaymentProcessor {
     initiated_by?: string;
     stored_credential_indicator?: string;
     payment_method_id?: string; // Optional specific payment method ID
+    billing_account_id?: string;
+    revenue_category?: string;
+    description?: string;
   }) {
     try {
       console.info(`[StripeProcessor] Processing vault transaction for customer ${details.customer_vault_id} amount ${details.amount}`);
@@ -392,9 +398,12 @@ class StripeProcessing extends PaymentProcessor {
         payment_method: paymentMethodId,
         confirm: true,
         off_session: true, // Indicates this is for a recurring payment
+        description: details.description,
         metadata: {
           initiated_by: details.initiated_by || 'system',
           stored_credential_indicator: details.stored_credential_indicator || 'recurring',
+          billing_account_id: details.billing_account_id || '',
+          revenue_category: details.revenue_category || 'other',
         },
       });
 

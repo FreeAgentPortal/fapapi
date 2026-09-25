@@ -4,6 +4,7 @@ import { FeatureType } from './FeatureSchema';
 
 export interface PlanEntitlements {
   agentSeats?: number | null;
+  teamInterestsPerMonth?: number | null;
 }
 
 export interface PlanType extends mongoose.Document {
@@ -49,6 +50,11 @@ const Schema = new mongoose.Schema(
         min: 0,
         default: null,
       },
+      teamInterestsPerMonth: {
+        type: Number,
+        min: 0,
+        default: null,
+      },
     },
     tier: {
       type: String,
@@ -57,7 +63,7 @@ const Schema = new mongoose.Schema(
     },
     yearlyDiscount: {
       type: Number,
-      default: 0.1,
+      default: 10,
     },
     isActive: { type: Boolean, default: true },
     mostPopular: { type: Boolean, default: false },

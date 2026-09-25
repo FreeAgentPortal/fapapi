@@ -21,21 +21,17 @@ export default class TalentSearchService {
     const teamId = user?.profileRefs?.team;
     const userId = user?._id;
 
-    if (!user || user.isActive === false || !Array.isArray(user.role) || !teamId || !userId || !mongoose.Types.ObjectId.isValid(String(teamId))) {
-      console.log('Authorization failed for user:', user);
-      console.trace();
+    if (!user || user.isActive === false || !teamId || !userId || !mongoose.Types.ObjectId.isValid(String(teamId))) {
       throw new ErrorUtil('Only active team users can search professional profiles', 403);
     }
 
     const team = await TeamModel.exists({
       _id: teamId,
-      // isActive: { $ne: false },
+      isActive: { $ne: false },
       'linkedUsers.user': userId,
     });
 
     if (!team) {
-      console.log('Team not found or user not linked to team:', { teamId, userId });
-      console.trace();
       throw new ErrorUtil('Only active team users can search professional profiles', 403);
     }
 
@@ -149,7 +145,7 @@ export default class TalentSearchService {
               socialLinks: 1,
               jobSearchStatus: 1,
               visibility: 1,
-              avatarUrl: 1,
+              avatarUrl: { $ifNull: ['$avatarUrl', '$_owner.profileImageUrl', null] },
               createdAt: 1,
               updatedAt: 1,
             },

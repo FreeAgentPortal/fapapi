@@ -70,6 +70,7 @@ const AuthActivityLogSchema = new Schema(
 );
 
 AuthActivityLogSchema.index({ userId: 1, sessionHash: 1, bucketStart: 1 }, { unique: true });
+AuthActivityLogSchema.index({ userId: 1, lastSeenAt: -1 });
 AuthActivityLogSchema.index({ bucketStart: 1 }, { expireAfterSeconds: 60 * 24 * 60 * 60 });
 AuthActivityLogSchema.index({ lastSeenAt: -1 });
 

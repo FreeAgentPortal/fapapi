@@ -1,6 +1,4 @@
-import mongoose from 'mongoose';
 import { MessageModel } from '../models/Message';
-import { ConversationModel } from '../models/Conversation';
 import { AthleteModel } from '../../profiles/athlete/models/AthleteModel';
 import { AgentProfileModel } from '../../profiles/agent/model/AgentProfile';
 import TeamModel from '../../profiles/team/model/TeamModel';
@@ -8,11 +6,12 @@ import { EmailService } from '../../notification/email/EmailService';
 import { SMSService } from '../../notification/sms/SMSService';
 import Notification from '../../notification/model/Notification';
 import User from '../../auth/model/User';
+import { TeamUnreadMessageAlertService } from '../services/TeamUnreadMessageAlertService';
 
 export class UnreadMessageAlertHandler {
   /**
    * Process unread message alerts for messages older than 2 hours
-   * Only alerts athletes (teams don't have SMS consent yet)
+   * Teams receive email and in-app reminders; athlete/agent SMS behavior is unchanged.
    */
   static async processUnreadMessageAlerts(): Promise<{
     processed: number;
@@ -29,21 +28,33 @@ export class UnreadMessageAlertHandler {
     let errors = 0;
 
     try {
-      // Find unread messages older than 2 hours where receiver is an athlete or agent
+      // Find unread messages older than 2 hours for every supported recipient role.
       const unreadMessages = await MessageModel.find({
         read: false,
         status: 'active',
         createdAt: { $lte: twoHoursAgo },
-        'receiver.role': { $in: ['athlete', 'agent'] },
+        'receiver.role': { $in: ['athlete', 'agent', 'team'] },
       })
+        .sort({ createdAt: -1, _id: -1 })
         .populate('conversation')
         .lean();
 
       console.info(`[UnreadMessageAlert] Found ${unreadMessages.length} unread messages older than 2 hours`);
 
+      const processedTeamConversations = new Set<string>();
       for (const message of unreadMessages) {
         try {
           processed++;
+
+          if (message.receiver.role === 'team') {
+            const conversationId = String(message.conversation?._id || message.conversation);
+            if (processedTeamConversations.has(conversationId)) continue;
+            processedTeamConversations.add(conversationId);
+            const teamResult = await TeamUnreadMessageAlertService.processMessage(String(message._id));
+            emailsSent += teamResult.emailsSent;
+            errors += teamResult.errors;
+            continue;
+          }
 
           const [recipient, team] = await Promise.all([this.resolveRecipient(message.receiver.role, message.receiver.profile), TeamModel.findById(message.sender.profile).lean()]);
 
@@ -244,6 +255,13 @@ export class UnreadMessageAlertHandler {
 
       if (message.read) {
         console.warn(`[UnreadMessageAlert] Message ${messageId} has already been read`);
+        return;
+      }
+
+      if (message.receiver.role === 'team') {
+        const result = await TeamUnreadMessageAlertService.processMessage(messageId);
+        if (result.errors) throw new Error(`Team unread message reminder had ${result.errors} delivery error(s)`);
+        console.info(`[UnreadMessageAlert] Team reminder processing completed for message ${messageId}:`, result);
         return;
       }
 

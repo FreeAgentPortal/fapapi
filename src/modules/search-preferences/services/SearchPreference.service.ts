@@ -22,7 +22,7 @@ export class SearchPreferencesService extends CRUDService {
 
   public create = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
     try {
-      const data = { ...req.body, user: req.user?._id };
+      const data = { ...req.body, user: req.user?._id, ownerId: req.user.profileRefs[req.body.ownerType] };
       await this.beforeCreate(data);
       const result = await this.handler.create(data);
       await this.afterCreate(result);

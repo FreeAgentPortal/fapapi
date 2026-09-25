@@ -6,7 +6,7 @@ import { ErrorUtil } from '../../../middleware/ErrorUtil';
 sgMail.setApiKey(process.env.SEND_GRID_API_KEY || '');
 
 export class SendGridProvider implements EmailProvider {
-  async sendEmail({ to, subject, html, from, data, templateId }: EmailPayload): Promise<void> {
+  async sendEmail({ to, subject, html, text, from, data, templateId }: EmailPayload): Promise<void> {
     if (templateId) {
       await sgMail.send({
         to,
@@ -21,6 +21,7 @@ export class SendGridProvider implements EmailProvider {
         from: from || 'noreply@thefreeagentportal.com',
         subject,
         html,
+        text,
       });
     } else {
       throw new ErrorUtil('Either html or templateId must be provided for sending email.', 400);

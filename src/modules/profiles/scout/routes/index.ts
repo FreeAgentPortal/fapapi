@@ -15,6 +15,7 @@ router.route('/health').get((req, res) => {
 // Additional routes for favorite athletes
 router.route('/favorite-athlete').get(AuthMiddleware.protect, service.fetchFavoritedAthletes);
 router.route('/favorite-athlete/:athleteId').post(AuthMiddleware.protect, service.toggleFavoriteAthlete);
+router.route('/scouting-queue').get(AuthMiddleware.protect, service.fetchScoutingQueue);
 
 //CRUD operations for Scout Profile
 router.route('/').get(service.getResources);

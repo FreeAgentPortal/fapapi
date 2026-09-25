@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import dotenv from 'dotenv';
 import { ModelKey, ModelMap } from '../utils/ModelMap';
+import { BillingValidator } from '../utils/billingValidation';
 
 // Add other models as needed
 
@@ -95,8 +96,7 @@ class DevTool {
     } catch (error) {
       console.error('❌ Error getting stats:', error);
     }
-  }
-
+  } 
   /**
    * ===================================
    * ADD YOUR CUSTOM LOGIC BELOW
@@ -104,13 +104,14 @@ class DevTool {
    */
   async customTask(): Promise<void> {
     console.info('🛠️  Running custom task...');
-    try {
+    try { 
     } catch (error) {
       console.info('❌ Error in custom task:', error);
     }
 
     console.info('\n✅ Custom task completed');
   }
+ 
 
   /**
    * Main execution function
@@ -125,6 +126,7 @@ class DevTool {
 
       // Get basic stats
       await this.getStats();
+ 
 
       // Run custom task
       await this.customTask();
