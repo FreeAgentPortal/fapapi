@@ -13,7 +13,7 @@ export default class NAthleteEvents {
     eventBus.subscribe('athlete.representation.invited', this.handler.representationInvitationReceived);
     eventBus.subscribe(
       'agent.managed-athlete.notification.requested',
-      this.handler.managedAthleteUpdated
+      this.handler.managedAthleteUpdated 
     );
   }
 }

@@ -45,30 +45,18 @@ export class ManagedAthleteHandler {
     }
   });
 
-  updateResumeVisibility = asyncHandler(
-    async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
-      try {
-        const payload = await this.service.updateResumeVisibility(
-          this.getIdentity(req),
-          req.params.athleteId,
-          req.params.resumeId,
-          req.body
-        );
-        return res.status(200).json({ success: true, payload });
-      } catch (err) {
-        return error(err, req, res);
-      }
+  updateResumeVisibility = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+    try {
+      const payload = await this.service.updateResumeVisibility(this.getIdentity(req), req.params.athleteId, req.params.resumeId, req.body);
+      return res.status(200).json({ success: true, payload });
+    } catch (err) {
+      return error(err, req, res);
     }
-  );
+  });
 
   createResumeItem = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
     try {
-      const payload = await this.service.createResumeItem(
-        this.getIdentity(req),
-        req.params.athleteId,
-        req.params.section,
-        req.body
-      );
+      const payload = await this.service.createResumeItem(this.getIdentity(req), req.params.athleteId, req.params.section, req.body);
       return res.status(201).json({ success: true, payload });
     } catch (err) {
       return error(err, req, res);
@@ -77,13 +65,7 @@ export class ManagedAthleteHandler {
 
   updateResumeItem = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
     try {
-      const payload = await this.service.updateResumeItem(
-        this.getIdentity(req),
-        req.params.athleteId,
-        req.params.section,
-        req.params.itemId,
-        req.body
-      );
+      const payload = await this.service.updateResumeItem(this.getIdentity(req), req.params.athleteId, req.params.section, req.params.itemId, req.body);
       return res.status(200).json({ success: true, payload });
     } catch (err) {
       return error(err, req, res);
@@ -92,13 +74,7 @@ export class ManagedAthleteHandler {
 
   deleteResumeItem = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
     try {
-      const payload = await this.service.deleteResumeItem(
-        this.getIdentity(req),
-        req.params.athleteId,
-        req.params.section,
-        req.params.resumeId,
-        req.params.itemId
-      );
+      const payload = await this.service.deleteResumeItem(this.getIdentity(req), req.params.athleteId, req.params.section, req.params.resumeId, req.params.itemId);
       return res.status(200).json({ success: true, payload });
     } catch (err) {
       return error(err, req, res);
@@ -133,10 +109,7 @@ export class ManagedAthleteHandler {
     return {
       actorUserId,
       agentProfileId,
-      requestId:
-        suppliedRequestId && suppliedRequestId.length <= 200
-          ? suppliedRequestId
-          : crypto.randomUUID(),
+      requestId: suppliedRequestId && suppliedRequestId.length <= 200 ? suppliedRequestId : crypto.randomUUID(),
     };
   }
 }

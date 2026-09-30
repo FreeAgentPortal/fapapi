@@ -4,8 +4,7 @@ export interface IAthlete extends Document {
   _id: mongoose.Types.ObjectId;
   espnid?: string; // ESPN ID, optional for querying espn athlete data
   userId: mongoose.Types.ObjectId;
-  fullName: string;
-  sport?: string;
+  fullName: string; 
   contactNumber?: string;
   email?: string;
   birthPlace?: {
@@ -70,8 +69,7 @@ const AthleteSchema = new Schema<IAthlete>(
       type: Schema.Types.ObjectId,
       ref: 'User',
       index: true,
-    },
-    sport: { type: String },
+    }, 
     league: { type: String },
     espnid: { type: String, unique: true, sparse: true }, // ESPN ID for querying athlete data
     fullName: { type: String, required: true },

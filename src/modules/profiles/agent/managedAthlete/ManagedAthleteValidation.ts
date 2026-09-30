@@ -3,13 +3,7 @@ import { ErrorUtil } from '../../../../middleware/ErrorUtil';
 
 export type ManagedResumeSection = 'experience' | 'education' | 'award' | 'reference' | 'media';
 
-export const MANAGED_RESUME_SECTIONS = new Set<ManagedResumeSection>([
-  'experience',
-  'education',
-  'award',
-  'reference',
-  'media',
-]);
+export const MANAGED_RESUME_SECTIONS = new Set<ManagedResumeSection>(['experience', 'education', 'award', 'reference', 'media']);
 
 const PROFILE_FIELDS = new Set([
   'fullName',
@@ -37,29 +31,8 @@ const EXPERIENCE_LEVELS = new Set(['Pro', 'College', 'HighSchool', 'Club', 'Othe
 const MEDIA_KINDS = new Set(['video', 'image', 'link']);
 
 const SECTION_FIELDS: Record<ManagedResumeSection, Set<string>> = {
-  experience: new Set([
-    'resumeId',
-    'owner',
-    'orgName',
-    'league',
-    'level',
-    'position',
-    'location',
-    'startDate',
-    'endDate',
-    'achievements',
-    'stats',
-  ]),
-  education: new Set([
-    'resumeId',
-    'owner',
-    'school',
-    'degreeOrProgram',
-    'startDate',
-    'endDate',
-    'isCurrent',
-    'notes',
-  ]),
+  experience: new Set(['resumeId', 'owner', 'orgName', 'league', 'level', 'position', 'location', 'startDate', 'endDate', 'achievements', 'stats']),
+  education: new Set(['resumeId', 'owner', 'school', 'degreeOrProgram', 'startDate', 'endDate', 'isCurrent', 'notes']),
   award: new Set(['resumeId', 'owner', 'title', 'org', 'year', 'description']),
   reference: new Set(['resumeId', 'owner', 'name', 'role', 'organization', 'contact']),
   media: new Set(['resumeId', 'owner', 'kind', 'url', 'label']),
@@ -301,7 +274,7 @@ export function validateManagedProfileUpdate(value: unknown): Record<string, unk
         }
         update.positions = entry.map((position, index) => {
           const object = requireObject(position, `positions[${index}]`);
-          assertAllowedKeys(object, new Set(['name', 'abbreviation']), `positions[${index}]`);
+          assertAllowedKeys(object, new Set(['name', 'abbreviation', '_id']), `positions[${index}]`);
           return {
             name: requireString(object.name, `positions[${index}].name`),
             abbreviation: requireString(object.abbreviation, `positions[${index}].abbreviation`),
@@ -319,9 +292,7 @@ export function validateManagedProfileUpdate(value: unknown): Record<string, unk
         update.metrics = numericMap(entry, 'metrics');
         break;
       case 'highlightVideos': {
-        const urls = stringArray(entry, 'highlightVideos').map((url, index) =>
-          validateUrl(url, `highlightVideos[${index}]`)
-        );
+        const urls = stringArray(entry, 'highlightVideos').map((url, index) => validateUrl(url, `highlightVideos[${index}]`));
         if (urls.length > 5) {
           throw new ErrorUtil('highlightVideos cannot contain more than 5 URLs.', 422);
         }
@@ -336,9 +307,7 @@ export function validateManagedProfileUpdate(value: unknown): Record<string, unk
 function normalizeLocation(value: unknown): Record<string, string> {
   const location = requireObject(value, 'location');
   assertAllowedKeys(location, new Set(['city', 'state', 'country']), 'location');
-  return Object.fromEntries(
-    Object.entries(location).map(([key, entry]) => [key, requireString(entry, `location.${key}`, { allowBlank: true })])
-  );
+  return Object.fromEntries(Object.entries(location).map(([key, entry]) => [key, requireString(entry, `location.${key}`, { allowBlank: true })]));
 }
 
 function normalizeContact(value: unknown): Record<string, string> {
@@ -363,12 +332,7 @@ function normalizeContact(value: unknown): Record<string, string> {
   return normalized;
 }
 
-export function validateManagedResumeSectionBody(
-  section: ManagedResumeSection,
-  value: unknown,
-  athleteId: string,
-  operation: 'create' | 'update'
-): ValidatedManagedResumeBody {
+export function validateManagedResumeSectionBody(section: ManagedResumeSection, value: unknown, athleteId: string, operation: 'create' | 'update'): ValidatedManagedResumeBody {
   const body = requireObject(value, 'Request body');
   assertAllowedKeys(body, SECTION_FIELDS[section], 'Request body');
   validateManagedOwner(body.owner, athleteId);

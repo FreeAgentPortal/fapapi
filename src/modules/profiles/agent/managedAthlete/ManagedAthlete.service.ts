@@ -1,11 +1,7 @@
 import mongoose, { ClientSession, Types } from 'mongoose';
 import { ErrorUtil } from '../../../../middleware/ErrorUtil';
 import { ResumeProfile } from '../../resume/models/ResumeProfile';
-import {
-  DelegatedAthleteAction,
-  DelegatedAthleteAuditEventModel,
-  DelegatedAthleteResourceType,
-} from '../model/DelegatedAthleteAuditEvent';
+import { DelegatedAthleteAction, DelegatedAthleteAuditEventModel, DelegatedAthleteResourceType } from '../model/DelegatedAthleteAuditEvent';
 import { ManagedAthleteOutboxEventModel } from '../model/ManagedAthleteOutboxEvent';
 import { ManagedAthleteAccessContext, ManagedAthleteAccessService } from './ManagedAthleteAccess.service';
 import { ManagedAthleteOutboxService } from './ManagedAthleteOutbox.service';
@@ -39,10 +35,7 @@ interface MutationOutcome<T> {
   metadata?: MutationMetadata;
 }
 
-const SECTION_CONFIG: Record<
-  ManagedResumeSection,
-  { arrayField: 'experiences' | 'education' | 'awards' | 'references' | 'media'; resourceType: DelegatedAthleteResourceType }
-> = {
+const SECTION_CONFIG: Record<ManagedResumeSection, { arrayField: 'experiences' | 'education' | 'awards' | 'references' | 'media'; resourceType: DelegatedAthleteResourceType }> = {
   experience: { arrayField: 'experiences', resourceType: 'experience' },
   education: { arrayField: 'education', resourceType: 'education' },
   award: { arrayField: 'awards', resourceType: 'award' },
@@ -97,10 +90,7 @@ function serializeAssignment(assignment: any): Record<string, unknown> {
 
 function getResumeItem(resume: any, arrayField: string, itemId: string): Record<string, unknown> {
   const items = resume[arrayField];
-  const item =
-    typeof items?.id === 'function'
-      ? items.id(itemId)
-      : items?.find((candidate: any) => candidate._id?.toString() === itemId);
+  const item = typeof items?.id === 'function' ? items.id(itemId) : items?.find((candidate: any) => candidate._id?.toString() === itemId);
   if (!item) {
     throw new ErrorUtil('Resume item not found.', 404);
   }
@@ -131,20 +121,12 @@ export class ManagedAthleteService {
     };
   }
 
-  async updateProfile(
-    identity: ManagedAthleteIdentity,
-    athleteId: string,
-    body: unknown
-  ): Promise<Record<string, unknown>> {
+  async updateProfile(identity: ManagedAthleteIdentity, athleteId: string, body: unknown): Promise<Record<string, unknown>> {
     const update = validateManagedProfileUpdate(body);
     const changedFields = Object.keys(update);
 
     return this.runMutation(identity, athleteId, async (context, session) => {
-      const athlete = await context.athlete.constructor.findOneAndUpdate(
-        { _id: context.athlete._id },
-        { $set: update },
-        { new: true, runValidators: true, session }
-      );
+      const athlete = await context.athlete.constructor.findOneAndUpdate({ _id: context.athlete._id }, { $set: update }, { new: true, runValidators: true, session });
       if (!athlete) {
         throw new ErrorUtil('Athlete profile not found.', 404);
       }
@@ -229,12 +211,7 @@ export class ManagedAthleteService {
     });
   }
 
-  async updateResumeVisibility(
-    identity: ManagedAthleteIdentity,
-    athleteId: string,
-    resumeId: string,
-    body: unknown
-  ): Promise<unknown> {
+  async updateResumeVisibility(identity: ManagedAthleteIdentity, athleteId: string, resumeId: string, body: unknown): Promise<unknown> {
     validatePathObjectId(resumeId, 'resumeId');
     const visibility = validateManagedVisibilityBody(body);
 
@@ -268,12 +245,7 @@ export class ManagedAthleteService {
     });
   }
 
-  async createResumeItem(
-    identity: ManagedAthleteIdentity,
-    athleteId: string,
-    sectionValue: string,
-    body: unknown
-  ): Promise<Record<string, unknown>> {
+  async createResumeItem(identity: ManagedAthleteIdentity, athleteId: string, sectionValue: string, body: unknown): Promise<Record<string, unknown>> {
     const section = this.requireSection(sectionValue);
     const validated = validateManagedResumeSectionBody(section, body, athleteId, 'create');
     const resumeId = validated.resumeId!;
@@ -310,13 +282,7 @@ export class ManagedAthleteService {
     });
   }
 
-  async updateResumeItem(
-    identity: ManagedAthleteIdentity,
-    athleteId: string,
-    sectionValue: string,
-    itemId: string,
-    body: unknown
-  ): Promise<Record<string, unknown>> {
+  async updateResumeItem(identity: ManagedAthleteIdentity, athleteId: string, sectionValue: string, itemId: string, body: unknown): Promise<Record<string, unknown>> {
     const section = this.requireSection(sectionValue);
     validatePathObjectId(itemId, 'itemId');
     const validated = validateManagedResumeSectionBody(section, body, athleteId, 'update');
@@ -367,13 +333,7 @@ export class ManagedAthleteService {
     });
   }
 
-  async deleteResumeItem(
-    identity: ManagedAthleteIdentity,
-    athleteId: string,
-    sectionValue: string,
-    resumeId: string,
-    itemId: string
-  ): Promise<Record<string, never>> {
+  async deleteResumeItem(identity: ManagedAthleteIdentity, athleteId: string, sectionValue: string, resumeId: string, itemId: string): Promise<Record<string, never>> {
     const section = this.requireSection(sectionValue);
     validatePathObjectId(resumeId, 'resumeId');
     validatePathObjectId(itemId, 'itemId');
@@ -429,12 +389,7 @@ export class ManagedAthleteService {
 
     try {
       await session.withTransaction(async () => {
-        const context = await this.accessService.resolve(
-          identity.actorUserId,
-          identity.agentProfileId,
-          athleteId,
-          { requireActive: true, session }
-        );
+        const context = await this.accessService.resolve(identity.actorUserId, identity.agentProfileId, athleteId, { requireActive: true, session });
         const outcome = await mutation(context, session);
         result = outcome.payload;
 
@@ -466,18 +421,12 @@ export class ManagedAthleteService {
         const outboxEvent = new ManagedAthleteOutboxEventModel({
           eventType: 'agent.managed-athlete.notification.requested',
           payload: {
-            notificationType: isProfileNotification
-              ? 'agent.athlete-profile.updated'
-              : 'agent.athlete-resume.updated',
+            notificationType: isProfileNotification ? 'agent.athlete-profile.updated' : 'agent.athlete-resume.updated',
             userTo: context.athlete.userId,
             userFrom: objectId(identity.actorUserId),
             entityId: objectId(outcome.metadata.notificationEntityId),
-            message: isProfileNotification
-              ? 'Your agent updated your athlete profile.'
-              : 'Your agent updated your athlete resume.',
-            description: isProfileNotification
-              ? 'Review your profile to see the latest changes.'
-              : 'Review your resume to see the latest changes.',
+            message: isProfileNotification ? 'Your agent updated your athlete profile.' : 'Your agent updated your athlete resume.',
+            description: isProfileNotification ? 'Review your profile to see the latest changes.' : 'Review your resume to see the latest changes.',
           },
           status: 'pending',
           attempts: 0,
