@@ -2,10 +2,12 @@ import mongoose, { Document, Schema, Types } from 'mongoose';
 
 export interface IConversation extends Document {
   participants: {
-    team: Types.ObjectId;
-    athlete: Types.ObjectId;
+    team?: Types.ObjectId;
+    athlete?: Types.ObjectId;
     agent?: Types.ObjectId;
+    agents?: Types.ObjectId[];
   };
+  directKey?: string;
   lastMessage?: Types.ObjectId;
   // Admin/Moderator fields
   status: 'active' | 'archived' | 'hidden' | 'deleted';
@@ -31,10 +33,12 @@ export interface IConversation extends Document {
 const ConversationSchema = new Schema<IConversation>(
   {
     participants: {
-      team: { type: Schema.Types.ObjectId, ref: 'TeamProfile', required: true },
-      athlete: { type: Schema.Types.ObjectId, ref: 'AthleteProfile', required: true },
+      team: { type: Schema.Types.ObjectId, ref: 'TeamProfile' },
+      athlete: { type: Schema.Types.ObjectId, ref: 'AthleteProfile' },
       agent: { type: Schema.Types.ObjectId, ref: 'AgentProfile' },
+      agents: { type: [{ type: Schema.Types.ObjectId, ref: 'AgentProfile' }], default: undefined },
     },
+    directKey: { type: String },
     lastMessage: { type: Schema.Types.ObjectId, ref: 'Message' },
     // Admin/Moderator fields
     status: {
@@ -63,5 +67,20 @@ const ConversationSchema = new Schema<IConversation>(
   },
   { timestamps: true }
 );
+
+// Existing team/athlete records have no directKey and are unaffected.
+ConversationSchema.index({ directKey: 1 }, { unique: true, partialFilterExpression: { directKey: { $type: 'string' } } });
+ConversationSchema.pre('validate', function () {
+  const { team, athlete, agent, agents } = this.participants;
+  if (agents?.length) {
+    if (agents.length !== 2 || new Set(agents.map(String)).size !== 2 || team || athlete || agent) {
+      this.invalidate('participants.agents', 'A direct agent conversation requires two distinct agents.');
+    }
+    return;
+  }
+  if ([team, athlete, agent].filter(Boolean).length < 2) {
+    this.invalidate('participants', 'A conversation requires at least two participants.');
+  }
+});
 
 export const ConversationModel = mongoose.model<IConversation>('Conversation', ConversationSchema);

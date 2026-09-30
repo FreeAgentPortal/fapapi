@@ -18,15 +18,13 @@ export default class ConversationEventHandler {
       throw new ErrorUtil('message data is required for conversation event handling', 400);
     }
 
-    const [senderUser, receiverUser] = await Promise.all([
+    const [senderUser, receiverUsers] = await Promise.all([
       this.findUserByProfile(message.sender.role, message.sender.profile),
-      this.findUserByProfile(message.receiver.role, message.receiver.profile),
+      this.findMessageRecipients(message.receiver.role, message.receiver.profile),
     ]);
-    if (!receiverUser) {
-      return;
-    }
-
-    await Notification.insertNotification(receiverUser?.id, senderUser?.id, 'New message', 'You have a new message', 'message', message.id);
+    await Promise.all(receiverUsers.map((receiverUser) =>
+      Notification.insertNotification(receiverUser.id, senderUser?.id, 'New message', 'You have a new message', 'message', message.id)
+    ));
   }
 
   async conversationStarted(event: { conversation: IConversation }) {
@@ -111,6 +109,21 @@ export default class ConversationEventHandler {
     } catch (error) {
       console.error(`[Notification]: Error sending conversation started SMS:`, error);
     }
+  }
+
+  private async findMessageRecipients(role: 'team' | 'athlete' | 'agent', profileId: any) {
+    if (role !== 'team') {
+      const user = await this.findUserByProfile(role, profileId);
+      return user ? [user] : [];
+    }
+    // A team profile owns one inbox shared by all linked staff accounts.
+    const team = await TeamModel.findById(profileId).lean();
+    if (!team || team.isActive === false) return [];
+    const linkedUserIds = (team.linkedUsers || []).map((member) => member.user?._id || member.user).filter(Boolean);
+    return await User.find({
+      isActive: { $ne: false },
+      $or: [{ _id: { $in: linkedUserIds } }, { 'profileRefs.team': { $in: [team._id, String(team._id)] } }],
+    });
   }
 
   private async findUserByProfile(role: 'team' | 'athlete' | 'agent', profileId: any) {

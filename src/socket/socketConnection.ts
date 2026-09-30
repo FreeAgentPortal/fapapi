@@ -1,38 +1,53 @@
 import setupSocket from './setupSocket';
+import authenticateSocket from './authenticateSocket';
+import { ProfilePresence } from './presence';
+import { PRESENCE_ROOM, ProfileServer } from './types';
 const colors = require('colors');
 
-/**
- * @description Socket connection, this file is called from server.js and is used to handle socket connections and disconnections
- *              We can import other socket files here to handle socket events and emit socket events from here
- * @param {Object} io - Socket.io instance
- * @returns {void}
- *
- * @author Austin Howard
- * @since 1.0
- * @version 1.0
- */
-export default (io: any) => {
-  try {
-    io.on('connection', (socket: any) => {
-      socket.on('setup', (userData: object) => {
-        setupSocket(socket, userData);
-      });
-      socket.on('disconnect', () => {});
-      socket.on('join', async (room: { roomId: string; user: any }) => {
-        if (!room.roomId) return;
-        socket.join(room.roomId);
-      });
-      socket.on('leave', async (room: { roomId: string; user: string }) => {
-        console.info(colors.yellow(`${room.user} has left the room`) + colors.blue(` ${room.roomId}`));
-        socket.leave(room.roomId);
-      });
-      socket.on('sendNewMessage', (room: any) => {
-        // send the new message to the client
-        socket.broadcast.to(room.roomId).emit('newMessage', room.message);
+export default (io: ProfileServer) => {
+  const presence = new ProfilePresence(io);
+  io.use(authenticateSocket);
+  io.on('connection', (socket) => {
+    let expiryTimer: NodeJS.Timeout;
+    const expireSession = () => {
+      const remaining = socket.data.account.expiresAt - Date.now();
+      if (remaining <= 0) {
+        if (socket.rooms.has(PRESENCE_ROOM)) socket.emit('presence:error', { code: 'FORBIDDEN' });
+        socket.disconnect(true);
+        return;
+      }
+      expiryTimer = setTimeout(expireSession, Math.min(remaining, 2147483647));
+      expiryTimer.unref();
+    };
+    expireSession();
+
+    socket.on('setup', (payload: unknown) => {
+      void setupSocket(socket, payload, () => {
+        presence.unsubscribe(socket);
+        presence.changed();
       });
     });
-  } catch (error) {
-    console.error(error);
-    throw error;
-  }
+    socket.on('presence:subscribe', () => { void presence.subscribe(socket); });
+    socket.on('presence:unsubscribe', () => presence.unsubscribe(socket));
+    socket.on('disconnect', () => {
+      clearTimeout(expiryTimer);
+      ++socket.data.setupRevision;
+      delete socket.data.profile;
+      presence.unsubscribe(socket);
+      presence.changed();
+    });
+    socket.on('join', async (room: { roomId: string; user: any }) => {
+      if (typeof room?.roomId !== 'string' || !room.roomId || room.roomId === PRESENCE_ROOM) return;
+      await socket.join(room.roomId);
+    });
+    socket.on('leave', async (room: { roomId: string; user: string }) => {
+      if (typeof room?.roomId !== 'string' || !room.roomId || room.roomId === PRESENCE_ROOM) return;
+      console.info(colors.yellow(`${room.user} has left the room`) + colors.blue(` ${room.roomId}`));
+      await socket.leave(room.roomId);
+    });
+    socket.on('sendNewMessage', (room: any) => {
+      if (typeof room?.roomId !== 'string' || !room.roomId || room.roomId === PRESENCE_ROOM) return;
+      socket.broadcast.to(room.roomId).emit('newMessage', room.message);
+    });
+  });
 };

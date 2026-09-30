@@ -6,6 +6,8 @@ import error from '../../../middleware/error';
 import { CRUDService } from '../../../utils/baseCRUD';
 import { ConversationCrudHandler } from '../handlers/ConversationCrud.handler';
 import { eventBus } from '../../../lib/eventBus';
+import { AgentConversationService } from './AgentConversation.service';
+import { RepresentativeConversationService } from './RepresentativeConversation.service';
 
 export class ConversationService extends CRUDService {
   constructor(private readonly conversationHandler: ConversationHandler = new ConversationHandler()) {
@@ -21,7 +23,28 @@ export class ConversationService extends CRUDService {
 
   public startConversation = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
     try {
+      if (req.body.representativeId !== undefined) {
+        const role = req.query.role;
+        if (role !== 'team' && role !== 'agent') return res.status(400).json({ message: 'Only teams and agents can contact representatives.' });
+        const senderId = req.user.profileRefs[role];
+        if (!senderId) return res.status(403).json({ message: 'A sender profile is required.' });
+        const result = await new RepresentativeConversationService().start(String(senderId), role, req.body);
+        if (result.newMessage) eventBus.publish('conversation.message', { message: result.newMessage });
+        return res.status(result.existing ? 200 : 201).json({ success: true, payload: result.conversation, existing: result.existing });
+      }
+      if (req.query.role === 'agent') {
+        const agentId = req.user.profileRefs.agent;
+        if (!agentId) return res.status(403).json({ message: 'An agent profile is required.' });
+        const result = await new AgentConversationService().start(String(agentId), req.body);
+        // The legacy conversation.started event sends a team-specific welcome.
+        // Agent-initiated threads use the role-aware new-message notification.
+        if (result.newMessage) eventBus.publish('conversation.message', { message: result.newMessage });
+        return res.status(result.existing ? 200 : 201).json({ success: true, payload: result.conversation, existing: result.existing });
+      }
+      if (req.query.role && req.query.role !== 'team') return res.status(400).json({ message: 'Only teams and agents can start conversations.' });
       const { athleteId, message } = req.body;
+      if (!req.user.profileRefs.team) return res.status(403).json({ message: 'A team profile is required.' });
+      if (typeof athleteId !== 'string' || typeof message !== 'string' || !message.trim()) return res.status(400).json({ message: 'An athlete and initial message are required.' });
       const teamId = req.user.profileRefs['team'] as any;
       const userId = req.user._id;
 
@@ -45,7 +68,7 @@ export class ConversationService extends CRUDService {
       const profileId = req.user.profileRefs[req.query.role as string];
       const role = req.query.role as 'team' | 'athlete' | 'agent';
 
-      if (!conversationId || !message || !userId || !profileId || !role) {
+      if (!conversationId || typeof message !== 'string' || !message.trim() || !userId || !profileId || !['team', 'athlete', 'agent'].includes(role)) {
         return res.status(400).json({ message: 'Missing required fields' });
       }
 
@@ -66,7 +89,7 @@ export class ConversationService extends CRUDService {
       const profileId = req.user.profileRefs[req.query.role as string];
       const role = req.query.role as 'team' | 'athlete' | 'agent';
 
-      if (!userId || !profileId || !role) {
+      if (!userId || !profileId || !['team', 'athlete', 'agent'].includes(role)) {
         return res.status(400).json({ message: 'Missing required fields' });
       }
 
@@ -110,19 +133,15 @@ export class ConversationService extends CRUDService {
 
       const response = await this.conversationHandler.getConversation(conversationId);
 
-      let isAuthenticated = false;
-
-      if (req.query.role === 'athlete' && !response.participants.agent && response.participants.athlete._id.toString() == profileId) {
-        isAuthenticated = true;
-      } else if (req.query.role === 'agent' && response.participants.agent?._id?.toString() == profileId) {
-        isAuthenticated = true;
-      } else if (response.participants.team._id.toString() == profileId) {
-        isAuthenticated = true;
-      }
+      const role = req.query.role;
+      const isAuthenticated =
+        (role === 'athlete' && (!response.participants.team || !response.participants.agent) && response.participants.athlete?._id.toString() === String(profileId)) ||
+        (role === 'agent' && (response.participants.agent?._id.toString() === String(profileId) || response.participants.agents?.some(agent => String(agent._id) === String(profileId)))) ||
+        (role === 'team' && response.participants.team?._id.toString() === String(profileId));
       if (!isAuthenticated) {
         return res.status(401).json({ message: 'Unauthorized' });
       }
-      return res.status(200).json({ success: true, payload: response });
+      return res.status(200).json({ success: true, payload: { ...response, viewerProfileId: String(profileId) } });
     } catch (err) {
       console.error(err);
       return error(err, req, res);
