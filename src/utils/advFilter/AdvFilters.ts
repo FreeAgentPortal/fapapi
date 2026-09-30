@@ -15,40 +15,40 @@ export class AdvFilters {
 
     filterOptionsArray.forEach((filterOption: any) => {
       const [key, value] = filterOption.split(';');
-      logger.debug({ key, value }, 'Parsing filter option');
+      // logger.debug({ key, value }, 'Parsing filter option');
       if (value === 'true') {
         filterOptionsObject[key] = true;
       } else if (value === 'false') {
         filterOptionsObject[key] = false;
       } else {
         try {
-          logger.debug({ key, value }, 'Before parsing JSON');
+          // logger.debug({ key, value }, 'Before parsing JSON');
           // Use JSON.parse to safely convert the value to an object
           const parsedValue = JSON.parse(value);
           // Recursively parse the parsedValue if it contains nested objects
           const filteredValue = this.parseValueRecursively(parsedValue);
-          logger.debug({ key, parsedValue }, 'After parsing JSON');
+          // logger.debug({ key, parsedValue }, 'After parsing JSON');
 
           // If key already exists, merge the parsed value
           filterOptionsObject[key] = {
             ...filterOptionsObject[key],
             ...filteredValue,
           };
-          logger.debug({ key, filteredValue }, 'Parsed filter value');
+          // logger.debug({ key, filteredValue }, 'Parsed filter value');
         } catch (error) {
           // If JSON.parse fails, check for valid ObjectId
           if (mongoose.Types.ObjectId.isValid(value)) {
-            logger.debug({ key, value }, 'Parsing ObjectId, valid ObjectId detected');
+            // logger.debug({ key, value }, 'Parsing ObjectId, valid ObjectId detected');
             filterOptionsObject[key] = new mongoose.Types.ObjectId(value);
           } else {
-            logger.debug({ key, value }, 'Parsing ObjectId, invalid ObjectId, treating as string or number');
+            // logger.debug({ key, value }, 'Parsing ObjectId, invalid ObjectId, treating as string or number');
             // If not a valid ObjectId, treat the value as a regular string or number
             filterOptionsObject[key] = isNaN(Number(value)) ? value : Number(value);
           }
         }
       }
     });
-    logger.debug(filterOptionsObject, 'Parsed filter options');
+    // logger.debug(filterOptionsObject, 'Parsed filter options');
     return [filterOptionsObject];
   }
 
@@ -100,7 +100,7 @@ export class AdvFilters {
           parsed.push({ [value]: { $regex: keyword.trim(), $options: 'i' } });
         }
       } catch (error) {
-        console.error(error);
+        // console.error(error);
         throw new Error('Invalid field format passed to query');
       }
     }
