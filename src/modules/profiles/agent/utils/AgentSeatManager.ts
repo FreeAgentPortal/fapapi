@@ -1,4 +1,5 @@
 import BillingAccount from '../../../auth/model/BillingAccount';
+import { ClientSession } from 'mongoose';
 import { FeatureType } from '../../../auth/model/FeatureSchema';
 import { PlanType } from '../../../auth/model/PlanSchema';
 import { AgentAthleteAssignmentModel } from '../model/AgentAthleteAssignment';
@@ -16,20 +17,28 @@ export interface AgentSeatSummary {
 }
 
 export class AgentSeatManager {
-  static async getSeatSummary(agentProfileId: string): Promise<AgentSeatSummary> {
-    const [agentProfile, seatsUsed, billingAccount] = await Promise.all([
-      AgentProfileModel.findById(agentProfileId).lean(),
-      AgentAthleteAssignmentModel.countDocuments({
-        agentProfile: agentProfileId,
-        status: { $in: ['pending', 'accepted'] },
-      }),
-      BillingAccount.findOne({ profileId: agentProfileId })
-        .populate('features')
-        .populate({
-          path: 'plan',
-          populate: { path: 'features' },
-        }),
-    ]);
+  static async getSeatSummary(agentProfileId: string, session?: ClientSession): Promise<AgentSeatSummary> {
+    const agentProfileQuery = AgentProfileModel.findById(agentProfileId).lean();
+    const seatsUsedQuery = AgentAthleteAssignmentModel.countDocuments({
+      agentProfile: agentProfileId,
+      status: { $in: ['pending', 'accepted'] },
+    });
+    const billingAccountQuery = BillingAccount.findOne({ profileId: agentProfileId })
+      .populate('features')
+      .populate({
+        path: 'plan',
+        populate: { path: 'features' },
+      });
+
+    if (session) {
+      agentProfileQuery.session(session);
+      seatsUsedQuery.session(session);
+      billingAccountQuery.session(session);
+    }
+
+    const [agentProfile, seatsUsed, billingAccount] = session
+      ? [await agentProfileQuery, await seatsUsedQuery, await billingAccountQuery]
+      : await Promise.all([agentProfileQuery, seatsUsedQuery, billingAccountQuery]);
 
     const { seatLimit, source } = this.resolveSeatLimit(agentProfile, billingAccount as any);
 
@@ -39,6 +48,37 @@ export class AgentSeatManager {
       seatsAvailable: Math.max(seatLimit - seatsUsed, 0),
       source,
     };
+  }
+
+  static async hasActiveRosterSeat(agentProfileId: string, session?: ClientSession): Promise<boolean> {
+    const agentProfileQuery = AgentProfileModel.findById(agentProfileId).select('seatLimitOverride isActive').lean();
+    const billingAccountQuery = BillingAccount.findOne({ profileId: agentProfileId }).select('status').lean();
+    if (session) {
+      agentProfileQuery.session(session);
+      billingAccountQuery.session(session);
+    }
+
+    const [summary, agentProfile, billingAccount] = session
+      ? [
+          await this.getSeatSummary(agentProfileId, session),
+          await agentProfileQuery,
+          await billingAccountQuery,
+        ]
+      : await Promise.all([
+          this.getSeatSummary(agentProfileId),
+          agentProfileQuery,
+          billingAccountQuery,
+        ]);
+
+    if (!agentProfile || agentProfile.isActive === false || summary.seatLimit <= 0 || summary.seatsUsed > summary.seatLimit) {
+      return false;
+    }
+
+    if (typeof agentProfile.seatLimitOverride === 'number') {
+      return true;
+    }
+
+    return billingAccount?.status === 'active' || billingAccount?.status === 'trialing';
   }
 
   private static resolveSeatLimit(agentProfile: any, billingAccount: any): { seatLimit: number; source: SeatSource } {

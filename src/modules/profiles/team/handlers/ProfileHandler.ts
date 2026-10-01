@@ -5,12 +5,30 @@ import { Types } from 'mongoose';
 import { ModelMap } from '../../../../utils/ModelMap';
 import { ErrorUtil } from '../../../../middleware/ErrorUtil';
 import { IAthlete } from '../../athlete/models/AthleteModel';
+import SearchPreferences from '../../../search-preferences/models/SearchPreferences';
+import { buildDefaultTeamSearchPreferences } from '../../../search-preferences/utils/defaultTeamSearchPreferences';
 
 export default class TeamProfileHandler extends CRUDHandler<ITeamProfile> {
   private modelMap: Record<string, any>;
   constructor() {
     super(TeamModel);
     this.modelMap = ModelMap;
+  }
+
+  async create(data: any): Promise<ITeamProfile> {
+    await this.beforeCreate(data);
+    const profile = await this.Schema.db.transaction(async session => {
+      const [team] = await this.Schema.create([data], { session });
+      // Commit the team and its default preferences together so a failed insert
+      // cannot leave a newly created team without its report setup.
+      await SearchPreferences.insertMany(
+        buildDefaultTeamSearchPreferences(new Types.ObjectId(String(team._id))),
+        { session, ordered: true },
+      );
+      return team;
+    });
+    await this.afterCreate(profile);
+    return profile;
   }
 
   async fetch(id: string): Promise<any | null> {
@@ -30,7 +48,7 @@ export default class TeamProfileHandler extends CRUDHandler<ITeamProfile> {
       throw new Error('User already linked to a team profile');
     }
 
-    const profile = await this.Schema.create({
+    const profile = await this.create({
       name,
       email,
       phone,

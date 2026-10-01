@@ -11,5 +11,9 @@ export default class NAthleteEvents {
   public init() {
     eventBus.subscribe('athlete.profile.completion.alert', this.handler.profileIncomplete);
     eventBus.subscribe('athlete.representation.invited', this.handler.representationInvitationReceived);
+    eventBus.subscribe(
+      'agent.managed-athlete.notification.requested',
+      this.handler.managedAthleteUpdated 
+    );
   }
 }

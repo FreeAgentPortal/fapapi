@@ -1,5 +1,6 @@
 import moment from 'moment';
 import mongoose from 'mongoose';
+import logger from '../logger';
 
 export class AdvFilters {
   /**
@@ -14,33 +15,40 @@ export class AdvFilters {
 
     filterOptionsArray.forEach((filterOption: any) => {
       const [key, value] = filterOption.split(';');
+      // logger.debug({ key, value }, 'Parsing filter option');
       if (value === 'true') {
         filterOptionsObject[key] = true;
       } else if (value === 'false') {
         filterOptionsObject[key] = false;
       } else {
         try {
+          // logger.debug({ key, value }, 'Before parsing JSON');
           // Use JSON.parse to safely convert the value to an object
-          const parsedValue = JSON.parse(value)
+          const parsedValue = JSON.parse(value);
           // Recursively parse the parsedValue if it contains nested objects
           const filteredValue = this.parseValueRecursively(parsedValue);
+          // logger.debug({ key, parsedValue }, 'After parsing JSON');
 
           // If key already exists, merge the parsed value
           filterOptionsObject[key] = {
             ...filterOptionsObject[key],
             ...filteredValue,
           };
+          // logger.debug({ key, filteredValue }, 'Parsed filter value');
         } catch (error) {
           // If JSON.parse fails, check for valid ObjectId
           if (mongoose.Types.ObjectId.isValid(value)) {
+            // logger.debug({ key, value }, 'Parsing ObjectId, valid ObjectId detected');
             filterOptionsObject[key] = new mongoose.Types.ObjectId(value);
           } else {
+            // logger.debug({ key, value }, 'Parsing ObjectId, invalid ObjectId, treating as string or number');
             // If not a valid ObjectId, treat the value as a regular string or number
             filterOptionsObject[key] = isNaN(Number(value)) ? value : Number(value);
           }
         }
       }
     });
+    // logger.debug(filterOptionsObject, 'Parsed filter options');
     return [filterOptionsObject];
   }
 
@@ -92,7 +100,7 @@ export class AdvFilters {
           parsed.push({ [value]: { $regex: keyword.trim(), $options: 'i' } });
         }
       } catch (error) {
-        console.error(error);
+        // console.error(error);
         throw new Error('Invalid field format passed to query');
       }
     }
@@ -118,8 +126,9 @@ export class AdvFilters {
           if (typeof opValue === 'object' && opValue !== null) {
             acc[opKey] = this.parseValueRecursively(opValue);
           } else {
-            const isValidDate = moment(opValue as string, true).isValid();
-            const isNumber = !isNaN(Number(opValue));
+            const isNumber = typeof opValue === 'number' || (typeof opValue === 'string' && opValue.trim() !== '' && !isNaN(Number(opValue)));
+            // only strings can be dates here; moment(number, true) misreads plain numbers as epoch ms
+            const isValidDate = !isNumber && typeof opValue === 'string' && moment(opValue, true).isValid();
             if (opKey === '$elemMatch' && typeof opValue === 'string') {
               return (acc[opKey] = { $eq: this.checkObjectId(opValue) }); // Handle simple string equality for $elemMatch
             } else if (opKey === '$in') {
@@ -130,10 +139,10 @@ export class AdvFilters {
               } else {
                 acc[opKey] = [this.checkObjectId(opValue as string)];
               }
-            } else if (isValidDate) {
-              acc[opKey] = moment(opValue as any).toDate();
             } else if (isNumber) {
               acc[opKey] = Number(opValue);
+            } else if (isValidDate) {
+              acc[opKey] = moment(opValue as any).toDate();
             } else if (opKey === null) {
               acc[opKey] = null;
             } else {

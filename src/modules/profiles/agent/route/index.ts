@@ -3,6 +3,7 @@ import { AuthMiddleware } from '../../../../middleware/AuthMiddleware';
 import { AgentService } from '../service/AgentService';
 import { AgentRosterService } from '../service/AgentRoster.service';
 import dashboardRoutes from './dashboard';
+import managedAthleteRoutes from '../managedAthlete/managedAthlete.routes';
 
 const router = express.Router();
 const service = new AgentService();
@@ -24,6 +25,7 @@ router.use('/profile', require('./profileRoutes').default);
 router.use('/assignment', require('./assignment').default);
 router.route('/roster').get(rosterService.getRoster);
 router.route('/roster/seats').get(rosterService.getSeatSummary);
+router.use('/roster/athletes', managedAthleteRoutes);
 router.route('/roster/invitations').post(rosterService.inviteAthlete);
 router.route('/roster/invitations/:assignmentId').delete(rosterService.removeAthlete);
 router.route('/roster/invitations/me/count').get(rosterService.getMyInvitationCount);

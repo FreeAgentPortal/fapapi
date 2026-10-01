@@ -17,6 +17,8 @@ import { cronJobs } from './cronjobs/cronjobs';
 //clustering
 import cluster from 'cluster';
 import os from 'os';
+import { createServer } from 'http';
+import { setupMaster, setupWorker } from '@socket.io/sticky';
 import NotificationService from './modules/notification/services/NotificationService';
 
 // Routes
@@ -24,9 +26,6 @@ import NotificationService from './modules/notification/services/NotificationSer
 const mongoSanitize = require('express-mongo-sanitize');
 const xss = require('xss-clean');
 const hpp = require('hpp');
-// setup socket.io
-const { Server } = require('socket.io');
-
 dotenv.config();
 const notificationService = new NotificationService();
 notificationService.init();
@@ -93,10 +92,21 @@ app.get('/', (req: Request, res: Response) => {
 });
 
 const numCPUs = os.cpus().length;
-const maxWorkers = Math.min(numCPUs, Number(process.env.CORE_CAP));
+const configuredWorkers = Number(process.env.CORE_CAP);
+const maxWorkers = Number.isFinite(configuredWorkers) && configuredWorkers >= 1
+  ? Math.min(numCPUs, Math.floor(configuredWorkers))
+  : numCPUs;
 
 if (cluster.isPrimary) {
   console.info(`[Server]: Primary process ${process.pid} is running`.green);
+
+  // The primary owns the public port and keeps every polling session on its worker.
+  cluster.setupPrimary({ serialization: 'advanced' });
+  const server = createServer();
+  setupMaster(server, { loadBalancingMethod: 'least-connection' });
+  server.listen(PORT, () => {
+    console.info(`[Server]: Cluster listening on port ${PORT}`.yellow.bold);
+  });
 
   //fork workers
   for (let i = 0; i < maxWorkers; i++) {
@@ -119,14 +129,14 @@ if (cluster.isPrimary) {
   app.listen(5001, () => {
     console.info(`[Server]: Worker ${process.pid} started`);
   });
-  //worker process runs the server
-  const server = app.listen(PORT, () => {
-    console.info(`[Server]: Server running; Worker ${process.pid} running in ${process.env.NODE_ENV} mode on port ${PORT}`.yellow.bold);
-    cronJobs();
-  });
-
+  // Workers receive public HTTP connections from the primary instead of listening
+  // on PORT themselves. The Express app still handles REST and socket requests.
+  const server = createServer(app);
   socket.init(server);
   const io = socket.getIO();
-
   socketConnection(io);
+  setupWorker(io);
+
+  console.info(`[Server]: Worker ${process.pid} ready in ${process.env.NODE_ENV} mode for port ${PORT}`.yellow.bold);
+  cronJobs();
 }

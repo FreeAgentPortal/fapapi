@@ -6,6 +6,7 @@ import { Types } from 'mongoose';
 import TeamModel from '../../profiles/team/model/TeamModel';
 import { AgentProfileModel } from '../../profiles/agent/model/AgentProfile';
 import logger from '../../../utils/logger';
+import { getAthleteRepresentative } from '../utils/athleteRepresentation';
 
 type ConversationRole = 'team' | 'athlete' | 'agent';
 
@@ -34,6 +35,10 @@ export class ConversationHandler {
     }
     logger.debug({ athleteId }, 'startConversation: athlete found');
 
+    const representative = getAthleteRepresentative(athlete.agent);
+    if (representative && (representative.status !== 'active' || !representative.profile)) {
+      throw new ErrorUtil('This athlete has an external representative. Contact their representative directly.', 403);
+    }
     const activeAgentProfileId = athlete.agent?.status === 'active' && athlete.agent?.profile ? athlete.agent.profile.toString() : null;
     logger.debug({ athleteId, activeAgentProfileId }, 'startConversation: resolved active agent');
 
@@ -58,6 +63,9 @@ export class ConversationHandler {
 
     const agent = activeAgentProfileId ? await AgentProfileModel.findById(activeAgentProfileId) : null;
     logger.debug({ activeAgentProfileId, agentFound: !!agent }, 'startConversation: agent lookup result');
+    if (activeAgentProfileId && (!agent || agent.isActive === false)) {
+      throw new ErrorUtil('Representative profile unavailable. Review the athlete’s representative details.', 403);
+    }
 
     conversation = new ConversationModel({
       participants: {
@@ -106,25 +114,37 @@ export class ConversationHandler {
     }
     logger.debug({ conversationId }, 'sendMessage: conversation found');
 
-    const athlete = await AthleteModel.findById(conversation.participants.athlete).lean();
+    if (['hidden', 'deleted'].includes(conversation.status)) throw new ErrorUtil('Conversation unavailable.', 403);
+    const athlete = conversation.participants.athlete ? await AthleteModel.findById(conversation.participants.athlete).lean() : null;
     const athleteHasActiveAgent = !!athlete?.agent?.profile && athlete?.agent?.status === 'active';
     logger.debug({ athleteId: conversation.participants.athlete, athleteHasActiveAgent }, 'sendMessage: athlete agent status resolved');
 
     logger.debug({ conversationId, senderProfileId, senderRole }, 'sendMessage: asserting sender authorization');
-    this.assertAuthorizedSender(conversation, senderProfileId, senderRole, athleteHasActiveAgent);
+    this.assertAuthorizedSender(conversation, senderProfileId, senderRole);
+    if (conversation.participants.team && conversation.participants.athlete && conversation.participants.agent &&
+        (!athleteHasActiveAgent || String(athlete?.agent?.profile) !== String(conversation.participants.agent))) {
+      throw new ErrorUtil('The representative for this athlete has changed. Start a new conversation with the current representative.', 403);
+    }
     logger.debug({ senderProfileId, senderRole }, 'sendMessage: sender authorized');
+
+    const representative = getAthleteRepresentative(athlete?.agent);
+    const communicatingThroughRepresentative = representative?.status === 'active' && !!representative.profile &&
+      (senderRole === 'agent' ? String(representative.profile) === senderProfileId : String(representative.profile) === String(conversation.participants.agent));
+    if ((senderRole === 'team' || senderRole === 'agent') && representative && !communicatingThroughRepresentative) {
+      throw new ErrorUtil('This athlete is represented. Contact their representative instead.', 403);
+    }
 
     if (senderRole === 'team' && athleteHasActiveAgent && !conversation.participants.agent) {
       logger.debug({ conversationId, senderRole, athleteHasActiveAgent }, 'sendMessage: team blocked — athlete has active agent not on conversation');
       throw new ErrorUtil('This athlete is represented by an agent. Start or continue the conversation with the agent instead.', 400);
     }
 
-    if (senderRole === 'athlete' && (conversation.participants.agent || athleteHasActiveAgent)) {
+    if (senderRole === 'athlete' && conversation.participants.team && (conversation.participants.agent || athleteHasActiveAgent)) {
       logger.debug({ conversationId, senderRole, athleteHasActiveAgent }, 'sendMessage: athlete blocked — active representation in place');
       throw new ErrorUtil('Teams must communicate with the athlete agent while representation is active.', 400);
     }
 
-    const receiver = this.resolveReceiver(conversation, senderRole);
+    const receiver = this.resolveReceiver(conversation, senderRole, senderProfileId);
     logger.debug({ receiver }, 'sendMessage: receiver resolved');
 
     const message = new MessageModel({
@@ -167,51 +187,45 @@ export class ConversationHandler {
     } else if (role === 'agent') {
       logger.debug({ profileId }, 'getConversationsForUser: querying as agent');
       conversations = await ConversationModel.find({
-        'participants.agent': profileId,
+        $or: [{ 'participants.agent': profileId }, { 'participants.agents': profileId }],
         $and: [{ status: { $ne: 'deleted' } }, { status: { $ne: 'hidden' } }],
       })
         .populate('participants.team', 'name logos')
-        .populate('participants.athlete', 'fullName profileImageUrl')
+        .populate('participants.athlete', 'fullName profileImageUrl agent')
+        .populate('participants.agents', 'displayName agencyName avatarUrl')
         .populate('lastMessage')
         .lean();
     } else {
       logger.debug({ profileId }, 'getConversationsForUser: querying as athlete (no agent)');
       conversations = await ConversationModel.find({
         'participants.athlete': profileId,
-        'participants.agent': { $exists: false },
+        $or: [{ 'participants.agent': { $exists: false } }, { 'participants.team': { $exists: false } }],
         $and: [{ status: { $ne: 'deleted' } }, { status: { $ne: 'hidden' } }],
       })
         .populate('participants.team', 'name logos')
+        .populate('participants.agent', 'displayName agencyName avatarUrl')
         .populate('lastMessage')
         .lean();
     }
 
+    // The latest message may be outgoing or read while an older incoming message
+    // is still unread. Use the same message filter as the navigation badge.
+    const unreadConversationIds = conversations.length
+      ? await this.getUnreadConversationIds(profileId, role, conversations.map((conversation) => conversation._id))
+      : [];
+    const unreadIds = new Set(unreadConversationIds.map(String));
+
     await this.inflateSenderProfiles(conversations);
 
-    return conversations.map((conversation) => {
-      const lastMessage = conversation.lastMessage as ConversationListMessage | null | undefined;
-      const hasUnreadMessages = Boolean(
-        lastMessage &&
-        lastMessage.status === 'active' &&
-        !lastMessage.read &&
-        lastMessage.receiver.role === role &&
-        lastMessage.receiver.profile.toString() === profileId.toString()
-      );
-
-      return {
-        ...conversation,
-        hasUnreadMessages,
-      };
-    });
+    return conversations.map((conversation) => ({
+      ...conversation,
+      viewerProfileId: String(profileId),
+      hasUnreadMessages: unreadIds.has(String(conversation._id)),
+    }));
   }
 
   async getUnreadConversationCount(profileId: string, role: ConversationRole): Promise<number> {
-    const unreadConversationIds = await MessageModel.distinct('conversation', {
-      'receiver.profile': profileId,
-      'receiver.role': role,
-      read: false,
-      status: 'active',
-    });
+    const unreadConversationIds = await this.getUnreadConversationIds(profileId, role);
 
     if (unreadConversationIds.length === 0) {
       return 0;
@@ -221,10 +235,10 @@ export class ConversationHandler {
       role === 'team'
         ? { 'participants.team': profileId }
         : role === 'agent'
-          ? { 'participants.agent': profileId }
+          ? { $or: [{ 'participants.agent': profileId }, { 'participants.agents': profileId }] }
           : {
               'participants.athlete': profileId,
-              'participants.agent': { $exists: false },
+              $or: [{ 'participants.agent': { $exists: false } }, { 'participants.team': { $exists: false } }],
             };
 
     return await ConversationModel.countDocuments({
@@ -234,45 +248,52 @@ export class ConversationHandler {
     });
   }
 
-  async getConversation(conversationId: string): Promise<IConversation> {
+  private async getUnreadConversationIds(profileId: string, role: ConversationRole, conversationIds?: Types.ObjectId[]) {
+    return await MessageModel.distinct('conversation', {
+      'receiver.profile': profileId,
+      'receiver.role': role,
+      read: false,
+      status: 'active',
+      ...(conversationIds && { conversation: { $in: conversationIds } }),
+    });
+  }
+
+  async getConversation(conversationId: string) {
     logger.debug({ conversationId }, 'getConversation: initiated');
 
     const conversation = await ConversationModel.findById(conversationId)
       .populate('participants.athlete', 'fullName profileImageUrl agent')
       .populate('participants.team', 'name logos')
       .populate('participants.agent', 'displayName agencyName email contactNumber')
-      .populate('messages');
-    if (!conversation) {
+      .populate('participants.agents', 'displayName agencyName avatarUrl')
+      .lean();
+    if (!conversation || ['hidden', 'deleted'].includes(conversation.status)) {
       logger.debug({ conversationId }, 'getConversation: conversation not found');
       throw new ErrorUtil('Conversation not found', 404);
     }
-    logger.debug({ conversationId, messageCount: conversation.messages.length }, 'getConversation: conversation retrieved');
-    return conversation;
+
+    // Messages can persist even when the conversation's reference list is incomplete.
+    const messages = await MessageModel.find({ conversation: conversation._id })
+      .sort({ createdAt: 1, _id: 1 })
+      .lean();
+
+    logger.debug({ conversationId, messageCount: messages.length }, 'getConversation: conversation retrieved');
+    return { ...conversation, messages };
   }
 
-  private resolveReceiver(conversation: IConversation, senderRole: ConversationRole): { profile: Types.ObjectId; role: ConversationRole } {
-    logger.debug({ conversationId: conversation._id, senderRole }, 'resolveReceiver: resolving receiver');
-
-    if (senderRole === 'team') {
-      if (conversation.participants.agent) {
-        logger.debug({ conversationId: conversation._id, agentId: conversation.participants.agent }, 'resolveReceiver: routing to agent');
-        return {
-          profile: conversation.participants.agent,
-          role: 'agent',
-        };
-      }
-      logger.debug({ conversationId: conversation._id, athleteId: conversation.participants.athlete }, 'resolveReceiver: routing to athlete');
-      return {
-        profile: conversation.participants.athlete,
-        role: 'athlete',
-      };
+  private resolveReceiver(conversation: IConversation, senderRole: ConversationRole, senderProfileId: string): { profile: Types.ObjectId; role: ConversationRole } {
+    const { team, athlete, agent, agents } = conversation.participants;
+    if (senderRole === 'agent' && agents?.length) {
+      const recipient = agents.find(id => String(id) !== senderProfileId);
+      if (recipient) return { profile: recipient, role: 'agent' };
     }
-
-    logger.debug({ conversationId: conversation._id, teamId: conversation.participants.team }, 'resolveReceiver: routing to team');
-    return {
-      profile: conversation.participants.team,
-      role: 'team',
-    };
+    if (senderRole === 'team' && agent) return { profile: agent, role: 'agent' };
+    if (senderRole === 'team' && athlete) return { profile: athlete, role: 'athlete' };
+    if (senderRole === 'agent' && team) return { profile: team, role: 'team' };
+    if (senderRole === 'agent' && athlete) return { profile: athlete, role: 'athlete' };
+    if (senderRole === 'athlete' && !team && agent) return { profile: agent, role: 'agent' };
+    if (senderRole === 'athlete' && team) return { profile: team, role: 'team' };
+    throw new ErrorUtil('Conversation recipient unavailable.', 400);
   }
 
   /**
@@ -335,38 +356,11 @@ export class ConversationHandler {
     }
   }
 
-  private assertAuthorizedSender(conversation: IConversation, senderProfileId: string, senderRole: ConversationRole, hasActiveAgent: boolean): void {
-    logger.debug({ conversationId: conversation._id, senderProfileId, senderRole }, 'assertAuthorizedSender: checking authorization');
-
-    if (senderRole === 'team' && conversation.participants.team.toString() !== senderProfileId.toString()) {
-      logger.debug(
-        { conversationId: conversation._id, senderProfileId, expectedTeamId: conversation.participants.team },
-        'assertAuthorizedSender: team profile mismatch — unauthorized'
-      );
+  private assertAuthorizedSender(conversation: IConversation, senderProfileId: string, senderRole: ConversationRole): void {
+    if (senderRole === 'agent' && conversation.participants.agents?.some(id => String(id) === senderProfileId)) return;
+    const participant = conversation.participants[senderRole];
+    if (!participant || participant.toString() !== senderProfileId.toString()) {
       throw new ErrorUtil('Unauthorized to participate in this conversation.', 403);
-    }
-
-    if (senderRole === 'athlete') {
-      if (conversation.participants.athlete.toString() !== senderProfileId.toString()) {
-        logger.debug(
-          { conversationId: conversation._id, senderProfileId, expectedAthleteId: conversation.participants.athlete },
-          'assertAuthorizedSender: athlete profile mismatch — unauthorized'
-        );
-        throw new ErrorUtil('Unauthorized to participate in this conversation.', 403);
-      }
-      logger.debug({ senderProfileId }, 'assertAuthorizedSender: athlete authorized');
-      return;
-    }
-
-    if (hasActiveAgent) {
-      if (!conversation.participants.agent || conversation.participants.agent.toString() !== senderProfileId.toString()) {
-        logger.debug(
-          { conversationId: conversation._id, senderProfileId, agentId: conversation.participants.agent },
-          'assertAuthorizedSender: agent profile mismatch — unauthorized'
-        );
-        throw new ErrorUtil('Unauthorized to participate in this conversation.', 403);
-      }
-      logger.debug({ senderProfileId }, 'assertAuthorizedSender: agent authorized');
     }
   }
 }

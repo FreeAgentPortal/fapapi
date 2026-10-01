@@ -8,6 +8,7 @@ export interface NotificationType extends mongoose.Document {
   notificationType: string;
   opened: boolean;
   entityId: ObjectId;
+  dedupeKey?: string;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -23,7 +24,8 @@ interface NotificationModel extends Model<NotificationAttributes> {
     description: string,
     message: string,
     notificationType: string,
-    entityId?: mongoose.Types.ObjectId
+    entityId?: mongoose.Types.ObjectId,
+    dedupeKey?: string
   ) => Promise<NotificationAttributes>;
 }
 
@@ -45,6 +47,7 @@ const NotificationSchema = new Schema<NotificationAttributes>(
       default: false,
     },
     entityId: mongoose.Schema.Types.ObjectId,
+    dedupeKey: { type: String, trim: true },
   },
   {
     timestamps: true,
@@ -58,8 +61,28 @@ NotificationSchema.statics.insertNotification = async function (
   description,
   message,
   notificationType,
-  entityId
+  entityId,
+  dedupeKey
 ) {
+  if (dedupeKey) {
+    return await this.findOneAndUpdate(
+      { dedupeKey },
+      {
+        $setOnInsert: {
+          userTo,
+          userFrom,
+          description,
+          message,
+          notificationType,
+          entityId,
+          dedupeKey,
+          opened: false,
+        },
+      },
+      { upsert: true, new: true, setDefaultsOnInsert: true }
+    );
+  }
+
   const notification = new this({
     userTo,
     userFrom,
@@ -84,6 +107,7 @@ NotificationSchema.statics.insertNotification = async function (
 // Add indexes for performance
 // Index TTL for automatic removal of old notifications > 60 days old
 NotificationSchema.index({ createdAt: 1 }, { expireAfterSeconds: 60 * 60 * 24 * 60 }); // 60 days
+NotificationSchema.index({ dedupeKey: 1 }, { unique: true, sparse: true });
 
 
 

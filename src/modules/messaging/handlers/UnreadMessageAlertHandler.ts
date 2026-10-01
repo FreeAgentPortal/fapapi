@@ -56,6 +56,10 @@ export class UnreadMessageAlertHandler {
             continue;
           }
 
+          // This reminder template is team-specific. Direct agent/athlete
+          // messages already emit the role-aware conversation.message notification.
+          if (message.sender.role !== 'team') continue;
+
           const [recipient, team] = await Promise.all([this.resolveRecipient(message.receiver.role, message.receiver.profile), TeamModel.findById(message.sender.profile).lean()]);
 
           if (!recipient || !team) {
@@ -182,7 +186,7 @@ export class UnreadMessageAlertHandler {
           teamName: team.name,
           teamLogo: team.logoUrl,
           messagePreview: message.content.substring(0, 100),
-          messageUrl: `https://athlete.thefreeagentportal.com/messages/${message.conversation._id || message.conversation}`,
+          messageUrl: `https://${message.receiver.role === 'agent' ? 'agents' : 'athlete'}.thefreeagentportal.com/messages/${message.conversation._id || message.conversation}`,
           supportEmail: 'support@freeagentportal.com',
           logoUrl: 'https://res.cloudinary.com/dsltlng97/image/upload/v1752863629/placeholder-logo_s7jg3y.png',
           currentYear: new Date().getFullYear(),
@@ -269,6 +273,8 @@ export class UnreadMessageAlertHandler {
         console.warn(`[UnreadMessageAlert] Message ${messageId} receiver is not an athlete or agent`);
         return;
       }
+
+      if (message.sender.role !== 'team') return;
 
       const [recipient, team] = await Promise.all([this.resolveRecipient(message.receiver.role, message.receiver.profile), TeamModel.findById(message.sender.profile).lean()]);
 

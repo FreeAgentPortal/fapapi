@@ -14,6 +14,16 @@ interface AthleteRepresentationInviteEvent {
   message?: string;
 }
 
+interface ManagedAthleteNotificationRequestedEvent {
+  outboxId: string;
+  notificationType: 'agent.athlete-profile.updated' | 'agent.athlete-resume.updated';
+  userTo: string;
+  userFrom: string;
+  entityId: string;
+  message: string;
+  description: string;
+}
+
 export default class AthleteEventHandler {
   private modelMap: Record<ModelKey, Model<any>> = ModelMap;
 
@@ -85,11 +95,7 @@ export default class AthleteEventHandler {
     console.info(`[Notification]: Profile incomplete alert processing completed for ${event.email}`);
   };
 
-  private async sendRepresentationInviteEmailPlaceholder(
-    user: any,
-    event: AthleteRepresentationInviteEvent,
-    agentDisplayName: string
-  ): Promise<void> {
+  private async sendRepresentationInviteEmailPlaceholder(user: any, event: AthleteRepresentationInviteEvent, agentDisplayName: string): Promise<void> {
     if (!user?.email) {
       console.warn(
         `[Notification]: No email found for athlete user ${user?._id || event.athleteUserId || event.athleteProfileId}, skipping representation invite email placeholder`
@@ -103,9 +109,7 @@ export default class AthleteEventHandler {
     }
 
     // TODO: Implement athlete representation invite email delivery when the email template and copy are available.
-    console.info(
-      `[Notification]: Representation invite email placeholder for ${user.email} from ${agentDisplayName} on assignment ${event.assignmentId}`
-    );
+    console.info(`[Notification]: Representation invite email placeholder for ${user.email} from ${agentDisplayName} on assignment ${event.assignmentId}`);
   }
 
   representationInvitationReceived = async (event: AthleteRepresentationInviteEvent) => {
@@ -122,9 +126,7 @@ export default class AthleteEventHandler {
 
       const recipientUserId = event.athleteUserId || athleteProfile?.userId?.toString();
       if (!recipientUserId) {
-        console.warn(
-          `[Notification]: Unable to resolve athlete user for representation invite ${event.assignmentId}, skipping in-app notification`
-        );
+        console.warn(`[Notification]: Unable to resolve athlete user for representation invite ${event.assignmentId}, skipping in-app notification`);
         return;
       }
 
@@ -152,4 +154,58 @@ export default class AthleteEventHandler {
     }
   };
 
+  managedAthleteUpdated = async (event: ManagedAthleteNotificationRequestedEvent) => {
+    await Notification.insertNotification(
+      event.userTo as any,
+      event.userFrom as any,
+      event.description,
+      event.message,
+      event.notificationType,
+      event.entityId as any,
+      event.outboxId
+    );
+  };
+
+  athleteViewRecorded = async (event: any) => {
+    console.info(`[Notification]: Recording athlete view notification for athlete ${event.athleteId}`);
+    try {
+      // we need to locate the profile, then locate the billing information
+      const athleteProfile = await this.modelMap['athlete'].findById(event.athleteId).populate('user');
+      if (!athleteProfile) {
+        console.warn(`[Notification]: Athlete profile not found for ${event.athleteId}, skipping athlete view notification`);
+        return;
+      }
+      // next find the billing information
+      const billingInfo = await this.modelMap['billing'].findOne({ profileId: athleteProfile._id });
+      if (!billingInfo) {
+        console.warn(`[Notification]: Billing information not found for athlete ${event.athleteId}, skipping athlete view notification`);
+        return;
+      }
+
+      // determine if the athletes plan includes seeing who viewed their profile, or if its only
+      // general information
+      const plan = await this.modelMap['plan'].findById(billingInfo.planId);
+      if (!plan) {
+        console.warn(`[Notification]: Plan information not found for athlete ${event.athleteId}, skipping athlete view notification`);
+        return;
+      }
+      const canSeeViewers = plan.features.includes('view_profile_viewers');
+      if (canSeeViewers) {
+        // get the viewer profile to include in the notification
+        const viewerProfile = await this.modelMap['team'].findById(event.viewerId).lean();
+        const viewerName = viewerProfile ? (viewerProfile as any).name : 'A team';
+        await Notification.insertNotification(
+          event.athleteId,
+          undefined as any,
+          `A new view on your profile has been recorded by ${viewerName}.`,
+          'TBD',
+          'athlete.view.recorded',
+          event.viewerId
+        );
+      }
+      await Notification.insertNotification(event.athleteId, undefined as any, 'A new view on your profile has been recorded.', 'TBD', 'athlete.view.recorded', event.viewerId);
+    } catch (error) {
+      console.error(`[Notification]: Error recording athlete view notification for athlete ${event.athleteId}:`, error);
+    }
+  };
 }
