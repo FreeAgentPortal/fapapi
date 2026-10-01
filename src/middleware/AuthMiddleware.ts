@@ -18,7 +18,7 @@ export class AuthMiddleware {
    */
   static protect = asyncHandler(async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     const authHeader = req.headers.authorization;
-
+    logger.debug({ authHeader }, '[AuthMiddleware] Authorization header received.');
     if (!authHeader) {
       logger.debug({ reqHeaders: req.headers }, '[AuthMiddleware] No authorization header provided.');
       throw new ErrorUtil('No authorization header provided.', 401);
@@ -39,6 +39,7 @@ export class AuthMiddleware {
       const service = req.headers['x-service-name'];
       const token = req.headers.authorization!.split(' ')[1];
       const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload;
+      logger.debug({ decoded }, '[AuthMiddleware] JWT decoded successfully.');
       req.user = await User.findById(decoded.userId).select('-password');
       if (!req.user) {
         logger.debug({ decoded }, '[AuthMiddleware] User not found for JWT.');
