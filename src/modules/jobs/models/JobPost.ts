@@ -1,4 +1,5 @@
 import mongoose, { Document, Schema, Types } from 'mongoose';
+import { JOB_SOURCE_PROVIDERS, JobSourceProvider } from './JobSource';
 
 export const JOB_EMPLOYMENT_TYPES = ['full_time', 'part_time', 'contract', 'internship', 'volunteer'] as const;
 export const JOB_LOCATION_TYPES = ['onsite', 'remote', 'hybrid'] as const;
@@ -26,7 +27,21 @@ export interface IJobPostViewer {
 }
 
 export interface IJobPost extends Document {
-  team: Types.ObjectId;
+  team?: Types.ObjectId;
+  origin: 'internal' | 'external';
+  organizationName?: string;
+  applyUrl?: string;
+  locationText?: string;
+  source?: {
+    sourceId: Types.ObjectId;
+    provider: JobSourceProvider;
+    externalId: string;
+    sourceUrl: string;
+  };
+  firstSeenAt?: Date;
+  lastSeenAt?: Date;
+  missingSince?: Date;
+  sourceUpdatedAt?: Date;
   createdBy: Types.ObjectId;
   title: string;
   department?: string;
@@ -77,10 +92,27 @@ const JobPostViewerSchema = new Schema<IJobPostViewer>(
 
 const JobPostSchema = new Schema<IJobPost>(
   {
+    origin: { type: String, enum: ['internal', 'external'], default: 'internal' },
+    organizationName: { type: String, trim: true, required: function () { return this.origin === 'external'; } },
+    applyUrl: { type: String, required: function () { return this.origin === 'external'; } },
+    locationText: String,
+    source: {
+      type: new Schema({
+        sourceId: { type: Schema.Types.ObjectId, ref: 'JobSource', required: true },
+        provider: { type: String, enum: JOB_SOURCE_PROVIDERS, required: true },
+        externalId: { type: String, required: true },
+        sourceUrl: { type: String, required: true },
+      }, { _id: false }),
+      required: function () { return this.origin === 'external'; },
+    },
+    firstSeenAt: Date,
+    lastSeenAt: Date,
+    missingSince: Date,
+    sourceUpdatedAt: Date,
     team: {
       type: Schema.Types.ObjectId,
       ref: 'TeamProfile',
-      required: true,
+      required: function () { return this.origin !== 'external'; },
     },
     createdBy: {
       type: Schema.Types.ObjectId,
@@ -159,6 +191,11 @@ JobPostSchema.index({ experienceLevel: 1 });
 JobPostSchema.index({ industries: 1 });
 JobPostSchema.index({ 'location.city': 1, 'location.state': 1, 'location.country': 1 });
 JobPostSchema.index({ createdAt: -1 });
+JobPostSchema.index(
+  { 'source.sourceId': 1, 'source.externalId': 1 },
+  { unique: true, partialFilterExpression: { origin: 'external' } }
+);
+JobPostSchema.index({ 'source.sourceId': 1, status: 1, lastSeenAt: 1 });
 
 export const JobPostModel = mongoose.model<IJobPost>('JobPost', JobPostSchema);
 

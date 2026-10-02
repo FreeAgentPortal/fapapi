@@ -20,7 +20,8 @@ export interface IApplicationNote {
 
 export interface IJobApplication extends Document {
   job: Types.ObjectId;
-  team: Types.ObjectId;
+  origin: 'internal' | 'external';
+  team?: Types.ObjectId;
   applicant: Types.ObjectId;
   resume: Types.ObjectId;
   coverLetter?: string;
@@ -82,6 +83,11 @@ const ApplicationNoteSchema = new Schema<IApplicationNote>(
 
 const JobApplicationSchema = new Schema<IJobApplication>(
   {
+    origin: {
+      type: String,
+      enum: ['internal', 'external'],
+      default: 'internal',
+    },
     job: {
       type: Schema.Types.ObjectId,
       ref: 'JobPost',
@@ -90,7 +96,7 @@ const JobApplicationSchema = new Schema<IJobApplication>(
     team: {
       type: Schema.Types.ObjectId,
       ref: 'TeamProfile',
-      required: true,
+      required: function () { return this.origin !== 'external'; },
     },
     applicant: {
       type: Schema.Types.ObjectId,

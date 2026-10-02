@@ -10,6 +10,8 @@ import JobPostHandler from '../handlers/JobPostHandler';
 import { eventBus } from '../../../lib/eventBus';
 import { AdvFilters } from '../../../utils/advFilter/AdvFilters';
 import logger from '../../../utils/logger';
+import { Types } from 'mongoose';
+import { ErrorUtil } from '../../../middleware/ErrorUtil';
 
 export default class ApplicationService extends CRUDService {
   private applicationHandler: ApplicationHandler;
@@ -47,11 +49,14 @@ export default class ApplicationService extends CRUDService {
   public applyToJob = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
     try {
       const jobId = req.params.jobId;
-      const professionalProfileId = await this.applicationProfileHandler.ensureProfessionalProfile(req.user);
       const jobPost = await this.jobPostHandler.fetch(jobId);
 
       if (!jobPost) {
         return res.status(404).json({ success: false, message: 'Job post not found' });
+      }
+
+      if (jobPost.origin === 'external') {
+        return res.status(400).json({ success: false, message: 'Apply for this job on the organization website', applyUrl: jobPost.applyUrl });
       }
 
       if (jobPost.status !== 'published') {
@@ -62,6 +67,7 @@ export default class ApplicationService extends CRUDService {
         return res.status(400).json({ success: false, message: 'Job post has expired' });
       }
 
+      const professionalProfileId = await this.applicationProfileHandler.ensureProfessionalProfile(req.user);
       if (!professionalProfileId) {
         return res.status(400).json({ success: false, message: 'User must have a professional profile to apply' });
       }
@@ -87,6 +93,7 @@ export default class ApplicationService extends CRUDService {
 
       const applicationData = {
         ...req.body,
+        origin: 'internal',
         job: jobId,
         team: jobPost.team,
         applicant: professionalProfileId,
@@ -114,6 +121,39 @@ export default class ApplicationService extends CRUDService {
       return res.status(201).json({ success: true, message: 'Application submitted successfully' });
     } catch (err: any) {
       console.error(err);
+      return error(err, req, res);
+    }
+  });
+
+  public confirmExternalApplication = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
+    try {
+      const jobId = req.params.jobId;
+      if (!Types.ObjectId.isValid(jobId)) {
+        throw new ErrorUtil('Invalid job post ID', 400);
+      }
+      const jobPost = await this.jobPostHandler.fetch(jobId);
+      if (!jobPost) {
+        throw new ErrorUtil('Job post not found', 404);
+      }
+      if (jobPost.origin !== 'external') {
+        throw new ErrorUtil('This route only records applications for external jobs', 400);
+      }
+
+      // Confirmation may arrive after the source closes the listing.
+      const professionalProfileId = await this.applicationProfileHandler.ensureProfessionalProfile(req.user);
+      if (!professionalProfileId) {
+        throw new ErrorUtil('User must have a professional profile to record an application', 400);
+      }
+      const { application, created } = await this.applicationHandler.confirmExternalApplication(
+        jobId, professionalProfileId, String(req.user._id)
+      );
+
+      return res.status(created ? 201 : 200).json({
+        success: true,
+        message: created ? 'External application recorded' : 'External application already recorded',
+        payload: { applicationId: application._id, job: application.job, applied: true },
+      });
+    } catch (err) {
       return error(err, req, res);
     }
   });

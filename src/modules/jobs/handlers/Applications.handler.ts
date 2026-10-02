@@ -169,6 +169,36 @@ export default class ApplicationHandler extends CRUDHandler<IJobApplication> {
     return existingApplication !== null;
   }
 
+  async confirmExternalApplication(
+    jobId: string,
+    applicantProfileId: string,
+    confirmedByUserId: string
+  ): Promise<{ application: IJobApplication; created: boolean }> {
+    const identity = { job: jobId, applicant: applicantProfileId };
+    await this.Schema.init();
+    const existing = await this.Schema.findOne(identity);
+    if (existing) return { application: existing, created: false };
+
+    try {
+      const application = await this.create({
+        ...identity,
+        origin: 'external',
+        status: 'submitted',
+        statusHistory: [ApplicationHandlerUtils.buildStatusHistoryEntry(
+          'submitted', confirmedByUserId, 'Professional confirmed an external application'
+        )],
+      });
+      return { application, created: true };
+    } catch (err: any) {
+      // The unique job/applicant index also covers concurrent confirmations.
+      if (err?.code === 11000) {
+        const application = await this.Schema.findOne(identity);
+        if (application) return { application, created: false };
+      }
+      throw err;
+    }
+  }
+
   async getStatusCounts(applicantProfileId: string): Promise<Record<string, number>> {
     const results = await this.Schema.aggregate([{ $match: { applicant: new Types.ObjectId(applicantProfileId) } }, { $group: { _id: '$status', count: { $sum: 1 } } }]);
 

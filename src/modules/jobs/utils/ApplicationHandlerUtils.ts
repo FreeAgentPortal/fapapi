@@ -47,7 +47,7 @@ export class ApplicationHandlerUtils {
   }
 
   static canManageApplication(actor: ApplicationActorContext | null | undefined, teamId: IJobApplication['team']): boolean {
-    if (!actor) {
+    if (!actor?.profileRefs?.team || !teamId) {
       return false;
     }
     return String(actor.profileRefs?.team) === String(teamId);

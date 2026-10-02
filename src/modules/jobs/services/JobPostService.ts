@@ -14,6 +14,7 @@ import JobApplicationModel from '../models/JobApplication';
 import { JobPostModel } from '../models/JobPost';
 import { buildJobRecommendationQuery } from '../utils/buildJobRecommendationQuery';
 import { AdvFilters } from '../../../utils/advFilter/AdvFilters';
+import { editableJobFields } from '../utils/jobPostInput';
  
 export default class JobPostService extends CRUDService {
   private profileHandler: ApplicationProfileHandler;
@@ -21,7 +22,7 @@ export default class JobPostService extends CRUDService {
 
   constructor() {
     super(JobPostHandler);
-    this.queryKeys = ['title', 'department', 'description', 'requirements', 'preferredQualifications', 'location.city', 'location.state', 'location.country'];
+    this.queryKeys = ['title', 'organizationName', 'locationText', 'department', 'description', 'requirements', 'preferredQualifications', 'location.city', 'location.state', 'location.country'];
     this.profileHandler = new ApplicationProfileHandler();
     this.statsHandler = new JobPostStatsHandler();
   }
@@ -29,10 +30,11 @@ export default class JobPostService extends CRUDService {
   public create = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
     try {
       const teamId = this.requireTeamProfile(req.user);
-      const data = req.body;
+      const data = editableJobFields(req.body);
 
       const created = await this.handler.create({
         ...data,
+        origin: 'internal',
         team: teamId,
         createdBy: req.user._id,
         status: data.status || 'draft',
@@ -57,6 +59,9 @@ export default class JobPostService extends CRUDService {
         throw new ErrorUtil('Job post not found', 404);
       }
 
+      const profileId = this.profileHandler.getProfessionalProfileId(authReq.user);
+      const applied = profileId ? Boolean(await JobApplicationModel.exists({ job: req.params.id, applicant: profileId })) : false;
+
       const userId = new mongoose.Types.ObjectId(String(authReq.user._id));
       const rawIp = (req.headers['x-forwarded-for'] as string | undefined)?.split(',')[0]?.trim() ?? (req as any).socket?.remoteAddress ?? '';
       const ip = rawIp.replace(/^::ffff:/, '');
@@ -65,7 +70,7 @@ export default class JobPostService extends CRUDService {
 
       return res.status(200).json({
         success: true,
-        payload: job,
+        payload: { ...job, applied },
       });
     } catch (err) {
       return error(err, req, res);
@@ -82,7 +87,11 @@ export default class JobPostService extends CRUDService {
         throw new ErrorUtil('Job post not found', 404);
       }
 
-      const payload = req.body;
+      if (existing.origin === 'external') {
+        throw new ErrorUtil('External listings are managed through their job source', 400);
+      }
+
+      const payload = editableJobFields(req.body);
 
       if (Object.keys(payload).length === 0) {
         throw new ErrorUtil('No valid job post fields provided for update', 400);
@@ -169,6 +178,15 @@ export default class JobPostService extends CRUDService {
         page,
         limit: pageSize,
       };
+
+      if (req.path === '/team/mine') {
+        options.filters.push({ team: new mongoose.Types.ObjectId(this.requireTeamProfile(authReq.user)) });
+      } else if (!authReq.user?.role?.includes('admin') && !authReq.user?.permissions?.includes('admin')) {
+        options.filters.push({ $or: [
+          { origin: { $ne: 'external' } },
+          { origin: 'external', status: 'published' },
+        ] });
+      }
 
       const profileId = this.profileHandler.getProfessionalProfileId(authReq.user);
       let appliedIds: mongoose.Types.ObjectId[] = [];

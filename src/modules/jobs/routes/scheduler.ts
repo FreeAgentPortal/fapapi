@@ -8,6 +8,7 @@ const service = new JobSchedulerService();
 router.use(AuthMiddleware.protect, AuthMiddleware.authorizeRoles(['admin']) as any);
 
 router.post('/trigger/expiration', service.triggerExpiration);
+router.post('/trigger/ingestion', service.triggerIngestion);
 router.get('/status', service.getStatus);
 
 export default router;

@@ -6,6 +6,7 @@ import authenticateUser from '../../../utils/authenticateUser';
 import JobPostService from '../services/JobPostService';
 import applicationsRoutes from './applications';
 import schedulerRoutes from './scheduler';
+import sourceRoutes from './sources';
 
 const router = express.Router();
 
@@ -13,6 +14,7 @@ const service = new JobPostService();
 
 router.use('/applications', applicationsRoutes);
 router.use('/scheduler', schedulerRoutes);
+router.use('/sources', sourceRoutes);
 
 router.use(AuthMiddleware.protect);
 router.route('/team/mine/stats').get(service.getTeamStats);
