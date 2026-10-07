@@ -18,9 +18,9 @@ export class AuthMiddleware {
    */
   static protect = asyncHandler(async (req: AuthenticatedRequest, res: Response, next: NextFunction) => {
     const authHeader = req.headers.authorization;
-    logger.debug({ authHeader }, '[AuthMiddleware] Authorization header received.');
+    // logger.debug({ authHeader }, '[AuthMiddleware] Authorization header received.');
     if (!authHeader) {
-      logger.debug({ reqHeaders: req.headers }, '[AuthMiddleware] No authorization header provided.');
+      // logger.debug({ reqHeaders: req.headers }, '[AuthMiddleware] No authorization header provided.');
       throw new ErrorUtil('No authorization header provided.', 401);
     }
 
@@ -29,7 +29,7 @@ export class AuthMiddleware {
     } else if (authHeader.startsWith('ApiKey ')) {
       await AuthMiddleware.verifyApiKey(req, res, next);
     } else {
-      logger.debug({ reqHeaders: req.headers }, '[AuthMiddleware] Unsupported authentication method.');
+      // logger.debug({ reqHeaders: req.headers }, '[AuthMiddleware] Unsupported authentication method.');
       return res.status(401).json({ message: 'Unsupported authentication method.' });
     }
   });
@@ -39,10 +39,10 @@ export class AuthMiddleware {
       const service = req.headers['x-service-name'];
       const token = req.headers.authorization!.split(' ')[1];
       const decoded = jwt.verify(token, process.env.JWT_SECRET as string) as JwtPayload;
-      logger.debug({ decoded }, '[AuthMiddleware] JWT decoded successfully.');
+      //  logger.debug({ decoded }, '[AuthMiddleware] JWT decoded successfully.');
       req.user = await User.findById(decoded.userId).select('-password');
       if (!req.user) {
-        logger.debug({ decoded }, '[AuthMiddleware] User not found for JWT.');
+        // logger.debug({ decoded }, '[AuthMiddleware] User not found for JWT.');
         return res.status(401).json({ message: 'User not found.' });
       }
       // if the service is provided we need to then attempt to find the users permissions for that service, i.e. 'admin'
@@ -54,7 +54,7 @@ export class AuthMiddleware {
           $or: [{ user: req.user._id }, { userId: req.user._id }, { 'linkedUsers.user': req.user._id }, { 'linkedUsers.userId': req.user._id }],
         }); 
         if (!profile) {
-          logger.debug({ service }, '[AuthMiddleware] No profile found for service.');
+          // logger.debug({ service }, '[AuthMiddleware] No profile found for service.');
           return res.status(403).json({ message: `No profile found for service ${service}` });
         }
         req.user.permissions = profile.permissions || [];
@@ -68,12 +68,12 @@ export class AuthMiddleware {
       try {
         AuthActivityTracker.trackJwtActivity(req, token);
       } catch (err: any) {
-        logger.error('[AuthMiddleware] Activity tracking failed:', err);
+        // logger.error('[AuthMiddleware] Activity tracking failed:', err);
       }
 
       next();
     } catch (err: any) {
-      logger.error('[AuthMiddleware] JWT validation failed:', err);
+      // logger.error('[AuthMiddleware] JWT validation failed:', err);
       return res.status(401).json({ message: 'JWT validation failed. ' + err });
     }
   }

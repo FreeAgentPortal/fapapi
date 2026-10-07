@@ -108,7 +108,9 @@ export function calculateInitialSubscriptionChargeInCents(
   const remainingCycleMs = Math.max(cycleEnd.diff(moment(activationDate)), 0);
   const remainingRatio = Math.min(1, remainingCycleMs / totalCycleMs);
 
-  return Math.round(fullCycleAmountInCents * remainingRatio);
+  const proratedAmountInCents = Math.round(fullCycleAmountInCents * remainingRatio);
+  // Keep zero charges free while enforcing a $0.50 minimum for nonzero prorations.
+  return proratedAmountInCents > 0 && proratedAmountInCents < 50 ? 50 : proratedAmountInCents;
 }
 
 function applyRenewalAnchor(anchor: BillingRenewalAnchor, activationDate: Date): Date {

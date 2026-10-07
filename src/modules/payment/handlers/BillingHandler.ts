@@ -892,7 +892,9 @@ export class BillingHandler {
     const remainingRatio = Math.min(1, remainingCycleMs / totalCycleMs);
     const proratedDifference = Math.max(0, (targetAmount - currentAmount) * remainingRatio);
 
-    return Math.round(proratedDifference * 100);
+    const proratedAmountInCents = Math.round(proratedDifference * 100);
+    // Keep zero charges free while enforcing a $0.50 minimum for nonzero prorations.
+    return proratedAmountInCents > 0 && proratedAmountInCents < 50 ? 50 : proratedAmountInCents;
   }
 
   private validatePlanSelection(plan: any, profileType: string): void {

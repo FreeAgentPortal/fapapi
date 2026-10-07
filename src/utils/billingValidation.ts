@@ -24,7 +24,7 @@ export class BillingValidator {
     if (!billing) {
       return {
         needsUpdate: true,
-        reasons: ['No billing account found'],
+        reasons: ['Billing setup is incomplete. Choose a plan and complete billing setup to continue.'],
         severity: 'critical',
         recommendations: ['Create a billing account to continue using the service'],
       };
@@ -39,23 +39,29 @@ export class BillingValidator {
     // Primary check: Payment information not vaulted
     if (!billing.vaulted && !isActiveFreePlan) {
       logger.debug({ vaulted: billing.vaulted, isActiveFreePlan }, 'validateBillingAccount: payment method not vaulted and not a free plan');
-      reasons.push('Payment information not saved (not vaulted)');
-      recommendations.push('Add payment method to vault for automatic billing');
+      reasons.push('No payment method is saved. Add a card to complete billing setup.');
+      recommendations.push('Add a card for automatic subscription payments');
       severity = 'critical';
     }
 
     // Check if account is inactive or suspended
     if (billing.status === 'inactive' || billing.status === 'suspended') {
       logger.debug({ status: billing.status }, 'validateBillingAccount: account is inactive or suspended');
-      reasons.push(`Account status is ${billing.status}`);
-      recommendations.push('Update payment information to reactivate account');
+      if (billing.initialSubscriptionChargeStatus === 'failed') {
+        reasons.push('Your first subscription payment failed. Check with your bank or use a different card, then try again to activate your subscription.');
+      } else if (billing.status === 'suspended' && billing.needsUpdate) {
+        reasons.push('Your subscription is paused because a payment could not be completed. Review your payment method to restore access.');
+      } else {
+        reasons.push('Your subscription is not active. Complete billing setup to restore access, or contact support if you have already paid.');
+      }
+      recommendations.push('Review your payment method and complete billing setup to restore access');
       severity = 'critical';
     }
 
     // Check if explicitly marked as needing update
-    if (billing.needsUpdate) {
+    if (billing.needsUpdate && billing.status !== 'inactive' && billing.status !== 'suspended') {
       logger.debug({}, 'validateBillingAccount: account flagged for manual update');
-      reasons.push('Billing account flagged for manual update');
+      reasons.push('Your billing information needs attention before automatic payments can continue. Review your payment method, or contact support if it is correct.');
       recommendations.push('Review and update billing information');
       if (severity !== 'critical') severity = 'warning';
     }
@@ -66,7 +72,7 @@ export class BillingValidator {
         { nextBillingDate: billing.nextBillingDate, vaulted: billing.vaulted, isActiveFreePlan },
         'validateBillingAccount: next billing date passed without payment method'
       );
-      reasons.push('Next billing date has passed without payment method on file');
+      reasons.push('Your subscription payment is overdue and no card is saved. Add a payment method to continue.');
       recommendations.push('Add payment method before next billing cycle');
       severity = 'critical';
     }
@@ -91,7 +97,7 @@ export class BillingValidator {
     // Check if missing required processor information
     if (billing.vaulted && !billing.processor) {
       logger.debug({}, 'validateBillingAccount: vaulted but processor information missing');
-      reasons.push('Payment method vaulted but processor information missing');
+      reasons.push('Your saved payment method is not connected to a payment processor. Contact support so we can fix your billing setup.');
       recommendations.push('Contact support to resolve payment processor configuration');
       if (severity !== 'critical') severity = 'warning';
     }

@@ -5,6 +5,7 @@ import { EventSchedulerCron } from '../modules/feed/cron/EventScheduler.cron';
 import { UnreadMessageAlertScheduler } from '../modules/messaging/cron/UnreadMessageAlertScheduler.cron';
 import { JobSchedulerCron } from '../modules/jobs/cron/JobScheduler.cron';
 import { ManagedAthleteOutboxCron } from '../modules/profiles/agent/cron/ManagedAthleteOutbox.cron';
+import { ProfileViewMilestoneScheduler } from '../modules/notification/cron/ProfileViewMilestoneScheduler.cron';
 
 export const cronJobs = async () => {
   EventSchedulerCron.init();
@@ -29,6 +30,8 @@ export const cronJobs = async () => {
 
   // Initialize the job expiration cron job
   JobSchedulerCron.init();
+
+  ProfileViewMilestoneScheduler.init();
 
   console.info('[CronJobs] All cron jobs initialized successfully');
 };

@@ -55,6 +55,7 @@ export const RoleRegistry: Record<string, RoleMetadata> = {
     setupFeeAmountCents: 0, // $0 — creates a receipt; set to e.g. 5000 to charge $50
     subscriptionStart: {
       ...deferredCalendarBilling,
+      chargeTiming: 'immediate',
       amount: 'prorated',
     },
   },
