@@ -1,3 +1,5 @@
+import { FEED_PROFILE_TYPES, FeedProfileType, normalizeFeedProfileType } from '../util/inflateProfiles';
+
 // domain/post.ts
 export type ActorId = `user:${string}` | `team:${string}`;
 
@@ -29,7 +31,7 @@ export interface Post extends mongoose.Document {
   _id: string;
   userId: string; // redundant for easy querying
   profile: {
-    type: 'athlete' | 'team';
+    type: FeedProfileType;
     id: string;
   };
   authorId: ActorId; // "user:..." or "team:..."
@@ -111,7 +113,8 @@ const PostSchema = new Schema(
     profile: {
       type: {
         type: String,
-        enum: ['athlete', 'team'],
+        enum: FEED_PROFILE_TYPES,
+        set: (type: string) => typeof type === 'string' ? normalizeFeedProfileType(type) : type,
         required: true,
       },
       id: { type: Schema.Types.ObjectId, required: true, refPath: 'profile.type' },

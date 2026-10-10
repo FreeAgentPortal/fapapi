@@ -22,7 +22,7 @@ export class AuthMiddleware {
     if (!authHeader) {
       // logger.debug({ reqHeaders: req.headers }, '[AuthMiddleware] No authorization header provided.');
       throw new ErrorUtil('No authorization header provided.', 401);
-    }
+    } 
 
     if (authHeader.startsWith('Bearer ')) {
       await AuthMiddleware.verifyJwt(req, res, next);

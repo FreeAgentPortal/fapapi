@@ -1,10 +1,25 @@
 import { Post, PostModel } from '../model/Post.model';
-import { CRUDHandler } from '../../../utils/baseCRUD';
+import { CRUDHandler, PaginationOptions } from '../../../utils/baseCRUD';
 import { processPostData } from '../util/extractPostMetadata';
+import { ActivityInflationHandler } from './ActivityInflation.handler';
 
 export class PostHandler extends CRUDHandler<Post> {
+  private inflationHandler = new ActivityInflationHandler();
+
   constructor() {
     super(PostModel);
+  }
+
+  async fetch(id: string): Promise<any | null> {
+    const post = await super.fetch(id);
+    if (post) await this.inflationHandler.inflateObjectProfiles([post]);
+    return post;
+  }
+
+  async fetchAll(options: PaginationOptions): Promise<{ entries: Post[]; metadata: any[] }[]> {
+    const results = await super.fetchAll(options);
+    for (const result of results) await this.inflationHandler.inflateObjectProfiles(result.entries);
+    return results;
   }
 
   async beforeCreate(data: any): Promise<void> {

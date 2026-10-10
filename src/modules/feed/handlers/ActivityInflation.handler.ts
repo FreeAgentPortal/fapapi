@@ -1,6 +1,7 @@
 import mongoose from 'mongoose';
 import { IActivity } from '../model/Activity.model';
 import logger from '../../../utils/logger';
+import { inflateProfiles } from '../util/inflateProfiles';
 
 /**
  * Handler for inflating activity objects and their associated profiles
@@ -43,17 +44,17 @@ export class ActivityInflationHandler {
         // Batch fetch all objects
         const objects = await CollectionModel.find({ _id: { $in: ids } }).lean();
 
+        // Inflate each object once, including objects referenced by multiple activities.
+        await this.inflateObjectProfiles(objects);
+
         // Create a map for quick lookup
         const objectMap = new Map(objects.map((obj: any) => [obj._id.toString(), obj]));
 
         // Attach the inflated objects to activities
         for (const activity of groupActivities) {
-          const objectData = objectMap.get(activity.object.id);
+          const objectData = objectMap.get(activity.object.id.toString());
           if (objectData) {
             (activity as any).objectDetails = objectData;
-
-            // Inflate profile based on object type
-            await this.inflateObjectProfile((activity as any).objectDetails, collection);
           }
         }
       } catch (error) {
@@ -70,94 +71,23 @@ export class ActivityInflationHandler {
    * - Events: { teamProfileId: string }
    * - Add more patterns as needed
    */
-  private async inflateObjectProfile(obj: any, collection: string): Promise<void> {
-    try {
-      let profileType: string | null = null;
-      let profileId: string | null = null;
-
-      // Determine profile type and ID based on object structure
-      if (obj.profile?.type && obj.profile?.id) {
-        // Social post pattern: { profile: { type, id } }
-        profileType = obj.profile.type;
-        profileId = obj.profile.id;
-      } else if (obj.teamProfileId) {
-        // Event pattern: { teamProfileId: string }
-        profileType = 'team';
-        profileId = obj.teamProfileId;
-      } else if (obj.athleteProfileId) {
-        // Athlete-specific event pattern (if exists)
-        profileType = 'athlete';
-        profileId = obj.athleteProfileId;
-      } else if (obj.scoutProfileId) {
-        // Scout-specific pattern (if exists)
-        profileType = 'scout';
-        profileId = obj.scoutProfileId;
+  async inflateObjectProfiles(objects: any[]): Promise<void> {
+    const targets = objects.map((object) => {
+      if (object.profile?.id) {
+        return { object, type: typeof object.profile.type === 'string' ? object.profile.type : '', id: object.profile.id.toString() };
       }
-
-      // If we found a profile reference, inflate it
-      if (profileType && profileId) {
-        await this.inflateProfile(obj, profileType, profileId);
+      for (const type of ['team', 'athlete', 'scout', 'professional', 'agent', 'admin']) {
+        const id = object[`${type}ProfileId`];
+        if (id) return { object, type, id: id.toString() };
       }
-    } catch (error) {
-      logger.error({ err: error, collection }, '[ActivityInflationHandler] Failed to determine profile for collection.');
-    }
-  }
-
-  /**
-   * Inflates a profile and attaches it to the object
-   * Only retrieves specific fields: _id, fullName, email, profileImageUrl
-   * For admin profiles, creates a static profile object instead
-   */
-  private async inflateProfile(obj: any, profileType: string, profileId: string): Promise<void> {
-    try {
-      // Handle admin profiles differently - use static data
-      if (profileType.toLowerCase() === 'admin') {
-        obj.profile = {
-          _id: profileId,
-          fullName: 'FreeAgentPortal',
-          profileImageUrl: 'https://res.cloudinary.com/dsltlng97/image/upload/v1752863629/placeholder-logo_s7jg3y.png',
-          isAdmin: true,
-        };
-        return;
+      if (typeof object.authorId === 'string') {
+        const profileId = object.authorId.split(';').find((part: string) => part.startsWith('profile:'))?.slice('profile:'.length);
+        return { object, type: '', id: profileId ?? '' };
       }
+      return null;
+    }).filter((target): target is { object: any; type: string; id: string } => target !== null);
 
-      // Map profile type to collection name
-      const collectionMap: Record<string, string> = {
-        athlete: 'athleteprofiles',
-        team: 'teamprofiles',
-        scout: 'scoutprofiles',
-      };
-
-      const collectionName = collectionMap[profileType.toLowerCase()];
-      if (!collectionName) {
-        logger.warn({ profileType }, '[ActivityInflationHandler] Unknown profile type.');
-        return;
-      }
-
-      // Direct collection access
-      const db = mongoose.connection.db;
-      if (!db) return;
-
-      const collection = db.collection(collectionName);
-      const profile = await collection.findOne(
-        { _id: new mongoose.Types.ObjectId(profileId) },
-        { projection: { _id: 1, fullName: 1, email: 1, profileImageUrl: 1, name: 1, logoUrl: 1 } }
-      );
-
-      // Map team-specific fields to standard fields
-      if (profile?.name) {
-        profile.fullName = profile.name;
-      }
-      if (profile?.logoUrl) {
-        profile.profileImageUrl = profile.logoUrl;
-      }
-
-      if (profile) {
-        obj.profile = profile;
-      }
-    } catch (error) {
-      logger.error({ err: error, profileType, profileId }, '[ActivityInflationHandler] Failed to inflate profile.');
-    }
+    await inflateProfiles(targets);
   }
 
   /**
