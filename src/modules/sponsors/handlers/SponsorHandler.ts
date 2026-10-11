@@ -97,6 +97,7 @@ export class SponsorHandler extends CRUDHandler<ISponsor> {
     const removed = await this.Schema.findOneAndDelete({ _id: id, __v: sponsor.__v });
     if (!removed) throw new ErrorUtil('Sponsor changed during this request; reload and try again', 409);
     await this.logos.cleanup(sponsor.logo.publicId, id);
+    if (sponsor.feedAd?.image.publicId) await new SponsorLogoHandler('feed-ad').cleanup(sponsor.feedAd.image.publicId, id);
     return { success: true };
   }
 

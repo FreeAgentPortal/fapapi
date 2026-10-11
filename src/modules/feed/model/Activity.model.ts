@@ -60,6 +60,7 @@ const ActivitySchema = new Schema(
 
 // Core time index (descending reads)
 ActivitySchema.index({ createdAt: -1 });
+ActivitySchema.index({ visibility: 1, createdAt: -1, _id: -1 });
 // Common compound queries
 ActivitySchema.index({ verb: 1, createdAt: -1 });
 ActivitySchema.index({ 'object.collection': 1, 'object.id': 1 });

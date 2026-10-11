@@ -6,6 +6,11 @@ import { CloudinaryHandler } from '../../upload/handlers/CloudinaryHandler';
 import { SponsorLogo } from '../models/Sponsor';
 
 export class SponsorLogoHandler {
+  constructor(private readonly assetFolder: '' | 'feed-ad' = '') {}
+
+  private folder(sponsorId: string): string {
+    return `sponsors/${sponsorId}${this.assetFolder ? `/${this.assetFolder}` : ''}`;
+  }
   async upload(file: UploadedFile, sponsorId: string): Promise<SponsorLogo> {
     if (file.truncated || file.size > 5 * 1024 * 1024 || file.data?.length > 5 * 1024 * 1024) {
       throw new ErrorUtil('Logo must be no larger than 5 MB', 413);
@@ -31,11 +36,11 @@ export class SponsorLogoHandler {
     const cloudinary = new CloudinaryHandler();
     let result;
     try {
-      result = await cloudinary.uploadFile(image, 'logo.png', `sponsors/${sponsorId}`);
+      result = await cloudinary.uploadFile(image, 'image.png', this.folder(sponsorId));
     } catch {
       throw new ErrorUtil('Logo upload failed; please try again', 502);
     }
-    if (result.resource_type !== 'image' || !result.public_id.startsWith(`sponsors/${sponsorId}/`)) {
+    if (result.resource_type !== 'image' || !result.public_id.startsWith(`${this.folder(sponsorId)}/`)) {
       await this.cleanup(result.public_id, sponsorId);
       throw new ErrorUtil('Unexpected logo upload response', 502);
     }
@@ -44,7 +49,7 @@ export class SponsorLogoHandler {
 
   /** Cleanup must never turn a successful database write into a failed response. */
   async cleanup(publicId: string, sponsorId: string): Promise<void> {
-    if (!publicId.startsWith(`sponsors/${sponsorId}/`)) {
+    if (!publicId.startsWith(`${this.folder(sponsorId)}/`)) {
       logger.warn({ sponsorId, publicId }, 'Skipped cleanup of logo outside sponsor folder');
       return;
     }

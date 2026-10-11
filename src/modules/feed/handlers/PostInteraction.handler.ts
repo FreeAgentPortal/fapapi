@@ -77,31 +77,28 @@ export class PostInteractionHandler {
    * Record a view (idempotent - only counts unique views)
    */
   async recordView(postId: string, userId: string, viewDurationMs: number = 0): Promise<boolean> {
+    await PostViewModel.init();
     const session = await mongoose.startSession();
-    session.startTransaction();
 
     try {
-      // Try to insert the view
-      const result = await PostViewModel.findOneAndUpdate(
-        { postId: new mongoose.Types.ObjectId(postId), userId: new mongoose.Types.ObjectId(userId) },
-        { $set: { viewDurationMs }, $setOnInsert: { createdAt: new Date() } },
-        { upsert: true, new: true, session }
-      );
-
-      const isNew = result.createdAt.getTime() >= Date.now() - 1000; // within last second = new
-
-      // If it's a new view, increment the counter
-      if (isNew) {
-        await PostModel.findByIdAndUpdate(postId, { $inc: { 'counts.views': 1 } }, { session });
-      }
-
-      await session.commitTransaction();
-      return isNew;
-    } catch (error) {
-      await session.abortTransaction();
+      return await session.withTransaction(async () => {
+        const result = await PostViewModel.updateOne(
+          { postId: new mongoose.Types.ObjectId(postId), userId: new mongoose.Types.ObjectId(userId) },
+          { $set: { viewDurationMs }, $setOnInsert: { createdAt: new Date() } },
+          { upsert: true, session }
+        );
+        const isNew = result.upsertedCount === 1;
+        if (isNew) {
+          await PostModel.findByIdAndUpdate(postId, { $inc: { 'counts.views': 1 } }, { session });
+        }
+        return isNew;
+      }, { readConcern: { level: 'snapshot' }, writeConcern: { w: 'majority' } });
+    } catch (error: any) {
+      // A racing first insert can lose to the unique viewer/post index.
+      if (error.code === 11000) return false;
       throw error;
     } finally {
-      session.endSession();
+      await session.endSession();
     }
   }
 

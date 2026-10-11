@@ -6,6 +6,16 @@ export interface SponsorLogo {
   altText?: string;
 }
 
+export interface SponsorFeedAd {
+  enabled: boolean;
+  headline: string;
+  body: string;
+  image: SponsorLogo;
+  ctaLabel: string;
+  destinationUrl: string;
+  revision: number;
+}
+
 export interface ISponsor extends Document {
   __v: number;
   businessName: string;
@@ -19,6 +29,8 @@ export interface ISponsor extends Document {
   updatedBy: Types.ObjectId;
   createdAt: Date;
   updatedAt: Date;
+  feedAd?: SponsorFeedAd;
+  feedAdRevision: number;
 }
 
 function hasUrlProtocol(value: string, protocols: string[]): boolean {
@@ -48,6 +60,22 @@ const SponsorLogoSchema = new Schema<SponsorLogo>(
 
 const SponsorSchema = new Schema<ISponsor>(
   {
+    feedAdRevision: { type: Number, default: 0, select: false },
+    feedAd: {
+      type: new Schema<SponsorFeedAd>({
+        enabled: { type: Boolean, default: false },
+        headline: { type: String, required: true, trim: true, maxlength: 120 },
+        body: { type: String, required: true, trim: true, maxlength: 1000 },
+        image: { type: SponsorLogoSchema, required: true },
+        ctaLabel: { type: String, required: true, trim: true, maxlength: 40 },
+        destinationUrl: { type: String, required: true, validate: {
+          validator: (value: string) => hasUrlProtocol(value, ['https:', 'http:']),
+          message: 'Destination must be an HTTP or HTTPS URL',
+        } },
+        revision: { type: Number, required: true, min: 1 },
+      }, { _id: false }),
+      default: undefined,
+    },
     businessName: { type: String, required: true, trim: true },
     websiteUrl: {
       type: String,

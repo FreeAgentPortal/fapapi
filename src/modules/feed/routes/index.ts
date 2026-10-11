@@ -8,10 +8,12 @@ import activityRoutes from './activity';
 import postRoutes from './post';
 import interactionRoutes from './interaction';
 import signingRoutes from './signing';
+import { HomeFeedHandler } from '../handlers/HomeFeed.handler';
 
 const router = express.Router();
 
 const service = new FeedService();
+router.get('/home', AuthMiddleware.protect, new HomeFeedHandler().fetch);
 
 router.use('/subscription', subscriptionRouter);
 router.use('/event', eventRoutes);
