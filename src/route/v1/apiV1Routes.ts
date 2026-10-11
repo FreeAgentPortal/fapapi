@@ -16,6 +16,7 @@ import messagingRoutes from '../../modules/messaging/routes/index';
 import jobsRoutes from '../../modules/jobs/routes/index';
 import interestRoutes from '../../modules/interests/routes/index';
 import sponsorRoutes from '../../modules/sponsors/routes/index';
+import featureUpdateRoutes from '../../modules/feature-updates/routes/index';
 
 const router = express.Router();
 
@@ -33,6 +34,7 @@ router.use('/messaging', messagingRoutes);
 router.use('/jobs', jobsRoutes);
 router.use('/interests', interestRoutes);
 router.use('/sponsors', sponsorRoutes);
+router.use('/feature-updates', featureUpdateRoutes);
 
 // TODO: Remove these when the new profile routes are fully integrated
 router.use('/admin', adminRoutes);
