@@ -2,12 +2,14 @@
 import express from 'express'; 
 import wasabiRoutes from './wasabi';
 import cloudinaryRoutes from './cloudinary';
+import scoutPortfolioRoutes from './scoutPortfolio';
 
 const router = express.Router();
  
 
 router.use('/wasabi-sys', wasabiRoutes);
 router.use('/cloudinary', cloudinaryRoutes);
+router.use('/scout-portfolio', scoutPortfolioRoutes);
 
 
 // Example diagnostic route

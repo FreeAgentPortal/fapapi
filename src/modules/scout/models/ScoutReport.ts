@@ -8,6 +8,11 @@ export interface IScoutReport extends mongoose.Document {
   _id: mongoose.Types.ObjectId;
   athleteId: mongoose.Types.ObjectId;
   scoutId: mongoose.Types.ObjectId;
+  submissionId?: mongoose.Types.ObjectId;
+  submissionVersion?: number;
+  reviewId?: mongoose.Types.ObjectId;
+  decidedAt?: Date;
+  decidedBy?: mongoose.Types.ObjectId;
   sport: string;
   league: string;
   reportType: 'game' | 'evaluation' | 'camp' | 'combine' | 'interview' | 'other';
@@ -50,12 +55,18 @@ const Schema = new mongoose.Schema(
     scoutId: {
       type: mongoose.Types.ObjectId,
       required: true,
-      ref: 'Admin', // references a admin with scout role
+      ref: 'ScoutProfile',
     },
     sport: {
       type: String,
       required: true,
     },
+    submissionId: { type: mongoose.Schema.Types.ObjectId, ref: 'ScoutSubmission' },
+    submissionVersion: Number,
+    reviewId: { type: mongoose.Schema.Types.ObjectId, ref: 'ScoutReview' },
+    decidedAt: Date,
+    decidedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+    message: String,
     league: {
       type: String,
       required: true,
@@ -126,4 +137,6 @@ const Schema = new mongoose.Schema(
   }
 );
 
+Schema.index({ reviewId: 1 }, { unique: true, partialFilterExpression: { reviewId: { $type: 'objectId' } } });
+Schema.index({ athleteId: 1, status: 1, isFinalized: 1 });
 export default mongoose.model<IScoutReport>('ScoutReport', Schema);

@@ -9,5 +9,7 @@ export default class NScoutService {
   constructor(private readonly handler: ScoutEventsHandler = new ScoutEventsHandler()) {}
   public init() {
     eventBus.subscribe('scout.report.submitted', (event) => this.handler.scoutReportSubmitted(event));
+    eventBus.subscribe('scout.report.decided', (event) => this.handler.scoutReportDecided(event));
+    eventBus.subscribe('scout.review.completed', (event) => this.handler.scoutReviewCompleted(event));
   }
 }

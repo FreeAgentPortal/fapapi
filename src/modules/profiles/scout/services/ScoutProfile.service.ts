@@ -5,6 +5,7 @@ import { ScoutProfileActionsHandler } from '../handlers/ScoutProfileActions.hand
 import { AuthenticatedRequest } from '../../../../types/AuthenticatedRequest';
 import asyncHandler from '../../../../middleware/asyncHandler';
 import { ErrorUtil } from '../../../../middleware/ErrorUtil';
+import { actorId } from '../../../scout/utils/portfolioInput';
 
 const parsePositiveInteger = (value: unknown, name: string, defaultValue: number, maximum?: number): number => {
   if (value === undefined || value === '') return defaultValue;
@@ -47,13 +48,8 @@ export class ScoutProfileService extends CRUDService {
   });
 
   public fetchScoutingQueue = asyncHandler(async (req: AuthenticatedRequest, res: Response): Promise<Response> => {
-    const scoutProfileId = req.user?.profileRefs?.scout;
-    console.log(req.user);
-    if (!scoutProfileId) {
-      throw new ErrorUtil('Only scout users can access the scouting queue', 403);
-    }
-
     const result = await this.scoutProfileActionsHandler.fetchScoutingQueue({
+      userId: actorId(req.user?._id),
       page: parsePositiveInteger(req.query.pageNumber, 'pageNumber', 1),
       limit: parsePositiveInteger(req.query.pageLimit, 'pageLimit', 20, 50),
     });
