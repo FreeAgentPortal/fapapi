@@ -1,5 +1,27 @@
 import { BillingAccountType } from "../../auth/model/BillingAccount";
 
+export interface PaymentChargeResult {
+  success: boolean;
+  message?: string;
+  status?: string;
+  transactionId?: string;
+  errorCode?: string;
+  declineCode?: string;
+  // Unknown outcomes must be reconciled before submitting another charge.
+  outcome?: 'succeeded' | 'declined' | 'error' | 'unknown';
+  data?: any;
+}
+
+export interface ScheduledChargeDetails {
+  amount: number;
+  billingAccountId: string;
+  revenueCategory: 'subscription';
+  description: string;
+  idempotencyKey: string;
+  paymentMethodId?: string;
+  [key: string]: any;
+}
+
 class PaymentProcessor {
   constructor() {}
 

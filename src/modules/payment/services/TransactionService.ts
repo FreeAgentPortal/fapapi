@@ -51,6 +51,7 @@ export default class TransactionService {
             total: result.results?.total || 0,
             successful: result.results?.successful || 0,
             failed: result.results?.failed || 0,
+            skipped: result.results?.skipped || 0,
             errors: result.results?.errors || [],
           },
         });

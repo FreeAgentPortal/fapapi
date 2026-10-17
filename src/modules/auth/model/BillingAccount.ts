@@ -3,6 +3,25 @@ import { ObjectId } from 'mongoose';
 import { UserType } from './User';
 import { PlanEntitlements, PlanType } from './PlanSchema';
 
+export interface SmartRetriesState {
+  status: 'processing' | 'retrying' | 'exhausted' | 'recovery_pending' | 'review';
+  dueDate: Date;
+  deadline: Date;
+  attemptCount: number;
+  // -1 is the original charge; 0..3 represent days 1, 3, 5, 7.
+  retrySlot: number;
+  nextAttemptAt?: Date;
+  lastAttemptAt?: Date;
+  attemptId: string;
+  recovery: boolean;
+  amountCents: number;
+  creditsCents: number;
+  isYearly: boolean;
+  planSnapshot: { _id: string; name: string; price: number };
+  paymentMethodId?: string;
+  outcome?: Record<string, any>;
+}
+
 export interface BillingAccountType extends mongoose.Document {
   _id: ObjectId;
   customerId: string;
@@ -22,6 +41,7 @@ export interface BillingAccountType extends mongoose.Document {
   vaulted: Boolean;
   vaultId: string;
   nextBillingDate?: Date;
+  smartRetries?: SmartRetriesState;
   needsUpdate?: boolean;
   pendingCancellation?: boolean;
   payor: UserType;
@@ -68,6 +88,30 @@ const Schema = new mongoose.Schema(
     },
     nextBillingDate: {
       type: Date,
+    },
+    smartRetries: {
+      type: new mongoose.Schema({
+        status: { type: String, enum: ['processing', 'retrying', 'exhausted', 'recovery_pending', 'review'], required: true },
+        dueDate: { type: Date, required: true },
+        deadline: { type: Date, required: true },
+        attemptCount: { type: Number, min: 0, required: true },
+        retrySlot: { type: Number, min: -1, max: 3, required: true },
+        nextAttemptAt: Date,
+        lastAttemptAt: Date,
+        attemptId: { type: String, required: true },
+        recovery: { type: Boolean, default: false },
+        amountCents: { type: Number, min: 0, required: true },
+        creditsCents: { type: Number, min: 0, required: true },
+        isYearly: Boolean,
+        planSnapshot: {
+          _id: String,
+          name: String,
+          price: Number,
+        },
+        paymentMethodId: String,
+        outcome: mongoose.Schema.Types.Mixed,
+      }, { _id: false }),
+      default: undefined,
     },
     initialSubscriptionChargeStatus: {
       type: String,

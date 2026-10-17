@@ -33,6 +33,8 @@ class StripeProcessing extends PaymentProcessor {
       billing_account_id: details.billingAccountId,
       revenue_category: details.revenueCategory,
       description: details.description,
+      idempotency_key: details.idempotencyKey,
+      payment_method_id: details.paymentMethodId,
     });
   }
 
@@ -362,6 +364,7 @@ class StripeProcessing extends PaymentProcessor {
     billing_account_id?: string;
     revenue_category?: string;
     description?: string;
+    idempotency_key?: string;
   }) {
     try {
       console.info(`[StripeProcessor] Processing vault transaction for customer ${details.customer_vault_id} amount ${details.amount}`);
@@ -405,7 +408,7 @@ class StripeProcessing extends PaymentProcessor {
           billing_account_id: details.billing_account_id || '',
           revenue_category: details.revenue_category || 'other',
         },
-      });
+      }, details.idempotency_key ? { idempotencyKey: details.idempotency_key } : undefined);
 
       console.info(`[StripeProcessor] Payment intent created: ${paymentIntent.id}`);
 
@@ -414,6 +417,7 @@ class StripeProcessing extends PaymentProcessor {
         message: 'Vault transaction processed successfully',
         transactionId: paymentIntent.id,
         status: paymentIntent.status,
+        outcome: paymentIntent.status === 'succeeded' ? 'succeeded' : 'unknown',
         data: paymentIntent,
       };
     } catch (error: any) {
@@ -422,6 +426,10 @@ class StripeProcessing extends PaymentProcessor {
         success: false,
         message: `Error processing vault transaction: ${error.message}`,
         errorCode: error.code,
+        declineCode: error.decline_code ?? error.raw?.decline_code,
+        transactionId: error.payment_intent?.id ?? error.raw?.payment_intent?.id,
+        outcome: error.type === 'StripeCardError' ? 'declined'
+          : ['StripeInvalidRequestError', 'StripeAuthenticationError', 'StripePermissionError', 'StripeRateLimitError'].includes(error.type) ? 'error' : 'unknown',
       };
     }
   }

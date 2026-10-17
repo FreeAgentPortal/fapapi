@@ -8,6 +8,7 @@ import { applyBillingPlanSnapshot, calculateNextRenewalBillingDate, calculatePla
 import logger from '../../../utils/logger';
 import type { ReceiptRevenueCategory } from '../utils/subscriptionRevenue';
 import { RoleRegistry } from '../../auth/utils/RoleRegistry';
+import SmartRetriesService from '../services/SmartRetriesService';
 
 type BillingChargeOptions = {
   updateBillingDate?: boolean;
@@ -37,6 +38,8 @@ export default class PaymentProcessingHandler {
   public static async processScheduledPayments(): Promise<{ success: boolean; message: string; results?: any }> {
     try {
       console.info('[PaymentProcessingHandler] Starting scheduled payment processing...');
+      await SmartRetriesService.expireRetries();
+      await SmartRetriesService.reportBlockedAttempts();
       if (!this.processor) {
         this.processor = await new PaymentProcessorFactory().smartChooseProcessor().then((res) => {
           if (!res.processor) {
@@ -68,6 +71,7 @@ export default class PaymentProcessingHandler {
         successful: 0,
         failed: 0,
         cancelled: 0,
+        skipped: 0,
         errors: [] as string[],
       };
       // if we still dont have a processor here, we have a big problem
@@ -77,8 +81,14 @@ export default class PaymentProcessingHandler {
       // Process each profile
       for (const profile of profilesDue) {
         try {
-          const result = await this.processPaymentForProfile(profile._id as any, undefined, true, 'Scheduled subscription payment');
-          if (result.success) {
+          const result = await SmartRetriesService.collect(String(profile._id), this.processor, async (billing, paymentResult, amount, plan) => {
+            return paymentResult.success
+              ? this.createSuccessReceipt(billing, paymentResult, amount, plan, 'Scheduled subscription payment', 'subscription')
+              : this.createFailureReceipt(billing, paymentResult, amount, plan, 'Scheduled subscription payment', 'subscription');
+          });
+          if (result.skipped) {
+            results.skipped++;
+          } else if (result.success) {
             results.successful++;
           } else {
             results.failed++;
@@ -123,24 +133,15 @@ export default class PaymentProcessingHandler {
       console.info('[PaymentProcessingHandler] Fetching profiles due for payment...');
 
       const currentDate = new Date();
-      currentDate.setHours(23, 59, 59, 999); // End of today
 
-      const profilesDue = await BillingAccount.find({
-        nextBillingDate: { $lte: currentDate },
-        // status is active or trialing
-        status: { $in: ['active', 'trialing'] },
-        vaulted: true,
-        plan: { $exists: true, $ne: null },
-        needsUpdate: { $ne: true }, // Exclude accounts needing update
-        pendingCancellation: { $ne: true }, // Exclude accounts pending cancellation
-      })
+      const profilesDue = await BillingAccount.find(SmartRetriesService.dueFilter(currentDate))
         .populate('plan')
         .populate('payor')
         .lean();
 
       // Filter out free plans (price = 0)
       const paidProfilesDue = profilesDue.filter((profile: any) => {
-        return profile.plan && profile.plan.price > 0;
+        return profile.smartRetries || (profile.plan && profile.plan.price > 0);
       });
 
       console.info(`[PaymentProcessingHandler] Found ${paidProfilesDue.length} profiles due for payment.`);
@@ -159,7 +160,8 @@ export default class PaymentProcessingHandler {
       const profiles = await BillingAccount.find({
         pendingCancellation: true,
         nextBillingDate: { $lte: currentDate },
-        status: { $in: ['active', 'trialing'] },
+        status: { $in: ['active', 'trialing', 'suspended'] },
+        'smartRetries.status': { $nin: ['processing', 'review'] },
       })
         .populate('plan')
         .populate('payor')
@@ -179,6 +181,7 @@ export default class PaymentProcessingHandler {
       const billings = await BillingAccount.find({
         'scheduledPlanChange.effectiveDate': { $lte: now },
         status: { $in: ['active', 'trialing'] },
+        smartRetries: { $exists: false },
       });
 
       let appliedCount = 0;
@@ -205,7 +208,9 @@ export default class PaymentProcessingHandler {
           billing.nextBillingDate = undefined;
         }
 
-        await billing.save();
+        SmartRetriesService.assertPlanChangeAllowed(billing);
+        billing.$where = { ...billing.$where, updatedAt: billing.updatedAt };
+        await SmartRetriesService.saveBillingChange(billing);
         appliedCount++;
       }
 
@@ -241,6 +246,7 @@ export default class PaymentProcessingHandler {
       status: 'inactive',
       pendingCancellation: false,
       needsUpdate: false,
+      $unset: { smartRetries: 1 },
     });
 
     console.info(`[PaymentProcessingHandler] Account ${billingAccount._id} cancelled successfully.`);
@@ -615,7 +621,7 @@ export default class PaymentProcessingHandler {
       },
       failure: {
         reason: paymentResult.message || 'Payment processing failed',
-        code: paymentResult.data?.response_code || 'UNKNOWN',
+        code: paymentResult.declineCode || paymentResult.errorCode || paymentResult.data?.response_code || 'UNKNOWN',
       },
       transactionDate: new Date(),
     });

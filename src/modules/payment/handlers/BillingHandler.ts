@@ -7,6 +7,7 @@ import { PaymentHandler } from './PaymentHandler';
 import { getPaymentSafeCountryCode } from '../utils/countryHelpers';
 import { validatePaymentFormData } from '../utils/paymentValidation';
 import PaymentProcessingHandler from './PaymentProcessing.handler';
+import SmartRetriesService from '../services/SmartRetriesService';
 import { eventBus } from '../../../lib/eventBus';
 import PlanSchema from '../../auth/model/PlanSchema';
 import { RoleRegistry } from '../../auth/utils/RoleRegistry';
@@ -63,6 +64,19 @@ export class BillingHandler {
       if (!billing) {
         throw new ErrorUtil('Could not find billing information', 404);
       }
+
+      if (billing.smartRetries) {
+        const selectedPlanId = this.resolveSelectedPlanId(req.body, billing.plan);
+        const changingCycle = billingCycle !== undefined && (billingCycle === 'yearly') !== Boolean(billing.isYearly);
+        if (selectedPlanId !== this.extractPlanId(billing.plan) || changingCycle) {
+          SmartRetriesService.assertPlanChangeAllowed(billing);
+        }
+        // The legacy vault endpoint also accepts card updates. Route unpaid accounts
+        // through the card-only path so it cannot advance dates or reactivate them.
+        const result = await this.createPaymentMethod(req);
+        return { planId: selectedPlanId, billingId: result.billingId, profileId: result.profileId };
+      }
+      SmartRetriesService.assertPlanChangeAllowed(billing);
 
       const processorResult = await new PaymentProcessorFactory().smartChooseProcessor();
       const processor = processorResult.processor;
@@ -238,7 +252,7 @@ export class BillingHandler {
         this.logUpdateVault(operationId, 'pre_intermediate_save', {
           billingBeforeSave: this.summarizeBilling(billing),
         });
-        await billing.save();
+        await SmartRetriesService.saveBillingChange(billing);
         this.logUpdateVault(operationId, 'post_intermediate_save', {
           billingAfterSave: this.summarizeBilling(billing),
         });
@@ -264,7 +278,7 @@ export class BillingHandler {
           this.logUpdateVault(operationId, 'setup_fee_result', paymentResults);
           if (paymentResults.success === false) {
             billing.setupFeePaid = false;
-            await billing.save();
+            await SmartRetriesService.saveBillingChange(billing);
             throw new ErrorUtil(`Initial setup fee payment failed: ${paymentResults.message}`, 400);
           }
           billing.setupFeePaid = true;
@@ -313,7 +327,7 @@ export class BillingHandler {
               billing.initialSubscriptionChargeStatus = 'failed';
               billing.status = 'suspended';
               billing.needsUpdate = true;
-              await billing.save();
+              await SmartRetriesService.saveBillingChange(billing);
               throw new ErrorUtil(`Initial subscription payment failed: ${paymentResults.message}`, 400);
             }
 
@@ -330,7 +344,7 @@ export class BillingHandler {
         processorName: billing.processor,
         billingBeforeFinalSave: this.summarizeBilling(billing),
       });
-      await billing.save();
+      await SmartRetriesService.saveBillingChange(billing);
       this.logUpdateVault(operationId, 'post_final_save', {
         billingAfterFinalSave: this.summarizeBilling(billing),
       });
@@ -390,6 +404,8 @@ export class BillingHandler {
       throw new ErrorUtil('Could not find billing information', 404);
     }
 
+    SmartRetriesService.assertPlanChangeAllowed(billing);
+
     if (!billing.vaulted || !this.hasUsableProcessorData(billing)) {
       throw new ErrorUtil('Billing account must complete payment setup before changing plans', 400);
     }
@@ -427,7 +443,7 @@ export class BillingHandler {
       };
 
       billing.scheduledPlanChange = scheduledPlanChange;
-      await billing.save();
+      await SmartRetriesService.saveBillingChange(billing);
 
       return {
         billingId: billing._id.toString(),
@@ -469,7 +485,7 @@ export class BillingHandler {
       billing.nextBillingDate = undefined;
     }
 
-    await billing.save();
+    await SmartRetriesService.saveBillingChange(billing);
 
     return {
       billingId: billing._id.toString(),
@@ -491,6 +507,8 @@ export class BillingHandler {
   }> {
     const { paymentFormValues, paymentMethod = 'creditcard', stripeToken } = req.body;
     const billing = await this.loadBillingForOwnerAction(req);
+    SmartRetriesService.assertCardChangeAllowed(billing);
+    const previousMethodId = billing.paymentProcessorData?.[billing.processor ?? '']?.paymentMethod?.id;
     const processor = await this.resolveBillingProcessor(billing);
 
     validatePaymentFormData(processor.getProcessorName(), stripeToken ? { stripeToken } : paymentFormValues, paymentMethod);
@@ -525,9 +543,9 @@ export class BillingHandler {
     };
     billing.markModified('paymentProcessorData');
     billing.vaulted = true;
-    billing.needsUpdate = false;
+    SmartRetriesService.cardUpdated(billing, previousMethodId);
 
-    await billing.save();
+    await SmartRetriesService.saveBillingChange(billing);
 
     return {
       billingId: billing._id.toString(),
@@ -545,6 +563,7 @@ export class BillingHandler {
     vaulted: boolean;
   }> {
     const billing = await this.loadBillingForOwnerAction(req);
+    SmartRetriesService.assertCardChangeAllowed(billing);
 
     if (!this.hasStoredPaymentMethod(billing)) {
       throw new ErrorUtil('No stored payment method found for this billing account', 404);
@@ -574,7 +593,7 @@ export class BillingHandler {
     billing.vaulted = false;
     billing.needsUpdate = this.requiresStoredPaymentMethod(billing);
 
-    await billing.save();
+    await SmartRetriesService.saveBillingChange(billing);
 
     return {
       billingId: billing._id.toString(),
