@@ -51,11 +51,28 @@ export function extractMentions(text?: string): ActorId[] {
 export function extractLinks(text?: string): string[] {
   if (!text) return [];
 
-  // Basic URL regex - matches http/https URLs
-  const urlRegex = /https?:\/\/[^\s]+/g;
-  const matches = text.match(urlRegex);
-
-  return matches ? Array.from(new Set(matches)) : [];
+  // Keep recognition aligned with the frontend's feed/utils/postLinks.ts.
+  const pattern = /(^|[\s([{<"'“‘])((?:https?:\/\/|www\.)[^\s<>"'“”‘’]+|(?:[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\.)+[a-z]{2,63}(?::\d+)?(?:[/?#][^\s<>"'“”‘’]*)?)/gi;
+  const links = new Set<string>();
+  for (const match of text.matchAll(pattern)) {
+    let candidate = match[2];
+    let previous: string;
+    do {
+      previous = candidate;
+      candidate = candidate.replace(/[.,;:!?…]+$/, '');
+      for (const [open, close] of [['(', ')'], ['[', ']'], ['{', '}']]) {
+        if (candidate.endsWith(close) && candidate.split(close).length > candidate.split(open).length) candidate = candidate.slice(0, -1);
+      }
+    } while (candidate !== previous);
+    if (text[match.index! + match[1].length + candidate.length] === '@') continue;
+    try {
+      const url = new URL(/^https?:\/\//i.test(candidate) ? candidate : `https://${candidate}`);
+      if (['http:', 'https:'].includes(url.protocol) && url.hostname && !url.username && !url.password) links.add(url.href);
+    } catch {
+      // Leave malformed links as plain text.
+    }
+  }
+  return [...links];
 }
 
 /**

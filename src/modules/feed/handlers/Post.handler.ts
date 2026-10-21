@@ -2,6 +2,7 @@ import { Post, PostModel } from '../model/Post.model';
 import { CRUDHandler, PaginationOptions } from '../../../utils/baseCRUD';
 import { processPostData } from '../util/extractPostMetadata';
 import { ActivityInflationHandler } from './ActivityInflation.handler';
+import { fetchPostLinkPreview } from '../util/fetchPostLinkPreview';
 
 export class PostHandler extends CRUDHandler<Post> {
   private inflationHandler = new ActivityInflationHandler();
@@ -29,6 +30,9 @@ export class PostHandler extends CRUDHandler<Post> {
     // Apply processed data back to the original data object
     Object.assign(data, processedData);
 
+    // Derive previews on the server; never trust metadata supplied by a client.
+    data.links = await fetchPostLinkPreview(data.body, data.media);
+
     // Ensure required fields have defaults
     data.userId = data.user;
     data.visibility = data.visibility || 'public';
@@ -41,5 +45,16 @@ export class PostHandler extends CRUDHandler<Post> {
       shares: 0,
       views: 0,
     };
+  }
+
+  async beforeUpdate(id: string, data: any): Promise<void> {
+    // Metadata remains server-owned. Remove dotted updates as well as the array.
+    for (const key of Object.keys(data)) {
+      if (key === 'links' || key.startsWith('links.')) delete data[key];
+    }
+    if ('body' in data || 'media' in data || Object.keys(data).some((key) => key.startsWith('media.'))) {
+      // Editing content invalidates the saved preview. Creation is the only fetch path.
+      data.links = [];
+    }
   }
 }
