@@ -62,10 +62,13 @@ export function calculateNextRenewalBillingDate(
   policy: SubscriptionStartPolicy,
   isYearly: boolean,
   currentBillingDate: Date,
-  processedAt: Date = new Date()
+  processedAt: Date = new Date(),
+  useUtc = false
 ): Date {
-  const processedMoment = moment(processedAt);
-  let nextBillingMoment = moment(currentBillingDate);
+  // Reports use UTC calendar boundaries; collection retains the existing local-time default.
+  const asMoment = (date: Date) => useUtc ? moment.utc(date) : moment(date);
+  const processedMoment = asMoment(processedAt);
+  let nextBillingMoment = asMoment(currentBillingDate);
 
   if (!nextBillingMoment.isValid()) {
     nextBillingMoment = processedMoment.clone();
@@ -76,7 +79,7 @@ export function calculateNextRenewalBillingDate(
       return billingMoment.clone().add(1, 'year');
     }
 
-    return moment(applyRenewalAnchor(policy.renewalAnchor.monthly, billingMoment.toDate()));
+    return asMoment(applyRenewalAnchor(policy.renewalAnchor.monthly, billingMoment.toDate(), useUtc));
   };
 
   nextBillingMoment = advanceOneCycle(nextBillingMoment);
@@ -113,16 +116,17 @@ export function calculateInitialSubscriptionChargeInCents(
   return proratedAmountInCents > 0 && proratedAmountInCents < 50 ? 50 : proratedAmountInCents;
 }
 
-function applyRenewalAnchor(anchor: BillingRenewalAnchor, activationDate: Date): Date {
+function applyRenewalAnchor(anchor: BillingRenewalAnchor, activationDate: Date, useUtc = false): Date {
+  const activation = useUtc ? moment.utc(activationDate) : moment(activationDate);
   if (anchor.type === 'rolling-days') {
-    return moment(activationDate).add(anchor.days, 'days').toDate();
+    return activation.add(anchor.days, 'days').toDate();
   }
 
   if (anchor.type === 'rolling-years') {
-    return moment(activationDate).add(anchor.years, 'years').toDate();
+    return activation.add(anchor.years, 'years').toDate();
   }
 
-  const nextMonth = moment(activationDate).add(1, 'month').startOf('month');
+  const nextMonth = activation.add(1, 'month').startOf('month');
   return nextMonth.date(Math.min(Math.max(anchor.day, 1), nextMonth.daysInMonth())).toDate();
 }
 

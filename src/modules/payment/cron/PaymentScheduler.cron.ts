@@ -1,5 +1,6 @@
 import cron from 'node-cron';
 import PaymentProcessingHandler from '../handlers/PaymentProcessing.handler';
+import { MonthlyRevenueForecastService } from '../services/MonthlyRevenueForecastService';
 
 export class PaymentSchedulerCron {
   private static isRunning = false;
@@ -13,6 +14,10 @@ export class PaymentSchedulerCron {
    */
   public static init(): void {
     console.info('[PaymentScheduler] Initializing payment processing cron job...');
+    void MonthlyRevenueForecastService.initializeSafely();
+    cron.schedule('0 0 1 * *', async () => {
+      await MonthlyRevenueForecastService.initializeSafely();
+    }, { timezone: 'UTC', name: 'monthly-revenue-forecast' });
 
     // Schedule to run daily at 9:00 AM
     cron.schedule(

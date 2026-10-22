@@ -57,6 +57,55 @@ describe('yearly subscription projection', () => {
     expect(result.runRate.contractedArr).toBe(1080);
   });
 
+  it('carries unused credits through multiple renewals instead of dropping the balance', () => {
+    const result = projectExistingSubscriptions([
+      billing({ credits: 250, nextBillingDate: '2026-10-01T00:00:00Z' }),
+    ], new Date('2026-10-01T00:00:00Z'), YEAR_END);
+    expect(result.timeline.slice(9).map((month) => month.contracted)).toEqual([0, 0, 50]);
+    expect(result.totals).toEqual({ contracted: 50, collectible: 50, atRisk: 0, charges: 1 });
+  });
+
+  it('rounds the cycle and available credits to cents before applying them', () => {
+    const result = projectExistingSubscriptions([
+      billing({ plan: { ...monthlyPlan, price: 10.01 }, credits: 20.03, nextBillingDate: '2026-10-01T00:00:00Z' }),
+    ], new Date('2026-10-01T00:00:00Z'), YEAR_END);
+    expect(result.timeline.slice(9).map((month) => month.contracted)).toEqual([0, 0, 10]);
+  });
+
+  it('uses rolling 30-day professional renewals, including two renewals in December', () => {
+    const result = projectExistingSubscriptions([
+      billing({ profileType: 'professional', nextBillingDate: '2026-10-02T12:00:00Z' }),
+    ], new Date('2026-10-01T00:00:00Z'), YEAR_END);
+    expect(result.timeline.slice(9).map((month) => month.contracted)).toEqual([100, 100, 200]);
+  });
+
+  it('retains the stored rolling anchor after an overdue renewal', () => {
+    const result = projectExistingSubscriptions([
+      billing({ profileType: 'professional', nextBillingDate: '2026-09-02T12:00:00Z' }),
+    ], new Date('2026-10-05T12:00:00Z'), YEAR_END);
+    expect(result.timeline.slice(9).map((month) => month.contracted)).toEqual([100, 100, 200]);
+  });
+
+  it('keeps an annual anniversary instead of moving an overdue renewal to this month next year', () => {
+    const result = projectExistingSubscriptions([
+      billing({ isYearly: true, nextBillingDate: '2025-12-20T12:00:00Z' }),
+    ], new Date('2026-01-10T12:00:00Z'), YEAR_END);
+    expect(result.timeline[0].contracted).toBe(1080);
+    expect(result.timeline[11].contracted).toBe(1080);
+    expect(result.totals.charges).toBe(2);
+  });
+
+  it('keeps January renewals outside the December reporting year', () => {
+    const result = projectExistingSubscriptions([
+      billing({ nextBillingDate: '2027-01-01T00:00:00Z' }),
+    ], new Date('2026-12-31T23:59:59Z'), YEAR_END);
+    expect(result.totals.contracted).toBe(0);
+    const january = projectExistingSubscriptions([
+      billing({ nextBillingDate: '2027-01-01T00:00:00Z' }),
+    ], new Date('2027-01-01T00:00:00Z'), new Date('2028-01-01T00:00:00Z'));
+    expect(january.timeline[0]).toMatchObject({ month: '2027-01', contracted: 100 });
+  });
+
   it('applies a scheduled plan and cycle change from its effective billing date', () => {
     const upgradedPlan = { _id: 'upgraded-plan', name: 'Upgraded', price: 200, yearlyDiscount: 0 };
     const result = projectExistingSubscriptions([

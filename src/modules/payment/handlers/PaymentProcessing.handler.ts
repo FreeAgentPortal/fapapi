@@ -9,6 +9,7 @@ import logger from '../../../utils/logger';
 import type { ReceiptRevenueCategory } from '../utils/subscriptionRevenue';
 import { RoleRegistry } from '../../auth/utils/RoleRegistry';
 import SmartRetriesService from '../services/SmartRetriesService';
+import { MonthlyRevenueForecastService } from '../services/MonthlyRevenueForecastService';
 
 type BillingChargeOptions = {
   updateBillingDate?: boolean;
@@ -38,6 +39,7 @@ export default class PaymentProcessingHandler {
   public static async processScheduledPayments(): Promise<{ success: boolean; message: string; results?: any }> {
     try {
       console.info('[PaymentProcessingHandler] Starting scheduled payment processing...');
+      await MonthlyRevenueForecastService.initializeSafely();
       await SmartRetriesService.expireRetries();
       await SmartRetriesService.reportBlockedAttempts();
       if (!this.processor) {

@@ -6,6 +6,8 @@ import PlanSchema from '../../auth/model/PlanSchema';
 import { StripeSubscriptionReconciliation } from '../classes/StripeSubscriptionReconciliation';
 import Receipt from '../models/Receipt';
 import { buildSubscriptionReceiptQuery, isSubscriptionProration } from '../utils/subscriptionRevenue';
+import { MonthlyRevenueForecastService } from '../services/MonthlyRevenueForecastService';
+import { resolveMonthlyForecasts } from '../utils/monthlyRevenueForecast';
 import {
   projectAcquisitionScenario,
   projectExistingSubscriptions,
@@ -33,10 +35,10 @@ export class YearlySubscriptionRevenueHandler {
     const yearStart = new Date(Date.UTC(now.getUTCFullYear(), 0, 1));
     const yearEnd = new Date(Date.UTC(now.getUTCFullYear() + 1, 0, 1));
 
-    const [subscriptionReceipts, billingAccounts] = await Promise.all([
+    const [subscriptionReceipts, billingAccounts, forecastSnapshots] = await Promise.all([
       Receipt.find(buildSubscriptionReceiptQuery(yearStart, now))
         .select(
-          'billingAccountId amount currency status planInfo processor transactionDate description revenueCategory reconciliation'
+          'billingAccountId type amount currency status planInfo processor transactionDate description revenueCategory reconciliation'
         )
         .sort({ transactionDate: 1 })
         .lean(),
@@ -47,6 +49,7 @@ export class YearlySubscriptionRevenueHandler {
         .populate('plan')
         .populate('scheduledPlanChange.plan')
         .lean(),
+      MonthlyRevenueForecastService.getSnapshots(now.getUTCFullYear()),
     ]);
 
     const successfulStripeReceipts = (subscriptionReceipts as any[]).filter(
@@ -71,6 +74,7 @@ export class YearlySubscriptionRevenueHandler {
       prorationTransactionIds
     );
     const projection = projectExistingSubscriptions(billingAccounts as any[], now, yearEnd);
+    const monthlyForecasts = resolveMonthlyForecasts(projection.timeline, subscriptionReceipts, forecastSnapshots, now);
     const receiptByTransactionId = new Map<string, any>();
     for (const receipt of successfulStripeReceipts) {
       receiptByTransactionId.set(receipt.processor.transactionId, receipt);
@@ -172,8 +176,9 @@ export class YearlySubscriptionRevenueHandler {
       },
       currentRunRate: projection.runRate,
       excludedSubscriptions: projection.excluded,
-      timeline: timeline.map((month) => ({
+      timeline: timeline.map((month, index) => ({
         ...month,
+        monthlyForecast: monthlyForecasts[index],
         actualGrossCaptured: this.money(month.actualGrossCaptured),
         actualProratedGrossCaptured: this.money(month.actualProratedGrossCaptured),
         actualRefunds: this.money(month.actualRefunds),

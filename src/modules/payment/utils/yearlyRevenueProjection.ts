@@ -1,4 +1,5 @@
-import { calculatePlanCycleAmount } from './billingPlanUtils';
+import { calculateNextRenewalBillingDate, calculatePlanCycleAmount } from './billingPlanUtils';
+import { RoleRegistry, type SubscriptionStartPolicy } from '../../auth/utils/RoleRegistry';
 
 export type ProjectionBillingCycle = 'monthly' | 'yearly';
 
@@ -38,7 +39,7 @@ export type ResolvedAcquisition = {
   newSubscribersPerMonth: number;
 };
 
-type ProjectionMonth = {
+export type ProjectionMonth = {
   month: string;
   contracted: number;
   collectible: number;
@@ -134,8 +135,17 @@ export function projectExistingSubscriptions(
       continue;
     }
 
+    let renewalAnchor = parsedNextBillingDate;
     let dueDate = parsedNextBillingDate.getTime() <= now.getTime() ? new Date(now) : parsedNextBillingDate;
-    let firstCharge = true;
+    let remainingCreditCents = Math.max(0, Math.round(Number(billing.credits ?? 0) * 100));
+    const renewalPolicy: SubscriptionStartPolicy = RoleRegistry[billing.profileType]?.subscriptionStart ?? {
+      chargeTiming: 'deferred',
+      amount: 'full',
+      renewalAnchor: {
+        monthly: { type: 'calendar-month', day: 1 },
+        yearly: { type: 'rolling-years', years: 1 },
+      },
+    };
     let safetyCounter = 0;
 
     while (dueDate.getTime() < endExclusive.getTime() && safetyCounter < 24) {
@@ -145,9 +155,10 @@ export function projectExistingSubscriptions(
         planState.plan,
         planState.billingCycle === 'yearly'
       );
-      const credit = firstCharge ? Math.max(0, Number(billing.credits ?? 0)) : 0;
-      const amount = money(Math.max(0, fullCycleAmount - credit));
-      firstCharge = false;
+      const cycleCents = Math.max(0, Math.round(fullCycleAmount * 100));
+      const appliedCreditCents = Math.min(cycleCents, remainingCreditCents);
+      const amount = (cycleCents - appliedCreditCents) / 100;
+      remainingCreditCents -= appliedCreditCents;
 
       if (amount > 0) {
         contracted += amount;
@@ -180,9 +191,14 @@ export function projectExistingSubscriptions(
         breakdown.set(key, item);
       }
 
-      dueDate = planState.billingCycle === 'yearly'
-        ? new Date(Date.UTC(dueDate.getUTCFullYear() + 1, dueDate.getUTCMonth(), 1))
-        : new Date(Date.UTC(dueDate.getUTCFullYear(), dueDate.getUTCMonth() + 1, 1));
+      dueDate = calculateNextRenewalBillingDate(
+        renewalPolicy,
+        planState.billingCycle === 'yearly',
+        renewalAnchor,
+        dueDate,
+        true
+      );
+      renewalAnchor = dueDate;
     }
   }
 
